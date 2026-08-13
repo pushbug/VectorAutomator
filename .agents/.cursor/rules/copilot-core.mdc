@@ -1,0 +1,45 @@
+---
+description: Co-pilot phase gate, session protocol, and skill routing. Project-wide agent workflow.
+alwaysApply: true
+---
+
+# Co-Pilot Core (v4)
+
+## Command gate
+Prefixes: `.think` `.consult` `.plan` `.dev` `.scrutinize` `.debug` `.done`
+
+No prefix → ask for command only. No reads, code, tests, or edits.
+Auto-trigger exception: `.debug` may be spawned internally by the `.dev` self-heal loop only. A user message describing a bug WITHOUT a `.debug` prefix still hits this gate — ask for the command.
+
+Flow: `.think` → [`.consult`]* → `.plan` → `.dev` → [`.debug`]* → `.scrutinize` → `.done`
+
+## Communication
+- Chat replies to the user: Thai, concise, easy to follow. Explain just enough.
+- All written artifacts (docs, plans, code, comments, commit msgs): English only — token efficiency. Write for the AI to re-read, not for the user.
+- **Two-layer output** (scrutinize, debug, coding, and any phase that reports findings to the user):
+  - **Layer 1 — สรุป (ไทย):** 1–2 sentences in plain language + options if applicable. No deep jargon. For the human.
+  - **Layer 2 — [for AI] Technical:** Compact block with `file:line`, root cause, fix path. For the next AI turn to act precisely. Always after Layer 1.
+
+## Global
+- No browser_subagent unless requested.
+- `.dev` must not edit `docs/session.md` or delete `docs/current_plan.md`.
+- Code or doc file nearing 300 lines → review trigger only, NOT an auto-split rule. Evaluate, then ASK the user before splitting. Split only if responsibilities are genuinely mixed/coupled; keep it if a split would worsen maintainability (see compliance #5).
+- **SKILL SYNC:** If any file under `.cursor/skills/` or `.cursor/rules/` is modified, remind the user to mirror the change in `.agents/skills/` or `.agents/AGENTS.md` — and vice versa. Both tool configs must stay in logical parity. (Paths that intentionally differ: internal cross-refs only.)
+
+## Session anchor
+On the first phase command of a new session (once only): read `docs/INDEX.md` + `docs/session.md`, confirm status. Missing session → notify, await `.plan`.
+`.think` is read-free — never reads files (see think skill); session anchor does not apply to it.
+`.consult` is read-only — reads files to answer questions but never writes. Session anchor applies.
+
+## Phase routing
+Read skills at `.cursor/skills/{name}/SKILL.md`, then docs per skill. Never read legacy monoliths (`project_map.md`, `ARCHITECTURE.md`, `TESTS.md`) — use INDEX routing only.
+
+| Phase | Skills | Docs |
+|-------|--------|------|
+| `.think` | think | — |
+| `.consult` | consult | INDEX, session; then any docs/source files needed to answer |
+| `.plan` | plan, testing | INDEX, prd, design, decisions; feature + test docs per plan skill |
+| `.dev` | coding | current_plan; compliance (safety contract — always); core/feature docs listed in plan; +transport-states if touching stats/replay |
+| `.debug` | debug | data-flow, dependencies; +danger-zones if state/timer bug; +transport-states if state machine bug |
+| `.scrutinize` | scrutinize, testing | current_plan (test IDs first); tests/OVERVIEW; tests/CATALOG only if IDs missing or cross-feature; feature/core docs of changed files; tests/SCENARIOS.md |
+| `.done` | handoff | INDEX, session; append new decisions to decisions.md; update affected feature/core/test docs |

@@ -1,0 +1,12 @@
+---
+description: Playwright E2E test conventions and selector anchoring
+globs: tests/**/*
+alwaysApply: false
+---
+
+# E2E Tests
+
+- Selectors: `data-testid` from `docs/tests/SELECTORS.md` — no brittle CSS-only anchors.
+- Test IDs: register in `docs/tests/CATALOG.md` before `.plan` closes.
+- Test observable behavior, not implementation details.
+- Fix production code under `.dev`; never weaken assertions to pass.

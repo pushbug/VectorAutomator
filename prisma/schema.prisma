@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Image {
+  id        String   @id @default(cuid())
+  title     String
+  keywords  String
+  status    String   @default("pending") // pending, uploaded, published
+  filePath  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stats     PlatformStats[]
+}
+
+model PlatformStats {
+  id        String   @id @default(cuid())
+  imageId   String
+  image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  platform  String   // "Shutterstock", "Adobe Stock", etc.
+  downloads Int      @default(0)
+  earnings  Float    @default(0)
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([imageId, platform, date])
+}

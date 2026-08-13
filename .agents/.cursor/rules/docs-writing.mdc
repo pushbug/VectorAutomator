@@ -1,0 +1,17 @@
+---
+description: Documentation writing standards for docs and planning files
+globs: docs/**/*
+alwaysApply: false
+---
+
+# Docs
+
+- English only. Workspace-relative paths only — no absolute paths.
+- Hub: `docs/INDEX.md`. Feature/core/test content lives in subfolders — update scoped files only.
+- Concise bullets; no chat history in `session.md`. Describe current state, not change history (history lives in git).
+- `docs/current_plan.md` owned by `.plan`; deleted by `.done`.
+
+## Doc lifecycle (create / split / register)
+- New feature or core area with NO matching doc → create a new scoped file under `docs/features/` or `docs/core/`. Do not cram it into an unrelated doc.
+- Any doc created, split, or renamed MUST be registered in `docs/INDEX.md` (add a routing-table row with a "when to read" note). Also update any skill that hardcodes the path.
+- Doc nearing 300 lines → review and propose a split to the user with a reason; do not split automatically. Split only if topics are genuinely separable; if a split would scatter related context, keep it. After an approved split, update `docs/INDEX.md` rows.
