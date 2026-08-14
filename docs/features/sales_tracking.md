@@ -15,7 +15,6 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
 ## 3. Supported Platforms
 - `Shutterstock`
 - `Adobe Stock`
-- `Freepik`
 - `Vecteezy`
 
 ## 4. UI Components

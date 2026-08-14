@@ -14,9 +14,11 @@ interface PortfolioImage {
   filePath: string;
   ssId: string | null;
   asId: string | null;
+  vzId?: string | null;
   ssDownloads: number;
   asDownloads: number;
   totalDownloads: number;
+  totalEarnings?: number;
   createdAt: string;
 }
 
@@ -50,36 +52,48 @@ export function PortfolioGrid({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div className="flex-1 overflow-y-auto pr-1 pb-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,200px)] gap-4">
           {images.map((img) => (
             <div 
               key={img.id}
               data-testid="portfolio-grid-item"
               onClick={() => onSelect(img)}
-              className={`cursor-pointer group relative aspect-square rounded-md overflow-hidden border-2 transition-all ${
+              className={`cursor-pointer group flex flex-col rounded-xl overflow-hidden border bg-surface transition-all shadow-xs hover:shadow-md ${
                 selectedId === img.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'
               }`}
             >
-              <Image 
-                src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
-                alt={img.title}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                className="object-cover transition-transform group-hover:scale-105"
-                unoptimized
-              />
-              {img.code && (
-                <div className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded bg-background/90 backdrop-blur-sm text-[10px] font-mono font-bold text-primary border border-border/80 shadow-xs">
-                  {img.code}
+              {/* Full Image Container */}
+              <div className="relative aspect-4/3 sm:aspect-square w-full bg-background overflow-hidden flex items-center justify-center p-2">
+                <Image 
+                  src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                  alt={img.code || img.title}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                  className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+                  unoptimized
+                />
+              </div>
+
+              {/* Bottom Info Section */}
+              <div className="p-2.5 border-t border-border bg-surface flex flex-col gap-1">
+                {/* Line 1: ID / Code */}
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-foreground truncate">
+                    {img.code ? img.code : `#${img.id.slice(0, 8)}`}
+                  </span>
                 </div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-background/80 backdrop-blur-sm p-2 text-xs truncate">
-                <span className="font-medium text-foreground block truncate">{img.title}</span>
-                <span className="text-muted flex justify-between items-center mt-1">
-                  <span>DL: {img.totalDownloads}</span>
-                  <span className="text-[11px] opacity-80">{img.createdAt ? new Date(img.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
-                </span>
+
+                {/* Line 2: Total Downloads & Total Earnings */}
+                <div className="flex items-center justify-between text-xs font-mono tabular-nums text-muted">
+                  <span className="flex items-center gap-1 font-medium text-foreground">
+                    <span>{img.totalDownloads.toLocaleString()}</span>
+                    <span className="text-[11px] text-muted">dl</span>
+                  </span>
+                  <span className="font-semibold text-emerald-500">
+                    ${(img.totalEarnings || 0).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -87,22 +101,24 @@ export function PortfolioGrid({
       </div>
       
       {totalPages > 1 && (
-        <div className="border-t border-border bg-surface p-4 flex justify-center items-center gap-4">
-          <button 
-            onClick={() => onPageChange(page - 1)} 
-            disabled={page <= 1}
-            className="px-3 py-1 bg-background border border-border rounded disabled:opacity-50 hover:bg-muted/10 transition-colors"
-          >
-            Prev
-          </button>
-          <span className="text-sm text-foreground font-medium">Page {page} of {totalPages}</span>
-          <button 
-            onClick={() => onPageChange(page + 1)} 
-            disabled={page >= totalPages}
-            className="px-3 py-1 bg-background border border-border rounded disabled:opacity-50 hover:bg-muted/10 transition-colors"
-          >
-            Next
-          </button>
+        <div className="pt-3 pb-1 flex justify-center items-center gap-3">
+          <div className="inline-flex items-center gap-3 bg-surface/90 backdrop-blur-xs border border-border px-4 py-2 rounded-xl shadow-xs">
+            <button 
+              onClick={() => onPageChange(page - 1)} 
+              disabled={page <= 1}
+              className="px-3 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-muted/10 transition-colors cursor-pointer"
+            >
+              Prev
+            </button>
+            <span className="text-xs text-foreground font-mono font-medium">Page {page} of {totalPages}</span>
+            <button 
+              onClick={() => onPageChange(page + 1)} 
+              disabled={page >= totalPages}
+              className="px-3 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-muted/10 transition-colors cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

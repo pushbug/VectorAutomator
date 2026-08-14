@@ -12,6 +12,7 @@ export default function PortfolioPage() {
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isLogSaleDrawerOpen, setIsLogSaleDrawerOpen] = useState(false);
   
   // Pagination and filtering state
@@ -44,17 +45,18 @@ export default function PortfolioPage() {
       setImages(json.data);
       setTotalPages(json.meta.totalPages);
       
-      // Update selectedImage if it exists
-      if (selectedImage) {
-        const refreshed = json.data.find((img: any) => img.id === selectedImage.id);
-        if (refreshed) setSelectedImage(refreshed);
-      }
+      // Update selectedImage if it exists using functional state update to avoid re-render cycles
+      setSelectedImage((prev: any) => {
+        if (!prev) return null;
+        const refreshed = json.data.find((img: any) => img.id === prev.id);
+        return refreshed || prev;
+      });
     } catch (error) {
       console.error('Error fetching portfolio:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [page, filters, selectedImage]);
+  }, [page, filters]);
 
   useEffect(() => {
     fetchPortfolio();
@@ -135,7 +137,7 @@ export default function PortfolioPage() {
         <PortfolioFilter onFilterChange={handleFilterChange} />
       </div>
       
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-background rounded-lg border border-border shadow-sm">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden gap-4 md:gap-6 min-h-0">
         <PortfolioGrid 
           images={images}
           selectedId={selectedImage?.id || null}
@@ -150,8 +152,10 @@ export default function PortfolioPage() {
           <PortfolioDetail 
             image={selectedImage}
             onUpdate={handleUpdateDownloads}
+            onImageUpdated={fetchPortfolio}
             onDelete={handleDeleteImage}
             onLogSale={() => setIsLogSaleDrawerOpen(true)}
+            onEdit={() => setIsEditDrawerOpen(true)}
             onClose={() => setSelectedImage(null)}
           />
         )}
@@ -161,6 +165,21 @@ export default function PortfolioPage() {
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
         onSuccess={fetchPortfolio}
+      />
+
+      <AddImageDrawer
+        isOpen={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+        onSuccess={async (updatedImage) => {
+          await fetchPortfolio();
+          if (updatedImage) {
+            setSelectedImage((prev: any) => ({
+              ...prev,
+              ...updatedImage,
+            }));
+          }
+        }}
+        editImage={selectedImage}
       />
 
       <SaleEntryDrawer

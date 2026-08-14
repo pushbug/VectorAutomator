@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Image from 'next/image';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 interface DeleteConfirmDialogProps {
   isOpen: boolean;
   title?: string;
   description?: string;
+  imageCode?: string | null;
+  imageSrc?: string | null;
   itemTitle?: string;
   isDeleting?: boolean;
   onConfirm: () => void;
@@ -15,8 +18,10 @@ interface DeleteConfirmDialogProps {
 
 export function DeleteConfirmDialog({
   isOpen,
-  title = 'Delete Image?',
-  description = 'Are you sure you want to permanently delete this image from the database and storage? This action cannot be undone.',
+  title = 'ยืนยันการลบรูปภาพ',
+  description = 'คุณแน่ใจหรือไม่ว่าต้องการลบรูปภาพนี้ออกจากระบบอย่างถาวร? การกระทำนี้ไม่สามารถย้อนกลับได้',
+  imageCode,
+  imageSrc,
   itemTitle,
   isDeleting = false,
   onConfirm,
@@ -45,7 +50,7 @@ export function DeleteConfirmDialog({
       {/* Modal Box */}
       <div 
         data-testid="delete-confirm-dialog"
-        className="relative bg-surface border border-border rounded-xl shadow-2xl max-w-md w-full p-6 z-10 animate-in fade-in zoom-in-95 duration-150"
+        className="relative bg-surface border border-border rounded-xl shadow-2xl max-w-md w-full p-6 z-10 animate-in fade-in zoom-in-95 duration-150 overflow-hidden"
       >
         <button
           type="button"
@@ -61,15 +66,34 @@ export function DeleteConfirmDialog({
             <AlertTriangle size={24} />
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-foreground">{title}</h3>
             <p className="text-sm text-muted mt-1 leading-relaxed">{description}</p>
 
-            {itemTitle && (
-              <div className="mt-3 p-2.5 rounded-md bg-background border border-border text-xs text-foreground font-mono truncate">
+            {/* Image Preview & ID Card */}
+            {imageSrc ? (
+              <div className="mt-4 p-2.5 rounded-lg bg-background border border-border flex items-center gap-3">
+                <div className="relative w-14 h-14 rounded-md overflow-hidden bg-surface border border-border shrink-0 flex items-center justify-center">
+                  <Image
+                    src={imageSrc}
+                    alt={imageCode || 'Preview'}
+                    fill
+                    className="object-contain p-1"
+                    unoptimized
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-muted uppercase font-medium">Image ID</p>
+                  <p className="font-mono font-bold text-sm text-foreground truncate mt-0.5">
+                    {imageCode || 'Unknown ID'}
+                  </p>
+                </div>
+              </div>
+            ) : itemTitle ? (
+              <div className="mt-3 p-2.5 rounded-md bg-background border border-border text-xs text-foreground font-mono wrap-break-word">
                 {itemTitle}
               </div>
-            )}
+            ) : null}
 
             <div className="mt-6 flex items-center justify-end gap-3">
               <button

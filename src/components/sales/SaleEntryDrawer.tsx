@@ -22,7 +22,6 @@ interface SaleEntryDrawerProps {
 const PLATFORMS = [
   'Shutterstock',
   'Adobe Stock',
-  'Freepik',
   'Vecteezy',
 ];
 
@@ -298,36 +297,41 @@ export function SaleEntryDrawer({
             {/* Platform Selection */}
             <div>
               <label 
-                htmlFor="platform-select" 
                 className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2"
               >
                 Platform *
               </label>
-              <select
-                id="platform-select"
+              <div 
                 data-testid="sales-form-platform-select"
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-hidden focus:border-primary cursor-pointer"
+                className="grid grid-cols-3 gap-1.5 p-1 bg-background border border-border rounded-xl"
               >
-                {PLATFORMS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
+                {PLATFORMS.map((p) => {
+                  const isSelected = platform === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      data-testid={`sales-form-platform-tab-${p.toLowerCase().replace(/\s+/g, '-')}`}
+                      onClick={() => setPlatform(p)}
+                      className={`py-2 px-2 text-xs sm:text-sm font-medium rounded-lg transition-all text-center cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                          : 'text-muted hover:text-foreground hover:bg-surface-hover'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Sale Date */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                Sale / Statement Date *
-              </label>
               <div data-testid="sales-form-date-input">
                 <SingleDatePicker
                   value={date}
                   onChange={setDate}
-                  label="Sale Date"
                   testId="sales-form-date-picker"
                 />
               </div>

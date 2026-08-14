@@ -50,3 +50,5 @@ dev.db
 
 # user assets
 portfolio_archive/
+/public/uploads/*
+!/public/uploads/.gitkeep

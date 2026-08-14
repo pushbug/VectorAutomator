@@ -9,6 +9,8 @@
   --border: var(--color-slate-200);
   --primary: var(--color-blue-600);
   --primary-foreground: #ffffff;
+  --destructive: var(--color-red-600);
+  --destructive-foreground: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -20,6 +22,8 @@
   --border: var(--color-slate-800);
   --primary: var(--color-blue-500);
   --primary-foreground: #ffffff;
+  --destructive: var(--color-red-500);
+  --destructive-foreground: #ffffff;
 }
 
 @theme {
@@ -31,10 +35,14 @@
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
   /* Retain base colors if needed */
   --color-blue-500: #3b82f6;
   --color-blue-600: #2563eb;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;

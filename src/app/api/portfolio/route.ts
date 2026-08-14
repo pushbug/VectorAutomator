@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
           OR: [
             { title: { contains: search } },
             { keywords: { contains: search } },
+            { category: { contains: search } },
             { code: { contains: search } },
+            { tags: { contains: search } },
+            { notes: { contains: search } },
           ],
         }
       : {};
@@ -98,38 +101,183 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, ssDownloads, asDownloads } = body;
+    const contentType = request.headers.get('content-type') || '';
+    let id: string = '';
+    let title: string | undefined;
+    let keywords: string | undefined;
+    let code: string | undefined;
+    let uploadDate: string | undefined;
+    let category: string | undefined;
+    let tags: string | undefined;
+    let notes: string | undefined;
+    let ssId: string | undefined;
+    let asId: string | undefined;
+    let vzId: string | undefined;
+    let ssDownloads: any;
+    let asDownloads: any;
+    let file: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      id = (formData.get('id') as string || '').trim();
+      title = formData.has('title') ? (formData.get('title') as string) : undefined;
+      keywords = formData.has('keywords') ? (formData.get('keywords') as string) : undefined;
+      code = formData.has('code') ? (formData.get('code') as string) : undefined;
+      uploadDate = formData.has('uploadDate') ? (formData.get('uploadDate') as string) : undefined;
+      category = formData.has('category') ? (formData.get('category') as string) : undefined;
+      tags = formData.has('tags') ? (formData.get('tags') as string) : undefined;
+      notes = formData.has('notes') ? (formData.get('notes') as string) : undefined;
+      ssId = formData.has('ssId') ? (formData.get('ssId') as string) : undefined;
+      asId = formData.has('asId') ? (formData.get('asId') as string) : undefined;
+      vzId = formData.has('vzId') ? (formData.get('vzId') as string) : undefined;
+      ssDownloads = formData.has('ssDownloads') ? formData.get('ssDownloads') : undefined;
+      asDownloads = formData.has('asDownloads') ? formData.get('asDownloads') : undefined;
+      const fileEntry = formData.get('file');
+      if (fileEntry instanceof File && fileEntry.size > 0) {
+        file = fileEntry;
+      }
+    } else {
+      const body = await request.json();
+      id = body.id;
+      title = body.title;
+      keywords = body.keywords;
+      code = body.code;
+      uploadDate = body.uploadDate;
+      category = body.category;
+      tags = body.tags;
+      notes = body.notes;
+      ssId = body.ssId;
+      asId = body.asId;
+      vzId = body.vzId;
+      ssDownloads = body.ssDownloads;
+      asDownloads = body.asDownloads;
+    }
 
     if (!id) {
-      return new NextResponse('Image ID is required', { status: 400 });
+      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
     }
 
     const currentImage = await prisma.image.findUnique({ where: { id } });
     if (!currentImage) {
-      return new NextResponse('Image not found', { status: 404 });
+      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
-    // Compute updated values, falling back to existing if not provided
-    const newSsDownloads = ssDownloads !== undefined ? parseInt(ssDownloads, 10) : currentImage.ssDownloads;
-    const newAsDownloads = asDownloads !== undefined ? parseInt(asDownloads, 10) : currentImage.asDownloads;
+    const dataToUpdate: any = {};
 
-    // Enforce totalDownloads sum logic
-    const totalDownloads = newSsDownloads + newAsDownloads;
+    if (title !== undefined) {
+      if (!title.trim()) {
+        return NextResponse.json({ error: 'Title cannot be empty' }, { status: 400 });
+      }
+      dataToUpdate.title = title.trim();
+    }
+
+    if (keywords !== undefined) {
+      if (!keywords.trim()) {
+        return NextResponse.json({ error: 'Keywords cannot be empty' }, { status: 400 });
+      }
+      dataToUpdate.keywords = keywords.trim();
+    }
+
+    if (code !== undefined) {
+      const cleanedCode = code.trim() || null;
+      if (cleanedCode) {
+        // Validate uniqueness excluding current image
+        const existing = await prisma.image.findFirst({
+          where: {
+            code: cleanedCode,
+            NOT: { id },
+          },
+        });
+
+        if (existing) {
+          return NextResponse.json(
+            { error: `Image code "${cleanedCode}" already exists in the system.` },
+            { status: 409 }
+          );
+        }
+
+        dataToUpdate.code = cleanedCode;
+        const match = cleanedCode.match(/^(\d{2})(\d{2})-(\d+)$/);
+        if (match) {
+          dataToUpdate.year = 2000 + parseInt(match[1], 10);
+          dataToUpdate.month = parseInt(match[2], 10);
+          dataToUpdate.seqNumber = parseInt(match[3], 10);
+        }
+      } else {
+        dataToUpdate.code = null;
+      }
+    }
+
+    if (uploadDate !== undefined) {
+      const parsedDate = new Date(uploadDate);
+      if (!isNaN(parsedDate.getTime())) {
+        dataToUpdate.createdAt = parsedDate;
+      }
+    }
+
+    if (file) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+      try {
+        await fs.access(uploadsDir);
+      } catch {
+        await fs.mkdir(uploadsDir, { recursive: true });
+      }
+      const uniqueFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(uploadsDir, uniqueFilename);
+      await fs.writeFile(filePath, buffer);
+
+      if (currentImage.filePath) {
+        try {
+          await fs.unlink(currentImage.filePath);
+        } catch (err: any) {
+          console.warn('Could not unlink old image file:', err?.message);
+        }
+      }
+
+      dataToUpdate.filePath = filePath;
+    }
+
+    if (category !== undefined) {
+      dataToUpdate.category = typeof category === 'string' ? category.trim() || null : null;
+    }
+    if (tags !== undefined) {
+      dataToUpdate.tags = typeof tags === 'string' ? tags.trim() || null : null;
+    }
+    if (notes !== undefined) {
+      dataToUpdate.notes = typeof notes === 'string' ? notes.trim() || null : null;
+    }
+    if (ssId !== undefined) {
+      dataToUpdate.ssId = typeof ssId === 'string' ? ssId.trim() || null : null;
+    }
+    if (asId !== undefined) {
+      dataToUpdate.asId = typeof asId === 'string' ? asId.trim() || null : null;
+    }
+    if (vzId !== undefined) {
+      dataToUpdate.vzId = typeof vzId === 'string' ? vzId.trim() || null : null;
+    }
+
+    if (ssDownloads !== undefined || asDownloads !== undefined) {
+      const newSsDownloads = ssDownloads !== undefined ? parseInt(ssDownloads, 10) : currentImage.ssDownloads;
+      const newAsDownloads = asDownloads !== undefined ? parseInt(asDownloads, 10) : currentImage.asDownloads;
+      dataToUpdate.ssDownloads = isNaN(newSsDownloads) ? currentImage.ssDownloads : newSsDownloads;
+      dataToUpdate.asDownloads = isNaN(newAsDownloads) ? currentImage.asDownloads : newAsDownloads;
+      dataToUpdate.totalDownloads = dataToUpdate.ssDownloads + dataToUpdate.asDownloads;
+    }
 
     const updatedImage = await prisma.image.update({
       where: { id },
-      data: {
-        ssDownloads: newSsDownloads,
-        asDownloads: newAsDownloads,
-        totalDownloads,
-      },
+      data: dataToUpdate,
     });
 
     return NextResponse.json(updatedImage);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update portfolio data:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: 'Image code already exists in the system.' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

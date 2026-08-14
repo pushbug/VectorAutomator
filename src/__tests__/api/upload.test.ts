@@ -113,6 +113,151 @@ describe('Upload API Route', () => {
       );
     });
 
+    it('persists platform asset IDs (ssId, asId, vzId) and initial downloads', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      const fakeCreated = {
+        id: 'img-2',
+        code: '2608-456',
+        title: 'Platform Asset Test',
+        keywords: 'vector, icon',
+        filePath: '/path/to/icon.jpg',
+        ssId: '24589201',
+        asId: '83920194',
+        vzId: '19384029',
+        ssDownloads: 10,
+        asDownloads: 5,
+        totalDownloads: 17,
+        status: 'uploaded',
+        createdAt: new Date('2026-08-14T00:00:00.000Z'),
+      };
+      mockCreate.mockResolvedValue(fakeCreated);
+
+      const formData = new FormData();
+      const fakeFile = new File(['dummy icon'], 'icon.jpg', { type: 'image/jpeg' });
+      formData.append('file', fakeFile);
+      formData.append('code', '2608-456');
+      formData.append('title', 'Platform Asset Test');
+      formData.append('keywords', 'vector, icon');
+      formData.append('ssId', '24589201');
+      formData.append('asId', '83920194');
+      formData.append('vzId', '19384029');
+      formData.append('ssDownloads', '10');
+      formData.append('asDownloads', '5');
+      formData.append('vzDownloads', '2');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(201);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            ssId: '24589201',
+            asId: '83920194',
+            vzId: '19384029',
+            ssDownloads: 10,
+            asDownloads: 5,
+            totalDownloads: 17,
+            stats: {
+              create: expect.arrayContaining([
+                expect.objectContaining({ platform: 'Shutterstock', downloads: 10 }),
+                expect.objectContaining({ platform: 'Adobe Stock', downloads: 5 }),
+                expect.objectContaining({ platform: 'Vecteezy', downloads: 2 }),
+              ]),
+            },
+          }),
+        })
+      );
+    });
+
+    it('persists tags and notes during image upload', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      const fakeCreated = {
+        id: 'img-3',
+        code: '2608-789',
+        title: 'Tagged Asset',
+        keywords: 'vector, icon',
+        tags: 'infographic, series-a',
+        notes: 'Needs color variation next week',
+        filePath: '/path/to/icon.jpg',
+        ssDownloads: 0,
+        asDownloads: 0,
+        totalDownloads: 0,
+        status: 'uploaded',
+        createdAt: new Date('2026-08-14T00:00:00.000Z'),
+      };
+      mockCreate.mockResolvedValue(fakeCreated);
+
+      const formData = new FormData();
+      const fakeFile = new File(['dummy icon'], 'icon.jpg', { type: 'image/jpeg' });
+      formData.append('file', fakeFile);
+      formData.append('code', '2608-789');
+      formData.append('title', 'Tagged Asset');
+      formData.append('keywords', 'vector, icon');
+      formData.append('tags', 'infographic, series-a');
+      formData.append('notes', 'Needs color variation next week');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(201);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tags: 'infographic, series-a',
+            notes: 'Needs color variation next week',
+          }),
+        })
+      );
+    });
+
+    it('persists category during image upload (UT-API-CAT-01)', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      const fakeCreated = {
+        id: 'img-4',
+        code: '2608-101',
+        title: 'Business Diagram',
+        keywords: 'business, chart',
+        category: 'Business',
+        filePath: '/path/to/chart.jpg',
+        ssDownloads: 0,
+        asDownloads: 0,
+        totalDownloads: 0,
+        status: 'uploaded',
+        createdAt: new Date('2026-08-14T00:00:00.000Z'),
+      };
+      mockCreate.mockResolvedValue(fakeCreated);
+
+      const formData = new FormData();
+      const fakeFile = new File(['dummy icon'], 'chart.jpg', { type: 'image/jpeg' });
+      formData.append('file', fakeFile);
+      formData.append('code', '2608-101');
+      formData.append('title', 'Business Diagram');
+      formData.append('keywords', 'business, chart');
+      formData.append('category', 'Business');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(201);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            category: 'Business',
+          }),
+        })
+      );
+    });
+
     it('rejects duplicate image code with 409 Conflict', async () => {
       mockFindUnique.mockResolvedValue({ id: 'existing-img', code: '2608-123' });
 

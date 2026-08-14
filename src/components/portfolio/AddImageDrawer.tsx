@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Upload, Plus, Edit3 } from 'lucide-react';
 import { SingleDatePicker } from './SingleDatePicker';
 
 const getTodayStr = () => {
@@ -12,13 +12,38 @@ const getTodayStr = () => {
   return `${year}-${month}-${day}`;
 };
 
+export interface PortfolioImage {
+  id: string;
+  code?: string | null;
+  year?: number | null;
+  month?: number | null;
+  seqNumber?: number | null;
+  title: string;
+  keywords: string;
+  category?: string | null;
+  tags?: string | null;
+  notes?: string | null;
+  status: string;
+  filePath: string;
+  ssId?: string | null;
+  asId?: string | null;
+  vzId?: string | null;
+  ssDownloads: number;
+  asDownloads: number;
+  totalDownloads: number;
+  totalEarnings?: number;
+  platformBreakdown?: Record<string, { downloads: number; earnings: number }>;
+  createdAt: string;
+}
+
 interface AddImageDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (updatedImage?: PortfolioImage) => void;
+  editImage?: PortfolioImage | null;
 }
 
-export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerProps) {
+export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddImageDrawerProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadDate, setUploadDate] = useState(getTodayStr);
@@ -26,14 +51,73 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
   const [hasManuallyEditedCode, setHasManuallyEditedCode] = useState(false);
   const [title, setTitle] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [ssDownloads, setSsDownloads] = useState('');
-  const [asDownloads, setAsDownloads] = useState('');
+  const [category, setCategory] = useState('');
+  const [tags, setTags] = useState('');
+  const [notes, setNotes] = useState('');
+  const [ssId, setSsId] = useState('');
+  const [asId, setAsId] = useState('');
+  const [vzId, setVzId] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  // Auto-fetch next suggested code when drawer opens or date changes (unless user manually typed one)
+  const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const keywordsTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync initial form values when opening drawer or when editImage changes
   useEffect(() => {
-    if (isOpen && !hasManuallyEditedCode) {
+    if (isOpen) {
+      if (editImage) {
+        setFile(null);
+        setPreview(editImage.filePath ? `/api/image?path=${encodeURIComponent(editImage.filePath)}` : null);
+        setUploadDate(editImage.createdAt ? editImage.createdAt.split('T')[0] : getTodayStr());
+        setCode(editImage.code || '');
+        setHasManuallyEditedCode(true);
+        setTitle(editImage.title || '');
+        setKeywords(editImage.keywords || '');
+        setCategory(editImage.category || '');
+        setTags(editImage.tags || '');
+        setNotes(editImage.notes || '');
+        setSsId(editImage.ssId || '');
+        setAsId(editImage.asId || '');
+        setVzId(editImage.vzId || '');
+      } else {
+        setFile(null);
+        setPreview(null);
+        setUploadDate(getTodayStr());
+        setCode('');
+        setHasManuallyEditedCode(false);
+        setTitle('');
+        setKeywords('');
+        setCategory('');
+        setTags('');
+        setNotes('');
+        setSsId('');
+        setAsId('');
+        setVzId('');
+      }
+      setHasSubmitted(false);
+      setError(null);
+      setTimeout(() => {
+        if (titleTextareaRef.current) {
+          titleTextareaRef.current.style.height = 'auto';
+          if (titleTextareaRef.current.value) {
+            titleTextareaRef.current.style.height = `${titleTextareaRef.current.scrollHeight}px`;
+          }
+        }
+        if (keywordsTextareaRef.current) {
+          keywordsTextareaRef.current.style.height = 'auto';
+          if (keywordsTextareaRef.current.value) {
+            keywordsTextareaRef.current.style.height = `${keywordsTextareaRef.current.scrollHeight}px`;
+          }
+        }
+      }, 50);
+    }
+  }, [isOpen, editImage]);
+
+  // Auto-fetch next suggested code only when creating new image
+  useEffect(() => {
+    if (isOpen && !editImage && !hasManuallyEditedCode) {
       fetch(`/api/upload?date=${uploadDate}`)
         .then((res) => res.json())
         .then((data) => {
@@ -43,7 +127,7 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
         })
         .catch((err) => console.error('Failed to fetch next code:', err));
     }
-  }, [isOpen, uploadDate, hasManuallyEditedCode]);
+  }, [isOpen, editImage, uploadDate, hasManuallyEditedCode]);
 
   // Close on Escape key
   useEffect(() => {
@@ -75,6 +159,18 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
     }
   };
 
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setTitle(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  };
+
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setKeywords(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  };
+
   const resetForm = () => {
     setFile(null);
     setPreview(null);
@@ -83,15 +179,23 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
     setHasManuallyEditedCode(false);
     setTitle('');
     setKeywords('');
-    setSsDownloads('');
-    setAsDownloads('');
+    setCategory('');
+    setTags('');
+    setNotes('');
+    setSsId('');
+    setAsId('');
+    setVzId('');
     setError(null);
+    setHasSubmitted(false);
+    if (titleTextareaRef.current) titleTextareaRef.current.style.height = 'auto';
+    if (keywordsTextareaRef.current) keywordsTextareaRef.current.style.height = 'auto';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title.trim() || !keywords.trim()) {
-      setError('Please select an image and enter both title and keywords.');
+    setHasSubmitted(true);
+    const isFileMissing = !editImage && !file;
+    if (isFileMissing || !title.trim() || !keywords.trim()) {
       return;
     }
 
@@ -100,30 +204,51 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      if (file) formData.append('file', file);
       formData.append('title', title.trim());
       formData.append('keywords', keywords.trim());
+      if (category.trim()) formData.append('category', category.trim());
       if (code.trim()) formData.append('code', code.trim());
       if (uploadDate) formData.append('uploadDate', uploadDate);
-      if (ssDownloads) formData.append('ssDownloads', ssDownloads);
-      if (asDownloads) formData.append('asDownloads', asDownloads);
+      if (tags.trim()) formData.append('tags', tags.trim());
+      if (notes.trim()) formData.append('notes', notes.trim());
+      if (ssId.trim()) formData.append('ssId', ssId.trim());
+      if (asId.trim()) formData.append('asId', asId.trim());
+      if (vzId.trim()) formData.append('vzId', vzId.trim());
 
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      if (editImage) {
+        formData.append('id', editImage.id);
+        const res = await fetch('/api/portfolio', {
+          method: 'PATCH',
+          body: formData,
+        });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to upload image');
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to update image');
+        }
+
+        const updated = await res.json();
+        onSuccess(updated);
+        onClose();
+      } else {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to upload image');
+        }
+
+        resetForm();
+        onSuccess();
+        onClose();
       }
-
-      resetForm();
-      onSuccess();
-      onClose();
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An error occurred while uploading.');
+      setError(err.message || (editImage ? 'An error occurred while saving.' : 'An error occurred while uploading.'));
     } finally {
       setIsUploading(false);
     }
@@ -148,9 +273,11 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                <Plus size={18} />
+                {editImage ? <Edit3 size={18} /> : <Plus size={18} />}
               </div>
-              <h2 className="text-lg font-semibold text-foreground">Add New Image</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                {editImage ? 'Edit Image' : 'Add New Image'}
+              </h2>
             </div>
             <button
               type="button"
@@ -199,7 +326,9 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
 
             {/* File Dropzone / Preview */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Image File</label>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Image File {editImage ? '(Optional)' : '*'}
+              </label>
               {preview ? (
                 <div className="relative w-full bg-background rounded-lg border border-border overflow-hidden group">
                   <img
@@ -220,27 +349,36 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
                   </div>
                 </div>
               ) : (
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  className="border-2 border-dashed border-border hover:border-primary/60 bg-background rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
-                  onClick={() => document.getElementById('portfolio-file-input')?.click()}
-                >
-                  <div className="p-3 rounded-full bg-primary/10 text-primary mb-3">
-                    <Upload size={24} />
+                <div>
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed ${
+                      hasSubmitted && !file
+                        ? 'border-destructive bg-destructive/5'
+                        : 'border-border hover:border-primary/60 bg-background'
+                    } rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors`}
+                    onClick={() => document.getElementById('portfolio-file-input')?.click()}
+                  >
+                    <div className={`p-3 rounded-full ${hasSubmitted && !file ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'} mb-3`}>
+                      <Upload size={24} />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">
+                      Click to upload or drag & drop
+                    </p>
+                    <p className="text-xs text-muted mt-1">JPG, PNG, or WebP</p>
+                    <input
+                      id="portfolio-file-input"
+                      data-testid="portfolio-add-file-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
                   </div>
-                  <p className="text-sm font-medium text-foreground">
-                    Click to upload or drag & drop
-                  </p>
-                  <p className="text-xs text-muted mt-1">JPG, PNG, or WebP</p>
-                  <input
-                    id="portfolio-file-input"
-                    data-testid="portfolio-add-file-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
+                  {hasSubmitted && !file && (
+                    <p className="text-xs text-destructive mt-1.5 font-medium">Please select an image file</p>
+                  )}
                 </div>
               )}
             </div>
@@ -248,58 +386,141 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Title *</label>
-              <input
-                type="text"
+              <textarea
+                ref={titleTextareaRef}
+                rows={1}
                 data-testid="portfolio-add-title-input"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={handleTitleChange}
                 placeholder="e.g. Minimalist Circular Flowchart Infographic"
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                required
+                className={`w-full px-3 py-2 border ${
+                  hasSubmitted && !title.trim()
+                    ? 'border-destructive focus:ring-destructive'
+                    : 'border-border focus:ring-primary'
+                } rounded-md bg-background text-foreground focus:outline-hidden focus:ring-2 text-sm resize-none overflow-hidden`}
               />
+              {hasSubmitted && !title.trim() && (
+                <p className="text-xs text-destructive mt-1 font-medium">Title is required</p>
+              )}
             </div>
 
             {/* Keywords */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Keywords *</label>
               <textarea
-                rows={4}
+                ref={keywordsTextareaRef}
+                rows={3}
                 data-testid="portfolio-add-keywords-input"
                 value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
+                onChange={handleKeywordsChange}
                 placeholder="abstract, business, flowchart, infographic, vector..."
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                required
+                className={`w-full px-3 py-2 border ${
+                  hasSubmitted && !keywords.trim()
+                    ? 'border-destructive focus:ring-destructive'
+                    : 'border-border focus:ring-primary'
+                } rounded-md bg-background text-foreground focus:outline-hidden focus:ring-2 text-sm resize-none overflow-hidden`}
               />
-              <p className="text-xs text-muted mt-1">Separate keywords with commas</p>
+              {hasSubmitted && !keywords.trim() && (
+                <p className="text-xs text-destructive mt-1 font-medium">Keywords are required</p>
+              )}
             </div>
 
-            {/* Initial Downloads (Optional) */}
-            <div className="pt-2 border-t border-border">
-              <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-                Initial Downloads (Optional)
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-foreground mb-1">Shutterstock</label>
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Category (Optional)</label>
+              <input
+                type="text"
+                data-testid="portfolio-add-category-input"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="e.g. Business, Infographics, Icons, Backgrounds..."
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+            </div>
+
+            {/* Tags (Optional) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Tags (Optional)</label>
+              <input
+                type="text"
+                data-testid="portfolio-add-tags-input"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g. icon, banner, vector, modern..."
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+            </div>
+
+            {/* Notes (Optional) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Notes (Optional)</label>
+              <textarea
+                rows={3}
+                data-testid="portfolio-add-notes-input"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any internal production notes, design ideas, or reminders..."
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+            </div>
+
+            {/* Platform Identifiers (Optional) */}
+            <div className="pt-3 border-t border-border space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                  Platform Asset IDs (Optional)
+                </label>
+                <p className="text-[11px] text-muted mt-0.5">
+                  Enter asset IDs from stock platforms for reference.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {/* Shutterstock */}
+                <div className="flex items-center gap-2">
+                  <span className="w-28 text-xs font-medium text-red-500 flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                    Shutterstock
+                  </span>
                   <input
-                    type="number"
-                    min="0"
-                    value={ssDownloads}
-                    onChange={(e) => setSsDownloads(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-1.5 border border-border rounded-md bg-background text-foreground text-sm"
+                    type="text"
+                    data-testid="portfolio-add-ssid-input"
+                    value={ssId}
+                    onChange={(e) => setSsId(e.target.value)}
+                    placeholder="Asset ID (e.g. 24589201)"
+                    className="flex-1 px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground text-xs font-mono focus:outline-hidden focus:border-primary"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-foreground mb-1">Adobe Stock</label>
+
+                {/* Adobe Stock */}
+                <div className="flex items-center gap-2">
+                  <span className="w-28 text-xs font-medium text-blue-500 flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                    Adobe Stock
+                  </span>
                   <input
-                    type="number"
-                    min="0"
-                    value={asDownloads}
-                    onChange={(e) => setAsDownloads(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-1.5 border border-border rounded-md bg-background text-foreground text-sm"
+                    type="text"
+                    data-testid="portfolio-add-asid-input"
+                    value={asId}
+                    onChange={(e) => setAsId(e.target.value)}
+                    placeholder="Asset ID (e.g. 83920194)"
+                    className="flex-1 px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground text-xs font-mono focus:outline-hidden focus:border-primary"
+                  />
+                </div>
+
+                {/* Vecteezy */}
+                <div className="flex items-center gap-2">
+                  <span className="w-28 text-xs font-medium text-amber-500 flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    Vecteezy
+                  </span>
+                  <input
+                    type="text"
+                    data-testid="portfolio-add-vzid-input"
+                    value={vzId}
+                    onChange={(e) => setVzId(e.target.value)}
+                    placeholder="Asset ID (e.g. 19384029)"
+                    className="flex-1 px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground text-xs font-mono focus:outline-hidden focus:border-primary"
                   />
                 </div>
               </div>
@@ -320,10 +541,10 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess }: AddImageDrawerPro
               type="button"
               data-testid="portfolio-add-submit-btn"
               onClick={handleSubmit}
-              disabled={isUploading || !file}
+              disabled={isUploading}
               className="px-4 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              {isUploading ? 'Uploading...' : 'Add to Portfolio'}
+              {isUploading ? (editImage ? 'Saving...' : 'Uploading...') : (editImage ? 'Save Changes' : 'Add to Portfolio')}
             </button>
           </div>
         </div>

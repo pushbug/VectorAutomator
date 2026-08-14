@@ -11,3 +11,9 @@
 - **Context:** IDE LSP emitted warnings (`tailwindcss(suggestCanonicalClasses)`) when using legacy aliases (`flex-shrink-0`, `flex-grow`) or redundant arbitrary scale brackets (`min-w-[200px]`).
 - **Decision:** Enforce 3-Layer Defense across Authoring Rules, Audit Skills, and System Design documentation requiring canonical utilities (`shrink-0`, `grow`, `min-w-50`, `w-25`).
 - **Impact:** Clean IDE diagnostics (0 problems) and strict consistency with Tailwind CSS v4.
+
+## ADR-003: Unified Add/Edit Image Form Drawer with Guarded Code Generation
+- **Date:** 2026-08-14
+- **Context:** Image creation and editing share identical metadata schemas and layout fields, but editing requires preserving existing image code, optional file replacement, and avoiding code collisions with self.
+- **Decision:** Reuse `AddImageDrawer` in dual-mode (`editImage` prop) with guarded auto-code generation (`!editImage`), optional file validation, self-code collision exclusion (`where: { code, NOT: { id } }`), and direct `selectedImage` state synchronization.
+- **Impact:** Zero component duplication, streamlined UX, and safe edit operations without regression risk.

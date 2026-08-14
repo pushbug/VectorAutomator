@@ -117,9 +117,30 @@ export async function POST(request: NextRequest) {
     
     await fs.writeFile(filePath, buffer);
 
+    const category = (formData.get('category') as string || '').trim() || null;
+    const tags = (formData.get('tags') as string || '').trim() || null;
+    const notes = (formData.get('notes') as string || '').trim() || null;
+    const ssId = (formData.get('ssId') as string || '').trim() || null;
+    const asId = (formData.get('asId') as string || '').trim() || null;
+    const vzId = (formData.get('vzId') as string || '').trim() || null;
     const ssDownloads = parseInt(formData.get('ssDownloads') as string || '0', 10);
     const asDownloads = parseInt(formData.get('asDownloads') as string || '0', 10);
-    const totalDownloads = (isNaN(ssDownloads) ? 0 : ssDownloads) + (isNaN(asDownloads) ? 0 : asDownloads);
+    const vzDownloads = parseInt(formData.get('vzDownloads') as string || '0', 10);
+    const validSsDownloads = isNaN(ssDownloads) ? 0 : ssDownloads;
+    const validAsDownloads = isNaN(asDownloads) ? 0 : asDownloads;
+    const validVzDownloads = isNaN(vzDownloads) ? 0 : vzDownloads;
+    const totalDownloads = validSsDownloads + validAsDownloads + validVzDownloads;
+
+    const initialStats: any[] = [];
+    if (validSsDownloads > 0) {
+      initialStats.push({ platform: 'Shutterstock', downloads: validSsDownloads, earnings: 0, date: createdAt });
+    }
+    if (validAsDownloads > 0) {
+      initialStats.push({ platform: 'Adobe Stock', downloads: validAsDownloads, earnings: 0, date: createdAt });
+    }
+    if (validVzDownloads > 0) {
+      initialStats.push({ platform: 'Vecteezy', downloads: validVzDownloads, earnings: 0, date: createdAt });
+    }
 
     const newImage = await prisma.image.create({
       data: {
@@ -129,12 +150,25 @@ export async function POST(request: NextRequest) {
         seqNumber,
         title,
         keywords,
+        category,
+        tags,
+        notes,
         filePath: filePath, // Storing absolute path for /api/image
-        ssDownloads: isNaN(ssDownloads) ? 0 : ssDownloads,
-        asDownloads: isNaN(asDownloads) ? 0 : asDownloads,
+        ssId,
+        asId,
+        vzId,
+        ssDownloads: validSsDownloads,
+        asDownloads: validAsDownloads,
         totalDownloads,
         status: 'uploaded',
         createdAt,
+        ...(initialStats.length > 0
+          ? {
+              stats: {
+                create: initialStats,
+              },
+            }
+          : {}),
       },
     });
 

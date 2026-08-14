@@ -45,7 +45,7 @@ export function SalesTable({
   search,
   onSearchChange,
 }: SalesTableProps) {
-  const platforms = ['all', 'Shutterstock', 'Adobe Stock', 'Freepik', 'Vecteezy'];
+  const platforms = ['all', 'Shutterstock', 'Adobe Stock', 'Vecteezy'];
 
   return (
     <div className="bg-surface border border-border rounded-xl shadow-xs overflow-hidden">

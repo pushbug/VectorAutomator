@@ -22,6 +22,8 @@ These are defined in `src/app/globals.css` and can be used directly as Tailwind 
 ### Brand / Accents
 - **primary**: Main brand color used for active states, buttons, links. (Light/Dark: `blue-500` / `blue-600`)
 - **primary-foreground**: Text color on top of primary background (e.g., white text on blue button).
+- **destructive**: Alert and error color used for destructive actions, validation errors. (Light/Dark: `red-600` / `red-500`)
+- **destructive-foreground**: Text color on top of destructive background (white).
 
 ## Typography
 - **Font**: Inter (sans-serif).
@@ -39,6 +41,8 @@ In Tailwind v4, we define these using the `@theme` directive in `globals.css` wi
   --border: var(--color-slate-200);
   --primary: var(--color-blue-600);
   --primary-foreground: #ffffff;
+  --destructive: var(--color-red-600);
+  --destructive-foreground: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -50,6 +54,8 @@ In Tailwind v4, we define these using the `@theme` directive in `globals.css` wi
   --border: var(--color-slate-800);
   --primary: var(--color-blue-500);
   --primary-foreground: #ffffff;
+  --destructive: var(--color-red-500);
+  --destructive-foreground: #ffffff;
 }
 ```
 

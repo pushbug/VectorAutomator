@@ -20,6 +20,9 @@ model Image {
   seqNumber      Int?
   title          String
   keywords       String
+  category       String?
+  tags           String?
+  notes          String?
   status         String   @default("pending") // pending, uploaded, published
   filePath       String
   ssId           String?

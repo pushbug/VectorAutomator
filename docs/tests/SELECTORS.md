@@ -33,6 +33,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `portfolio-add-code-input` | The image code input field inside the add image drawer |
 | `portfolio-detail-code` | The image code badge inside the portfolio detail panel |
 | `portfolio-delete-btn` | The button to trigger delete confirmation in portfolio detail |
+| `portfolio-detail-edit-btn` | The button in portfolio detail header to trigger edit image drawer |
 | `delete-confirm-dialog` | The modal dialog asking for confirmation before deleting |
 | `delete-confirm-btn` | The confirmation button inside delete modal |
 | `delete-cancel-btn` | The cancel button inside delete modal |
@@ -50,5 +51,20 @@ Always use `data-testid` for element selection in E2E tests.
 | `sales-form-close-btn` | The close button in sales drawer |
 | `sales-table` | The table displaying sales history log |
 | `sales-row-delete-btn` | The button to delete a specific sales log entry |
+| `portfolio-add-category-input` | The Category input field in Add Image drawer |
+| `portfolio-add-tags-input` | The Tags input field in Add Image drawer |
+| `portfolio-add-notes-input` | The Notes textarea in Add Image drawer |
+| `portfolio-add-ssid-input` | The Shutterstock Asset ID input in Add Image drawer |
+| `portfolio-add-asid-input` | The Adobe Stock Asset ID input in Add Image drawer |
+| `portfolio-add-vzid-input` | The Vecteezy Asset ID input in Add Image drawer |
+| `portfolio-detail-title` | The full title text container inside portfolio detail panel |
+| `portfolio-detail-category` | The category text container inside portfolio detail panel |
+| `portfolio-detail-tags` | The tags text container inside portfolio detail panel |
+| `portfolio-detail-notes` | The notes text container inside portfolio detail panel |
+| `single-calendar-month-btn` | Header button to toggle month grid view mode |
+| `single-calendar-year-btn` | Header button to toggle year grid view mode |
+| `single-calendar-month-{idx}` | Specific month select button in month grid |
+| `single-calendar-year-{year}` | Specific year select button in year grid |
+| `single-calendar-day-{dateStr}` | Specific day select button in day grid |
 
 
