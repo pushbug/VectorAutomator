@@ -56,3 +56,23 @@ In Tailwind v4, we define these using the `@theme` directive in `globals.css` wi
 Whenever adding a new UI element, always use semantic classes:
 - Bad: `className="bg-white dark:bg-slate-900"`
 - Good: `className="bg-surface"`
+
+## Tailwind v4 Canonical Utility Classes
+
+Always write modern canonical Tailwind v4 utilities. Never use legacy/deprecated aliases:
+
+| Legacy / Deprecated / Redundant Arbitrary Class (Do NOT use) | Canonical Tailwind v4 Class (MUST use) |
+|---|---|
+| `flex-shrink-0` | `shrink-0` |
+| `flex-shrink` | `shrink` |
+| `flex-grow` | `grow` |
+| `flex-grow-0` | `grow-0` |
+| `overflow-clip` | `overflow-hidden` / `truncate` |
+| `text-opacity-*`, `bg-opacity-*` | `text-*/80`, `bg-*/50` (slash opacity syntax) |
+| `min-w-[200px]`, `w-[200px]`, `max-w-[200px]` | `min-w-50`, `w-50`, `max-w-50` (50 * 4px = 200px) |
+| `min-w-[100px]`, `w-[100px]`, `max-w-[100px]` | `min-w-25`, `w-25`, `max-w-25` (25 * 4px = 100px) |
+| `h-[16px]`, `w-[16px]`, `p-[16px]` | `h-4`, `w-4`, `p-4` (4 * 4px = 16px) |
+| `h-[24px]`, `w-[24px]`, `p-[24px]` | `h-6`, `w-6`, `p-6` (6 * 4px = 24px) |
+| `h-[32px]`, `w-[32px]`, `p-[32px]` | `h-8`, `w-8`, `p-8` (8 * 4px = 32px) |
+
+

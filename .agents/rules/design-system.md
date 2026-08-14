@@ -20,4 +20,13 @@ When writing, creating, or refactoring React components or HTML in this project,
 
 3. If you are unsure of the available tokens, you MUST read the `docs/systemdesign.md` file before generating UI code.
 
-Failure to follow these rules will break the Dark/Light mode toggle functionality.
+## Tailwind CSS v4 Canonical Classes
+
+ALWAYS use Tailwind CSS v4 canonical utilities and avoid legacy aliases:
+- Use `shrink-0` (NEVER `flex-shrink-0`)
+- Use `grow` (NEVER `flex-grow`)
+- Use `shrink` (NEVER `flex-shrink`)
+- Use slash opacity syntax (e.g. `bg-primary/10`, `text-muted/80`)
+- Use canonical scale values (e.g. `min-w-50`, `w-25`, `h-4`) and NEVER use redundant arbitrary pixel brackets (e.g. `min-w-[200px]`, `w-[100px]`, `h-[16px]`) when a scale number exists.
+
+Failure to follow these rules will break the Dark/Light mode toggle functionality or trigger LSP diagnostic warnings.

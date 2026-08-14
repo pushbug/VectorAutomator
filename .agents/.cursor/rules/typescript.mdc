@@ -10,4 +10,4 @@ alwaysApply: false
 - Match existing imports, naming, hooks, and component patterns 1:1.
 - Minimum code for spec; no speculative abstractions or single-use helpers.
 - Comments: only for non-obvious intent, trade-offs, or safety guards. Never narrate what the code does. No emoji in comments. English only.
-- Run `npx tsc --noEmit` after edits. Local Vitest only during `.dev` — no full E2E here.
+- **Tailwind CSS v4 Canonical Classes:** Always use modern canonical classes (e.g. `shrink-0` instead of `flex-shrink-0`, `grow` instead of `flex-grow`, `shrink` instead of `flex-shrink`). Never use legacy/deprecated aliases or redundant arbitrary pixel brackets (e.g. use `min-w-50` instead of `min-w-[200px]`, `w-25` instead of `w-[100px]`, `h-4` instead of `h-[16px]`) that trigger LSP warnings.

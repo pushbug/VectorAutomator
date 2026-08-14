@@ -184,6 +184,7 @@ export function MetadataEditor({
               ))}
               <input
                 id="keyword-input"
+                data-testid="metadata-keywords-input"
                 type="text"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}

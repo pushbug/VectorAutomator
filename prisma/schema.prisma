@@ -13,14 +13,24 @@ datasource db {
 }
 
 model Image {
-  id        String   @id @default(cuid())
-  title     String
-  keywords  String
-  status    String   @default("pending") // pending, uploaded, published
-  filePath  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  stats     PlatformStats[]
+  id             String   @id @default(cuid())
+  code           String?  @unique
+  year           Int?
+  month          Int?
+  seqNumber      Int?
+  title          String
+  keywords       String
+  status         String   @default("pending") // pending, uploaded, published
+  filePath       String
+  ssId           String?
+  asId           String?
+  vzId           String?
+  ssDownloads    Int      @default(0)
+  asDownloads    Int      @default(0)
+  totalDownloads Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  stats          PlatformStats[]
 }
 
 model PlatformStats {

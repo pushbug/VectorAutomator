@@ -1,0 +1,70 @@
+'use client';
+import React, { useState, useEffect } from 'react';
+
+import { DateRangePicker } from './DateRangePicker';
+
+interface PortfolioFilterProps {
+  onFilterChange: (filters: { search: string; sortBy: string; sortOrder: string; startDate: string; endDate: string }) => void;
+}
+
+export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Debounce search and filter inputs
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onFilterChange({ search, sortBy, sortOrder, startDate, endDate });
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search, sortBy, sortOrder, startDate, endDate, onFilterChange]);
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 mb-6 bg-surface p-4 rounded-lg border border-border flex-wrap items-end">
+      <DateRangePicker
+        startDate={startDate}
+        endDate={endDate}
+        onChange={({ startDate: s, endDate: e }) => {
+          setStartDate(s);
+          setEndDate(e);
+        }}
+      />
+
+      <div className="flex-1 min-w-50">
+        <label htmlFor="portfolio-search" className="block text-sm font-medium text-foreground mb-1">Search</label>
+        <input
+          id="portfolio-search"
+          data-testid="portfolio-search-input"
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by title or keywords..."
+          className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary h-10.5"
+        />
+      </div>
+
+      <div className="w-full md:w-48">
+        <label htmlFor="portfolio-sort" className="block text-sm font-medium text-foreground mb-1">Sort By</label>
+        <select
+          id="portfolio-sort"
+          data-testid="portfolio-sort-select"
+          value={`${sortBy}-${sortOrder}`}
+          onChange={(e) => {
+            const [newSortBy, newSortOrder] = e.target.value.split('-');
+            setSortBy(newSortBy);
+            setSortOrder(newSortOrder);
+          }}
+          className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="createdAt-desc">Newest First</option>
+          <option value="createdAt-asc">Oldest First</option>
+          <option value="totalDownloads-desc">Downloads (Highest)</option>
+          <option value="totalDownloads-asc">Downloads (Lowest)</option>
+        </select>
+      </div>
+    </div>
+  );
+}

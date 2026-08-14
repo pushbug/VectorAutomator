@@ -9,6 +9,7 @@ import {
   UploadCloud, 
   Lightbulb, 
   Image as ImageIcon,
+  DollarSign,
   Menu,
   Moon,
   Sun
@@ -30,6 +31,7 @@ export default function Sidebar() {
     { name: "Daily Briefing", href: "/briefing", icon: Lightbulb },
     { name: "Upload & Process", href: "/upload", icon: UploadCloud },
     { name: "Portfolio", href: "/portfolio", icon: ImageIcon },
+    { name: "Sales & Earnings", href: "/sales", icon: DollarSign },
   ];
 
   return (

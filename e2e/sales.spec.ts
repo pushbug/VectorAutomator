@@ -1,0 +1,38 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Sales & Earnings Management', () => {
+  test('renders sales page, summary cards, table, and opens entry drawer', async ({ page }) => {
+    // Navigate to sales page
+    await page.goto('/sales');
+
+    // Verify header and KPI summary cards
+    await expect(page.getByRole('heading', { name: /Sales & Earnings Manager/i })).toBeVisible();
+    await expect(page.getByTestId('sales-kpi-total-earnings')).toBeVisible();
+    await expect(page.getByTestId('sales-kpi-total-downloads')).toBeVisible();
+
+    // Verify sales table exists
+    await expect(page.getByTestId('sales-table')).toBeVisible();
+
+    // Test platform filter buttons
+    await page.getByRole('button', { name: 'Adobe Stock' }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'All Platforms' }).click();
+    await page.waitForTimeout(300);
+
+    // Open Record Sale drawer
+    const addSaleBtn = page.getByTestId('sales-add-sale-btn');
+    await expect(addSaleBtn).toBeVisible();
+    await addSaleBtn.click();
+
+    // Verify drawer elements
+    const drawer = page.getByTestId('sales-form-drawer');
+    await expect(drawer).toBeVisible();
+    await expect(page.getByTestId('sales-form-platform-select')).toBeVisible();
+    await expect(page.getByTestId('sales-form-downloads-input')).toBeVisible();
+    await expect(page.getByTestId('sales-form-earnings-input')).toBeVisible();
+
+    // Close drawer
+    await page.getByTestId('sales-form-close-btn').click();
+    await expect(drawer).not.toBeVisible();
+  });
+});

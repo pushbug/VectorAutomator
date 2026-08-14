@@ -60,6 +60,7 @@ description: Trigger when the user runs the .scrutinize command. Acts as an E2E 
 ### 6b. VISUAL & UX
 
 - `tsc` doesn't catch visual regressions. Check: design tokens (`docs/design.md`), CLS=0, no overflow, `font-mono`+`tabular-nums` on metrics.
+- **Tailwind v4 Canonical Audit:** Verify no deprecated aliases or redundant scale brackets were introduced (audit `rg "flex-shrink-"`, `rg "flex-grow"`, `rg "min-w-\[\d+px\]"`, `rg "w-\[\d+px\]"`; require `shrink-0`, `grow`, `min-w-50`, etc.).
 - Visual change → recommend screenshot check.
 
 ### 7. REPORT

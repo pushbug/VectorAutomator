@@ -86,6 +86,7 @@ Read skills at `.agents/skills/{name}/SKILL.md`, then docs per skill. Never read
 - **Responsive Design:** All UI components MUST be fully responsive by default. Always apply a Mobile-first approach using Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`).
 - **Zustand Stores:** Always use `useShallow` (from `zustand/react/shallow`) when selecting from any store. Never use dynamic `import()` inside `useEffect` for server actions — use static imports only.
 - **Event Listeners:** Never bind `window.addEventListener` inside Zustand stores or generic utility files. Always bind global event listeners inside a React `useEffect` with a proper `removeEventListener` cleanup function to prevent Next.js HMR memory leaks.
+- **Tailwind CSS v4 Canonical Classes:** Always use modern canonical classes (e.g. `shrink-0` instead of `flex-shrink-0`, `grow` instead of `flex-grow`, `shrink` instead of `flex-shrink`). Never use deprecated/legacy utility aliases or redundant arbitrary pixel brackets (e.g. use `min-w-50` instead of `min-w-[200px]`, `w-25` instead of `w-[100px]`, `h-4` instead of `h-[16px]`) that trigger `suggestCanonicalClasses` LSP diagnostics.
 
 ---
 

@@ -56,7 +56,8 @@ test.describe('Upload Workflow', () => {
     await titleInput.fill('User Edited Title');
     
     const keywordsInput = page.getByTestId('metadata-keywords-input');
-    await keywordsInput.fill('user, edited, keywords');
+    await keywordsInput.fill('user');
+    await keywordsInput.press('Enter');
 
     // Save metadata
     const saveBtn = page.getByTestId('save-metadata-btn');
