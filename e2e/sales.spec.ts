@@ -35,4 +35,37 @@ test.describe('Sales & Earnings Management', () => {
     await page.getByTestId('sales-form-close-btn').click();
     await expect(drawer).not.toBeVisible();
   });
+
+  test('E2E-SALES-02: opens smart paste modal, parses pasted text, and allows preview/close', async ({ page }) => {
+    await page.goto('/sales');
+
+    // Open Smart Paste modal
+    const pasteBtn = page.getByTestId('sales-smart-paste-btn');
+    await expect(pasteBtn).toBeVisible();
+    await pasteBtn.click();
+
+    // Verify modal elements
+    const modal = page.getByTestId('smart-paste-modal');
+    await expect(modal).toBeVisible();
+    await expect(page.getByTestId('smart-paste-textarea')).toBeVisible();
+
+    // Paste sample Adobe Stock row
+    await page.getByTestId('smart-paste-textarea').fill(`
+[1929092005](https://stock.adobe.com/stock-photo/id/1929092005)
+Vectors
+2/27/2026
+$207.04
+    `);
+
+    // Click Parse
+    await page.getByTestId('smart-paste-parse-btn').click();
+
+    // Verify preview stage shows parsed asset ID and earnings
+    await expect(modal.getByText('#1929092005')).toBeVisible();
+    await expect(modal.getByText('$207.04')).toBeVisible();
+
+    // Close modal
+    await page.getByTestId('smart-paste-close-btn').click();
+    await expect(modal).not.toBeVisible();
+  });
 });

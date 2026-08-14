@@ -17,3 +17,10 @@
 - **Context:** Image creation and editing share identical metadata schemas and layout fields, but editing requires preserving existing image code, optional file replacement, and avoiding code collisions with self.
 - **Decision:** Reuse `AddImageDrawer` in dual-mode (`editImage` prop) with guarded auto-code generation (`!editImage`), optional file validation, self-code collision exclusion (`where: { code, NOT: { id } }`), and direct `selectedImage` state synchronization.
 - **Impact:** Zero component duplication, streamlined UX, and safe edit operations without regression risk.
+
+## ADR-004: Zero-Risk Smart Paste Stock Importer & Multi-Tier Auto-Matcher
+- **Date:** 2026-08-14
+- **Context:** Contributors frequently copy tabular sales statements directly from Adobe Stock and Shutterstock dashboards containing diverse clipboard formats (TSV rows, newline stream blocks, markdown links `[ID](url)`, dollar signs, and commas) that need to be resolved against local artwork records without risky external web scraping.
+- **Decision:** Implement a client-side clipboard parser pipeline (`stockPasteParser.ts`) paired with `/api/sales/paste-sync` multi-tier matching engine (Tier 1: Exact Asset ID -> Tier 2: Exact Creation Date -> Tier 3: ±7 Day Proximity Window -> Fallback: Interactive Thumbnail Selector). Sync operations execute atomic Prisma transactions to link platform IDs and upsert `PlatformStats` records with automatic rollup recomputations.
+- **Impact:** 100% safe local parsing, zero account risk from web scrapers, automatic asset ID binding, and instantaneous batch sync for stock revenue.
+

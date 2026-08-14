@@ -12,6 +12,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `download-eps-btn` | The button to download processed EPS |
 | `download-jpg-btn` | The button to download processed JPG |
 | `portfolio-search-input` | The search input field in the portfolio dashboard |
+| `portfolio-search-clear-btn` | The clear button to reset the search input in portfolio dashboard |
 | `portfolio-sort-select` | The dropdown to select sort order in the portfolio dashboard |
 | `portfolio-grid-item` | An individual image card in the portfolio grid |
 | `portfolio-detail-panel` | The side panel showing selected image details |
@@ -58,6 +59,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `portfolio-add-asid-input` | The Adobe Stock Asset ID input in Add Image drawer |
 | `portfolio-add-vzid-input` | The Vecteezy Asset ID input in Add Image drawer |
 | `portfolio-detail-title` | The full title text container inside portfolio detail panel |
+| `portfolio-detail-keywords` | The keywords text container inside portfolio detail panel |
 | `portfolio-detail-category` | The category text container inside portfolio detail panel |
 | `portfolio-detail-tags` | The tags text container inside portfolio detail panel |
 | `portfolio-detail-notes` | The notes text container inside portfolio detail panel |
@@ -66,5 +68,14 @@ Always use `data-testid` for element selection in E2E tests.
 | `single-calendar-month-{idx}` | Specific month select button in month grid |
 | `single-calendar-year-{year}` | Specific year select button in year grid |
 | `single-calendar-day-{dateStr}` | Specific day select button in day grid |
-
-
+| `range-calendar-month-btn` | Left month header button to toggle month grid view in DateRangePicker |
+| `range-calendar-year-btn` | Left year header button to toggle year grid view in DateRangePicker |
+| `range-calendar-month-{idx}` | Specific month select button in DateRangePicker month grid |
+| `range-calendar-year-{year}` | Specific year select button in DateRangePicker year grid |
+| `portfolio-page-input` | Numeric jump-to-page input field in Portfolio grid pagination |
+| `sales-smart-paste-btn` | Header button to open Smart Paste stock data modal |
+| `smart-paste-modal` | Modal dialog for pasting and previewing stock statement |
+| `smart-paste-close-btn` | Close button inside Smart Paste modal |
+| `smart-paste-textarea` | Textarea for pasting contributor clipboard table |
+| `smart-paste-parse-btn` | Button to parse and match pasted data |
+| `smart-paste-submit-btn` | Button to confirm and sync matched items to database |

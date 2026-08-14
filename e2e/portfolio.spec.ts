@@ -9,9 +9,18 @@ test.describe('Portfolio Dashboard', () => {
     await expect(page.getByTestId('portfolio-layout')).toBeVisible();
 
     // Verify filter components are visible
-    await expect(page.getByTestId('portfolio-search-input')).toBeVisible();
+    const searchInput = page.getByTestId('portfolio-search-input');
+    await expect(searchInput).toBeVisible();
     await expect(page.getByTestId('portfolio-sort-select')).toBeVisible();
     await expect(page.getByTestId('portfolio-date-picker-trigger')).toBeVisible();
+
+    // Test typing in search and clicking Clear button
+    await searchInput.fill('Infographic');
+    const searchClearBtn = page.getByTestId('portfolio-search-clear-btn');
+    await expect(searchClearBtn).toBeVisible();
+    await searchClearBtn.click();
+    await expect(searchInput).toHaveValue('');
+    await expect(searchClearBtn).not.toBeVisible();
 
     // Test opening and closing the Add Image slide-over drawer
     await expect(page.getByTestId('portfolio-add-btn')).toBeVisible();
@@ -56,6 +65,8 @@ test.describe('Portfolio Dashboard', () => {
 
   test('handles Image Code in drawer and shows Delete confirmation modal in detail panel', async ({ page }) => {
     await page.goto('/portfolio');
+    await expect(page.getByTestId('portfolio-layout')).toBeVisible();
+    await expect(page.getByText('Loading...')).not.toBeVisible();
 
     // Open Add Image drawer
     await page.getByTestId('portfolio-add-btn').click();
@@ -72,6 +83,7 @@ test.describe('Portfolio Dashboard', () => {
     // Close drawer
     await page.getByTestId('portfolio-add-close-btn').click();
     await expect(page.getByTestId('portfolio-add-drawer')).not.toBeVisible();
+    await page.waitForTimeout(300);
 
     // If grid items exist, test delete confirmation modal
     const gridItems = page.getByTestId('portfolio-grid-item');
@@ -89,10 +101,11 @@ test.describe('Portfolio Dashboard', () => {
       const confirmDialog = page.getByTestId('delete-confirm-dialog');
       await expect(confirmDialog).toBeVisible();
       await expect(page.getByTestId('delete-confirm-btn')).toBeVisible();
-      await expect(page.getByTestId('delete-cancel-btn')).toBeVisible();
+      const cancelBtn = page.getByTestId('delete-cancel-btn');
+      await expect(cancelBtn).toBeVisible();
 
       // Cancel deletion
-      await page.getByTestId('delete-cancel-btn').click();
+      await cancelBtn.click();
       await expect(confirmDialog).not.toBeVisible();
     }
   });

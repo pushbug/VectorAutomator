@@ -201,7 +201,7 @@ export function PortfolioDetail({
 
           <div>
             <h3 className="font-semibold text-muted mb-1">Keywords</h3>
-            <p className="whitespace-pre-wrap leading-relaxed text-muted wrap-break-word">{image.keywords}</p>
+            <p data-testid="portfolio-detail-keywords" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">{image.keywords}</p>
           </div>
 
           {image.category && (
@@ -214,7 +214,7 @@ export function PortfolioDetail({
           {image.tags && (
             <div>
               <h3 className="font-semibold text-muted mb-1">Tags</h3>
-              <p data-testid="portfolio-detail-tags" className="whitespace-pre-wrap leading-relaxed text-muted wrap-break-word">{image.tags}</p>
+              <p data-testid="portfolio-detail-tags" className="whitespace-pre-wrap leading-relaxed text-foreground font-medium wrap-break-word">{image.tags}</p>
             </div>
           )}
 

@@ -42,6 +42,25 @@ export function PortfolioGrid({
   onPageChange
 }: PortfolioGridProps) {
   
+  const [inputPage, setInputPage] = React.useState(page.toString());
+
+  React.useEffect(() => {
+    setInputPage(page.toString());
+  }, [page]);
+
+  const handlePageCommit = (valStr: string) => {
+    const parsed = parseInt(valStr, 10);
+    if (!isNaN(parsed)) {
+      const clamped = Math.max(1, Math.min(totalPages, parsed));
+      setInputPage(clamped.toString());
+      if (clamped !== page) {
+        onPageChange(clamped);
+      }
+    } else {
+      setInputPage(page.toString());
+    }
+  };
+
   if (isLoading) {
     return <div className="flex-1 flex justify-center items-center h-full">Loading...</div>;
   }
@@ -53,7 +72,7 @@ export function PortfolioGrid({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto pr-1 pb-4">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,200px)] gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
           {images.map((img) => (
             <div 
               key={img.id}
@@ -102,19 +121,39 @@ export function PortfolioGrid({
       
       {totalPages > 1 && (
         <div className="pt-3 pb-1 flex justify-center items-center gap-3">
-          <div className="inline-flex items-center gap-3 bg-surface/90 backdrop-blur-xs border border-border px-4 py-2 rounded-xl shadow-xs">
+          <div className="inline-flex items-center gap-2.5 bg-surface/90 backdrop-blur-xs border border-border px-3.5 py-1.5 rounded-xl shadow-xs">
             <button 
+              type="button"
               onClick={() => onPageChange(page - 1)} 
               disabled={page <= 1}
-              className="px-3 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-muted/10 transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-40 hover:bg-muted/10 transition-colors cursor-pointer"
             >
               Prev
             </button>
-            <span className="text-xs text-foreground font-mono font-medium">Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-1.5 text-xs text-foreground font-mono font-medium">
+              <span className="text-muted">Page</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                data-testid="portfolio-page-input"
+                value={inputPage}
+                onChange={(e) => setInputPage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+                onBlur={() => handlePageCommit(inputPage)}
+                className="w-12 h-6 px-1 text-center font-mono font-bold text-xs bg-background border border-border rounded-md text-foreground focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-muted">of {totalPages}</span>
+            </div>
             <button 
+              type="button"
               onClick={() => onPageChange(page + 1)} 
               disabled={page >= totalPages}
-              className="px-3 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-muted/10 transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-40 hover:bg-muted/10 transition-colors cursor-pointer"
             >
               Next
             </button>

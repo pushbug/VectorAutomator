@@ -13,9 +13,20 @@
 | `UT-API-ID-01` | Verify upload and patch APIs accept and persist platform asset IDs (ssId, asId, vzId) | `src/__tests__/api/upload.test.ts` |
 | `UT-API-CAT-01` | Verify upload and patch APIs accept and persist category metadata | `src/__tests__/api/upload.test.ts` |
 | `UT-UI-DATE-01` | Verify SingleDatePicker year/month grid navigation and quick jump to past years | `src/__tests__/components/SingleDatePicker.test.tsx` |
+| `UT-UI-DATE-RANGE-01` | Verify DateRangePicker year/month grid navigation and quick jump to past years | `src/__tests__/components/DateRangePicker.test.tsx` |
 | `UT-UI-DEL-01` | Verify DeleteConfirmDialog open state, escape keydown, confirm, and cancel handling | `src/__tests__/components/DeleteConfirmDialog.test.tsx` |
 | `UT-UI-SALES-01` | Verify SalesSummaryCards KPI metrics and SalesTable filtering/empty states | `src/__tests__/components/SalesComponents.test.tsx` |
 | `UT-API-PF-EDIT-01` | Verify portfolio PATCH API updates all metadata, preserves own code, and rejects cross-image duplicate codes with 409 | `src/__tests__/api/portfolio.test.ts` |
+| `UT-KEEP-INGEST-01` | Verify Keep note text parsing, metadata extraction, and fallback keywords | `src/__tests__/import_keep.test.ts` |
+| `UT-KEEP-DEDUP-02` | Verify chronological YYMM-XX code generation and duplicate-free sequencing | `src/__tests__/import_keep.test.ts` |
+| `UT-KEEP-FILTER-03` | Verify strict Vector label whitelist and Knowledge/Pinterest/empty exclusions | `src/__tests__/import_keep.test.ts` |
+| `UT-UI-PAGE-01` | Verify PortfolioGrid interactive page jump input, Enter commit, and boundary clamping | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-API-PF-SEARCH-01` | Verify Portfolio API universal search across title, keywords, tags, code, and platform asset IDs | `src/__tests__/api/portfolio.test.ts` |
+| `UT-SALES-PASTE-01` | Verify multi-line clipboard text parsing with markdown links from Adobe Stock | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-02` | Verify single-line TSV table rows parsing with downloads and currency | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-03` | Verify /api/sales/paste-sync preview and atomic transaction bulk upsert with ID linking | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-04` | Verify multi-line stream text parsing with download counts and plain decimal earnings | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-05` | Verify /api/sales/paste-sync proximity matching within ±7 days and candidate disambiguation | `src/__tests__/api/sales_paste.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -24,4 +35,5 @@
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |
+| `E2E-SALES-02` | Verify opening Smart Paste modal, parsing pasted stock data, preview, and submission | `e2e/sales.spec.ts` |
 

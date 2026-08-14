@@ -34,14 +34,26 @@ export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
       />
 
       <div className="flex-1 min-w-50">
-        <label htmlFor="portfolio-search" className="block text-sm font-medium text-foreground mb-1">Search</label>
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="portfolio-search" className="block text-sm font-medium text-foreground">Search</label>
+          {search && (
+            <button
+              type="button"
+              data-testid="portfolio-search-clear-btn"
+              onClick={() => setSearch('')}
+              className="text-xs text-muted hover:text-foreground font-medium transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <input
           id="portfolio-search"
           data-testid="portfolio-search-input"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by title or keywords..."
+          placeholder="Search by title, keywords, tags, code, or asset ID..."
           className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary h-10.5"
         />
       </div>

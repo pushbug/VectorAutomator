@@ -62,6 +62,33 @@ describe('Portfolio API Route', () => {
         })
       );
     });
+
+    it('UT-API-PF-SEARCH-01: searches across title, keywords, tags, code, and platform asset IDs', async () => {
+      mockFindMany.mockResolvedValue([{ id: '1', title: 'Infographic Timeline', asId: '569029521' }]);
+      mockCount.mockResolvedValue(1);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio?search=569029521');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.meta.total).toBe(1);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { asId: { contains: '569029521' } },
+              { ssId: { contains: '569029521' } },
+              { vzId: { contains: '569029521' } },
+              { title: { contains: '569029521' } },
+              { keywords: { contains: '569029521' } },
+              { tags: { contains: '569029521' } },
+              { code: { contains: '569029521' } },
+            ]),
+          }),
+        })
+      );
+    });
   });
 
   describe('PATCH', () => {

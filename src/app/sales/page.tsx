@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, DollarSign } from 'lucide-react';
+import { Plus, DollarSign, Sparkles } from 'lucide-react';
 import { SalesSummaryCards } from '@/components/sales/SalesSummaryCards';
 import { SalesTable, SaleItem } from '@/components/sales/SalesTable';
 import { SaleEntryDrawer } from '@/components/sales/SaleEntryDrawer';
+import { SmartPasteModal } from '@/components/sales/SmartPasteModal';
 import { DeleteConfirmDialog } from '@/components/portfolio/DeleteConfirmDialog';
 
 export default function SalesPage() {
@@ -19,6 +20,7 @@ export default function SalesPage() {
   const [platformFilter, setPlatformFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
 
   // Deletion state
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -89,15 +91,27 @@ export default function SalesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          data-testid="sales-add-sale-btn"
-          onClick={() => setIsDrawerOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-sm transition-all cursor-pointer"
-        >
-          <Plus size={16} />
-          <span>Record Sale</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            data-testid="sales-smart-paste-btn"
+            onClick={() => setIsPasteModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-surface hover:bg-muted/10 text-foreground border border-border text-sm font-medium rounded-lg shadow-2xs transition-all cursor-pointer"
+          >
+            <Sparkles size={16} className="text-primary" />
+            <span>Paste Stock Data</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="sales-add-sale-btn"
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-sm transition-all cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Record Sale</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -123,6 +137,13 @@ export default function SalesPage() {
       <SaleEntryDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+        onSuccess={fetchSales}
+      />
+
+      {/* Smart Paste Stock Statement Modal */}
+      <SmartPasteModal
+        isOpen={isPasteModalOpen}
+        onClose={() => setIsPasteModalOpen(false)}
         onSuccess={fetchSales}
       />
 

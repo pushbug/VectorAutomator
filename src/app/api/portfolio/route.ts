@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
             { code: { contains: search } },
             { tags: { contains: search } },
             { notes: { contains: search } },
+            { asId: { contains: search } },
+            { ssId: { contains: search } },
+            { vzId: { contains: search } },
+            { id: { contains: search } },
           ],
         }
       : {};
