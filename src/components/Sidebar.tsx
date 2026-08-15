@@ -7,7 +7,6 @@ import { useTheme } from "next-themes";
 import { 
   LayoutDashboard, 
   UploadCloud, 
-  Lightbulb, 
   Image as ImageIcon,
   DollarSign,
   Menu,
@@ -28,7 +27,6 @@ export default function Sidebar() {
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Daily Briefing", href: "/briefing", icon: Lightbulb },
     { name: "Upload & Process", href: "/upload", icon: UploadCloud },
     { name: "Portfolio", href: "/portfolio", icon: ImageIcon },
     { name: "Sales & Earnings", href: "/sales", icon: DollarSign },

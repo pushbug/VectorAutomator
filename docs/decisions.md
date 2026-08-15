@@ -24,3 +24,10 @@
 - **Decision:** Implement a client-side clipboard parser pipeline (`stockPasteParser.ts`) paired with `/api/sales/paste-sync` multi-tier matching engine (Tier 1: Exact Asset ID -> Tier 2: Exact Creation Date -> Tier 3: ±7 Day Proximity Window -> Fallback: Interactive Thumbnail Selector). Sync operations execute atomic Prisma transactions to link platform IDs and upsert `PlatformStats` records with automatic rollup recomputations.
 - **Impact:** 100% safe local parsing, zero account risk from web scrapers, automatic asset ID binding, and instantaneous batch sync for stock revenue.
 
+## ADR-005: Shelving Daily Briefing & Scraping Modules Pending Portfolio Maturity
+- **Date:** 2026-08-15
+- **Context:** The Daily Briefing module and Adobe Stock scraper were reliant on unstable web scraping and premature AI suggestions before the contributor's full local portfolio dataset and historical sales trends were established.
+- **Decision:** Remove the Daily Briefing UI (`/briefing`), AI briefing endpoint (`/api/ai/briefing`), and scraping endpoint (`/api/scraper`). Focus development on Portfolio, Metadata processing, and Sales ingestion first. Trend guidance can be reintroduced as an analytics feature once comprehensive historical sales data is populated.
+- **Impact:** Streamlined sidebar navigation, zero external scraping failure vectors, and clean codebase hygiene.
+
+

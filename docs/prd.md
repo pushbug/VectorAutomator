@@ -23,13 +23,13 @@ Microstock Auto-Pilot คือระบบ Web Application ที่รัน�
 
 ระบบจะถูกแบ่งการทำงานออกเป็น 4 โมดูลหลัก (สอดคล้องกับหน้า Tab บน GUI):
 
-### Module 1: AI Daily Briefing (ระบบวิเคราะห์เทรนด์รายวัน)
+### Module 1: AI Daily Briefing (ระบบวิเคราะห์เทรนด์รายวัน - [Shelved / รอข้อมูล Portfolio ครบถ้วน])
 
+- **Status:** Shelved (นำออกจาก Navigation และ API ชั่วคราว เพื่อโฟกัสที่การนำเข้าข้อมูล Portfolio & Sales ให้สมบูรณ์ก่อน)
 - **Goal:** ให้ AI แนะนำแนวทางและคีย์เวิร์ดสำหรับงานชิ้นใหม่ (3-5 งาน/วัน)
 - **Features:**
   - มี Input ให้ใส่ Keyword เป้าหมาย (เช่น `business infographic 4 steps`)
-  - ระบบ Web Scraper ดึงข้อมูล Title และ Top 10 Keywords จากภาพที่ติดอันดับ 1-10 ของเว็บ Microstock
-  - ส่งข้อมูลให้ Gemini API วิเคราะห์ และสรุปเป็น "การ์ดโจทย์งาน" ระบุ Concept, โทนสี, สไตล์, และ Target Keywords ที่ควรมี
+  - วิเคราะห์ข้อมูลและสรุปเป็น "การ์ดโจทย์งาน" ระบุ Concept, โทนสี, สไตล์, และ Target Keywords ที่ควรมี
 
 ### Module 2: AI Metadata & Process (ระบบจัดการไฟล์และฝังคีย์เวิร์ด)
 
