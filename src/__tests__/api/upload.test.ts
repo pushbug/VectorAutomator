@@ -280,6 +280,51 @@ describe('Upload API Route', () => {
       expect(data.error).toContain('already exists');
     });
 
+    it('auto-generates next code for the month when code is omitted', async () => {
+      mockFindFirst.mockResolvedValue({ seqNumber: 70 });
+      mockCreate.mockResolvedValue({
+        id: 'img-auto-1',
+        code: '2608-71',
+        year: 2026,
+        month: 8,
+        seqNumber: 71,
+        title: 'Auto Code Image',
+        keywords: 'auto, code',
+        filePath: '/path/to/auto.jpg',
+        createdAt: new Date('2026-08-16T00:00:00.000Z'),
+      });
+
+      const formData = new FormData();
+      const fakeFile = new File(['dummy auto content'], 'auto.jpg', { type: 'image/jpeg' });
+      formData.append('file', fakeFile);
+      formData.append('title', 'Auto Code Image');
+      formData.append('keywords', 'auto, code');
+      formData.append('uploadDate', '2026-08-16');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(201);
+      expect(mockFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { year: 2026, month: 8 },
+        })
+      );
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            code: '2608-71',
+            year: 2026,
+            month: 8,
+            seqNumber: 71,
+          }),
+        })
+      );
+    });
+
     it('returns 400 when required fields are missing', async () => {
       const formData = new FormData();
       formData.append('title', 'Incomplete');

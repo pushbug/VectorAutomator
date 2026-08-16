@@ -58,7 +58,12 @@ describe('Portfolio API Route', () => {
         expect.objectContaining({
           skip: 0,
           take: 10,
-          orderBy: { createdAt: 'desc' }
+          orderBy: [
+            { year: 'desc' },
+            { month: 'desc' },
+            { seqNumber: 'desc' },
+            { createdAt: 'desc' },
+          ]
         })
       );
     });

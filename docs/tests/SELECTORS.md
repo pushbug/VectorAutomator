@@ -79,3 +79,6 @@ Always use `data-testid` for element selection in E2E tests.
 | `smart-paste-textarea` | Textarea for pasting contributor clipboard table |
 | `smart-paste-parse-btn` | Button to parse and match pasted data |
 | `smart-paste-submit-btn` | Button to confirm and sync matched items to database |
+| `asset-select-checkbox-{id}` | Checkbox button in AssetQueue card to toggle selection for portfolio import |
+| `asset-select-all-btn` | Button in AssetQueue header to toggle select all / deselect all |
+| `batch-import-portfolio-btn` | Header button in Process & Upload page to batch import selected assets to portfolio |

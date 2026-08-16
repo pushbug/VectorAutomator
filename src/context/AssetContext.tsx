@@ -13,6 +13,7 @@ export interface Asset {
   errorMsg?: string;
   downloadPaths?: string[];
   previewUrl?: string;
+  selectedForImport?: boolean;
 }
 
 interface AssetContextType {

@@ -81,4 +81,92 @@ describe('useAssetProcessor', () => {
     expect(result.current.assetList[0].status).toBe('modified');
     expect(result.current.assetList[0].title).toBe('new title');
   });
+
+  it('UT-IMPORT-QUEUE-01: toggles selection and imports selected assets with queue clearing', async () => {
+    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+
+    const file1 = new File(['dummy-1'], 'item1.jpg', { type: 'image/jpeg' });
+    const file2 = new File(['dummy-2'], 'item2.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      result.current.processDroppedFiles([file1, file2]);
+    });
+
+    expect(result.current.assetList.length).toBe(2);
+
+    // Toggle item1 selection
+    act(() => {
+      result.current.toggleSelectForImport('item1');
+    });
+    expect(result.current.assets['item1'].selectedForImport).toBe(true);
+    expect(result.current.assets['item2'].selectedForImport).toBeFalsy();
+
+    // Select all
+    act(() => {
+      result.current.selectAllForImport(true);
+    });
+    expect(result.current.assets['item1'].selectedForImport).toBe(true);
+    expect(result.current.assets['item2'].selectedForImport).toBe(true);
+
+    // Give both valid metadata
+    act(() => {
+      result.current.setActiveAssetId('item1');
+    });
+    act(() => {
+      result.current.updateActiveAsset({ title: 'Item 1 Title', keywords: 'vector, icon' });
+    });
+
+    act(() => {
+      result.current.setActiveAssetId('item2');
+    });
+    act(() => {
+      result.current.updateActiveAsset({ title: 'Item 2 Title', keywords: 'banner, design' });
+    });
+
+    // Mock successful upload response
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'img-123', code: '2608-1' }),
+      })
+    ));
+
+    let importRes: any;
+    await act(async () => {
+      importRes = await result.current.importSelectedToPortfolio();
+    });
+
+    expect(importRes.successCount).toBe(2);
+    expect(importRes.failedCount).toBe(0);
+    // Queue should be cleared
+    expect(result.current.assetList.length).toBe(0);
+    expect(result.current.activeAssetId).toBeNull();
+  });
+
+  it('UT-IMPORT-QUEUE-01: retains assets in queue with error status when metadata is missing or upload fails', async () => {
+    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+
+    const file1 = new File(['dummy-1'], 'missing_meta.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      result.current.processDroppedFiles([file1]);
+    });
+
+    act(() => {
+      result.current.toggleSelectForImport('missing_meta');
+    });
+
+    // Attempt import with empty title and keywords
+    let importRes: any;
+    await act(async () => {
+      importRes = await result.current.importSelectedToPortfolio();
+    });
+
+    expect(importRes.successCount).toBe(0);
+    expect(importRes.failedCount).toBe(1);
+    expect(result.current.assetList.length).toBe(1);
+    expect(result.current.assets['missing_meta'].status).toBe('error');
+    expect(result.current.assets['missing_meta'].errorMsg).toBe('Title and Keywords are required');
+  });
 });
+

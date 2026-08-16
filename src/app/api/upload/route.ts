@@ -26,9 +26,12 @@ export async function GET(request: NextRequest) {
     const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
     const month = targetDate.getMonth() + 1;
 
-    // Find highest seqNumber for this year
+    // Find highest seqNumber for this year and month
     const highestImage = await prisma.image.findFirst({
-      where: { year: fullYear },
+      where: {
+        year: fullYear,
+        month,
+      },
       orderBy: { seqNumber: 'desc' },
       select: { seqNumber: true },
     });
@@ -70,9 +73,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const fullYear = createdAt.getFullYear();
+    const monthNum = createdAt.getMonth() + 1;
+    const yy = String(fullYear).slice(-2);
+    const mm = String(monthNum).padStart(2, '0');
+
     let code: string | null = codeRaw || null;
-    let year: number | null = createdAt.getFullYear();
-    let month: number | null = createdAt.getMonth() + 1;
+    let year: number | null = fullYear;
+    let month: number | null = monthNum;
     let seqNumber: number | null = null;
 
     if (code) {
@@ -98,6 +106,22 @@ export async function POST(request: NextRequest) {
         month = parsedMonth;
         seqNumber = parsedSeq;
       }
+    } else {
+      // Auto-generate code based on highest sequence in that month and year
+      const highestImage = await prisma.image.findFirst({
+        where: {
+          year: fullYear,
+          month: monthNum,
+        },
+        orderBy: { seqNumber: 'desc' },
+        select: { seqNumber: true },
+      });
+
+      const nextSeq = (highestImage?.seqNumber ?? 0) + 1;
+      seqNumber = nextSeq;
+      code = `${yy}${mm}-${nextSeq}`;
+      year = fullYear;
+      month = monthNum;
     }
 
     const bytes = await file.arrayBuffer();

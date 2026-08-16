@@ -51,14 +51,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const orderByClause: any = sortBy === 'createdAt'
+      ? [
+          { year: sortOrder },
+          { month: sortOrder },
+          { seqNumber: sortOrder },
+          { createdAt: sortOrder },
+        ]
+      : {
+          [sortBy]: sortOrder,
+        };
+
     const [images, totalCount] = await Promise.all([
       prisma.image.findMany({
         where,
         skip,
         take: limit,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
+        orderBy: orderByClause,
         include: {
           stats: {
             orderBy: { date: 'desc' },

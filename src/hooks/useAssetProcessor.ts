@@ -215,6 +215,105 @@ export function useAssetProcessor() {
     }
   };
 
+  const toggleSelectForImport = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setAssets(prev => {
+      if (!prev[id]) return prev;
+      return {
+        ...prev,
+        [id]: { ...prev[id], selectedForImport: !prev[id].selectedForImport }
+      };
+    });
+  };
+
+  const selectAllForImport = (selected: boolean) => {
+    setAssets(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(id => {
+        updated[id] = { ...updated[id], selectedForImport: selected };
+      });
+      return updated;
+    });
+  };
+
+  const importSelectedToPortfolio = async (): Promise<{ successCount: number; failedCount: number; errors: string[] }> => {
+    const selectedAssets = assetList.filter(a => a.selectedForImport);
+    if (selectedAssets.length === 0) return { successCount: 0, failedCount: 0, errors: [] };
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+    const idsToRemove: string[] = [];
+
+    setAssets(prev => {
+      const updated = { ...prev };
+      selectedAssets.forEach(a => {
+        if (updated[a.id]) {
+          updated[a.id] = { ...updated[a.id], status: "uploading", errorMsg: undefined };
+        }
+      });
+      return updated;
+    });
+
+    for (const asset of selectedAssets) {
+      if (!asset.jpgFile) {
+        failedCount++;
+        errors.push(`${asset.baseName}: JPG file missing`);
+        setAssets(prev => prev[asset.id] ? { ...prev, [asset.id]: { ...prev[asset.id], status: "error", errorMsg: "JPG file missing" } } : prev);
+        continue;
+      }
+
+      if (!asset.title?.trim() || !asset.keywords?.trim()) {
+        failedCount++;
+        errors.push(`${asset.baseName}: Title and Keywords are required`);
+        setAssets(prev => prev[asset.id] ? { ...prev, [asset.id]: { ...prev[asset.id], status: "error", errorMsg: "Title and Keywords are required" } } : prev);
+        continue;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append("file", asset.jpgFile);
+        formData.append("title", asset.title.trim());
+        formData.append("keywords", asset.keywords.trim());
+        formData.append("uploadDate", new Date().toISOString().split("T")[0]);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to import image");
+        }
+
+        successCount++;
+        idsToRemove.push(asset.id);
+      } catch (err: any) {
+        failedCount++;
+        errors.push(`${asset.baseName}: ${err.message || "Failed to import"}`);
+        setAssets(prev => prev[asset.id] ? { ...prev, [asset.id]: { ...prev[asset.id], status: "error", errorMsg: err.message } } : prev);
+      }
+    }
+
+    if (idsToRemove.length > 0) {
+      setAssets(prev => {
+        const updated = { ...prev };
+        idsToRemove.forEach(id => {
+          delete updated[id];
+        });
+        return updated;
+      });
+
+      if (activeAssetId && idsToRemove.includes(activeAssetId)) {
+        const remaining = assetList.filter(a => !idsToRemove.includes(a.id));
+        setActiveAssetId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    }
+
+    return { successCount, failedCount, errors };
+  };
+
   return {
     assets,
     assetList,
@@ -227,6 +326,9 @@ export function useAssetProcessor() {
     generateMetadataForAsset,
     batchGenerateMetadata,
     embedExifForAsset,
-    batchEmbedExif
+    batchEmbedExif,
+    toggleSelectForImport,
+    selectAllForImport,
+    importSelectedToPortfolio
   };
 }
