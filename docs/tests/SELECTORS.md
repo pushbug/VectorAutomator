@@ -82,3 +82,16 @@ Always use `data-testid` for element selection in E2E tests.
 | `asset-select-checkbox-{id}` | Checkbox button in AssetQueue card to toggle selection for portfolio import |
 | `asset-select-all-btn` | Button in AssetQueue header to toggle select all / deselect all |
 | `batch-import-portfolio-btn` | Header button in Process & Upload page to batch import selected assets to portfolio |
+| `dash-kpi-total-vectors` | Total vectors KPI summary card in Overview Dashboard |
+| `dash-kpi-monthly-vectors` | Monthly vector output KPI summary card in Overview Dashboard |
+| `dash-kpi-total-downloads` | Total downloads KPI summary card in Overview Dashboard |
+| `dash-kpi-month-earnings` | Current month earnings KPI summary card in Overview Dashboard |
+| `dash-action-upload` | Quick launch link to Process & Upload module |
+| `dash-action-portfolio` | Quick launch link to Portfolio module |
+| `dash-action-sales` | Quick launch link to Sales & Earnings module |
+| `dash-recent-item-{id}` | Recent vector item row in Dashboard activity grid |
+| `dash-top-item-{id}` | Top performing vector item row in Dashboard activity grid |
+| `portfolio-copy-title-btn` | Button next to Title in Portfolio Detail to copy title text |
+| `portfolio-copy-keywords-btn` | Button next to Keywords in Portfolio Detail to copy keywords text |
+
+

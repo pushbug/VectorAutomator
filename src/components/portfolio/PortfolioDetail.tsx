@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Trash2, DollarSign, Download, PlusCircle, Edit3 } from 'lucide-react';
+import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lucide-react';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
 interface PortfolioImage {
@@ -60,6 +60,14 @@ export function PortfolioDetail({
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
   const [idInputVal, setIdInputVal] = useState('');
   const [isSavingId, setIsSavingId] = useState(false);
+  const [copiedField, setCopiedField] = useState<'title' | 'keywords' | null>(null);
+
+  const handleCopy = (text: string, field: 'title' | 'keywords') => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   if (!image) return null;
 
@@ -193,14 +201,44 @@ export function PortfolioDetail({
           </div>
 
           <div>
-            <h3 className="font-semibold text-muted mb-1">Title</h3>
+            <div className="flex items-center gap-1.5 mb-1">
+              <h3 className="font-semibold text-muted">Title</h3>
+              <button
+                type="button"
+                data-testid="portfolio-copy-title-btn"
+                onClick={() => handleCopy(image.title, 'title')}
+                title={copiedField === 'title' ? 'Copied!' : 'Copy Title'}
+                className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
+              >
+                {copiedField === 'title' ? (
+                  <Check size={13} className="text-emerald-500" />
+                ) : (
+                  <Copy size={13} className="text-muted hover:text-foreground" />
+                )}
+              </button>
+            </div>
             <p data-testid="portfolio-detail-title" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">
               {image.title}
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-muted mb-1">Keywords</h3>
+            <div className="flex items-center gap-1.5 mb-1">
+              <h3 className="font-semibold text-muted">Keywords</h3>
+              <button
+                type="button"
+                data-testid="portfolio-copy-keywords-btn"
+                onClick={() => handleCopy(image.keywords, 'keywords')}
+                title={copiedField === 'keywords' ? 'Copied!' : 'Copy Keywords'}
+                className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
+              >
+                {copiedField === 'keywords' ? (
+                  <Check size={13} className="text-emerald-500" />
+                ) : (
+                  <Copy size={13} className="text-muted hover:text-foreground" />
+                )}
+              </button>
+            </div>
             <p data-testid="portfolio-detail-keywords" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">{image.keywords}</p>
           </div>
 

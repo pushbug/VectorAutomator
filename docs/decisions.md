@@ -34,3 +34,13 @@
 - **Context:** Contributors needed a seamless way to import processed artwork directly from the Process & Upload screen into the Portfolio database without manual re-entry or double submissions, while ensuring chronological YYMM-seq numbering (e.g., `2608-16`) and proper sequential sorting in the Portfolio Grid.
 - **Decision:** Implement per-card checkboxes in `AssetQueue` with Select All support and a top-right Batch Import trigger in `UploadPage`. Ingested items are sequentially posted to `/api/upload` (which auto-computes the next monthly sequence when `code` is omitted) and atomically removed from the local queue on HTTP 200/201 success. Update `GET /api/portfolio` to sort hierarchically by `[{ year: sortOrder }, { month: sortOrder }, { seqNumber: sortOrder }, { createdAt: sortOrder }]`.
 - **Impact:** Eliminates redundant data entry, guarantees unique monthly sequence numbering, prevents accidental duplicate imports, and keeps the workspace clean via automatic queue clearing.
+
+## ADR-007: Local Standalone macOS Launcher and Bento Cockpit Dashboard
+- **Date:** 2026-08-16
+- **Context:** Contributors needed an instant way to launch VectorAutomator locally from their Mac Desktop/Dock as an isolated desktop-like window without terminal commands, alongside a centralized home Cockpit displaying real-time portfolio metrics, monthly production pace, quick launchpad, and 1-click keyword copy capabilities.
+- **Decision:** 
+  1. Build a native macOS launcher (`VectorAutomator.app`) using AppleScript compilation (`osacompile`) with dynamic Node PATH discovery (`/opt/homebrew/bin`, `~/.nvm`), background daemon management, port readiness polling, and custom icon branding via Cocoa `NSWorkspace.shared.setIcon`.
+  2. Implement an aggregated `GET /api/dashboard` endpoint and Bento Cockpit UI on the root route (`/`) featuring 4 KPI cards, a monthly pace progress tracker (target: 50 vectors/mo), a 3-card Quick Action launchpad, recent vector uploads, and top performers with 1-click clipboard keyword copy.
+  3. Add subtle 13px copy buttons with dynamic green checkmark feedback next to Title and Keywords in `PortfolioDetail`.
+- **Impact:** Delivers a true native-like desktop experience without heavy Electron bundling, eliminates initial Next.js boilerplate from home route, and gives the contributor immediate operational visibility on startup.
+

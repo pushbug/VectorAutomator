@@ -28,6 +28,8 @@
 | `UT-SALES-PASTE-04` | Verify multi-line stream text parsing with download counts and plain decimal earnings | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-PASTE-05` | Verify /api/sales/paste-sync proximity matching within ±7 days and candidate disambiguation | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-IMPORT-QUEUE-01` | Verify AssetQueue selection toggling and batch importing to portfolio with queue clearing | `src/__tests__/useAssetProcessor.test.ts` |
+| `UT-API-DASH-01` | Verify dashboard API aggregated metrics calculations, zero-data safety, and error handling | `src/__tests__/api/dashboard.test.ts` |
+| `UT-UI-DASH-01` | Verify Dashboard HomePage KPI rendering, monthly goal pace, quick action routes, and copy trigger | `src/__tests__/components/Dashboard.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
