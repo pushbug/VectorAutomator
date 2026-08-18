@@ -22,10 +22,12 @@ export function useAssetProcessor() {
           newAssets[baseName] = {
             id: baseName,
             baseName,
-            title: "",
+            title: baseName,
             keywords: "",
             status: "idle"
           };
+        } else if (!newAssets[baseName].title) {
+          newAssets[baseName].title = baseName;
         }
         
         if (ext === "eps") newAssets[baseName].epsFile = file;

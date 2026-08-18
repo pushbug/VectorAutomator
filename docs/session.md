@@ -7,6 +7,7 @@
 - Implemented 5 search scopes (`all`, `title`, `keywords` [default], `code`, `ids`) on `src/app/api/portfolio/route.ts` and eliminated CUID false positives.
 - Created `src/components/upload/KeywordSuggester.tsx` with 50/50 split layout, thumbnail previews via `/api/image`, and dual clipboard copy buttons.
 - Updated `src/components/upload/MetadataEditor.tsx` with soft-cap 100-word input, live red warning badge/border on >50 keywords, Save button disabled gate, and title red border validation.
+- Implemented automatic Title pre-fill using EPS/JPG `baseName` on drop in `src/hooks/useAssetProcessor.ts`.
 - Standardized action button sizing, typography, and spacing across `MetadataEditor` and `KeywordSuggester` footers.
 - Added comprehensive unit and E2E test suites (`UT-LIB-KEYWORD-ANALYTICS-01`, `UT-UI-KEYWORD-SUGGEST-01`, `UT-UI-KEYWORD-SUGGEST-SEARCH-FIELD-01`, `UT-UI-METADATA-KEYWORD-GATE-01`, `UT-UI-KEYWORD-SUGGEST-COPY-01`, `UT-UI-METADATA-TITLE-VALIDATION-01`, `E2E-UPL-02`).
 - Documented feature in `docs/features/keyword_suggest.md`, registered in `docs/INDEX.md`, and logged ADR-008 in `docs/decisions.md`. Passed full TypeScript check and 101 Vitest tests across 19 suites.

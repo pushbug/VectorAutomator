@@ -129,10 +129,12 @@ test.describe('Upload Workflow', () => {
 
     const queueItem = page.getByTestId('asset-queue-item-banner');
     await expect(queueItem).toBeVisible();
-    await queueItem.click();
-
-    // Test Title validation: Click Save without Title
+    // Assert Title is auto-filled with baseName ("banner")
     const titleInput = page.getByTestId('metadata-title-input');
+    await expect(titleInput).toHaveValue('banner');
+
+    // Test Title validation: Clear title and click Save
+    await titleInput.fill('');
     const saveBtn = page.getByTestId('save-metadata-btn');
     await saveBtn.click();
     await expect(titleInput).toHaveClass(/border-destructive/);

@@ -32,6 +32,7 @@ describe('useAssetProcessor', () => {
 
     expect(result.current.assetList.length).toBe(1);
     expect(result.current.assetList[0].baseName).toBe('test1');
+    expect(result.current.assetList[0].title).toBe('test1');
     expect(result.current.assetList[0].epsFile).toBe(file1);
     expect(result.current.assetList[0].jpgFile).toBe(file2);
     expect(result.current.activeAssetId).toBe('test1');
