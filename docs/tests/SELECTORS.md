@@ -93,5 +93,21 @@ Always use `data-testid` for element selection in E2E tests.
 | `dash-top-item-{id}` | Top performing vector item row in Dashboard activity grid |
 | `portfolio-copy-title-btn` | Button next to Title in Portfolio Detail to copy title text |
 | `portfolio-copy-keywords-btn` | Button next to Keywords in Portfolio Detail to copy keywords text |
+| `keyword-suggest-search-field-select` | Search scope dropdown select (All / Title & Keywords / Code & IDs) in KeywordSuggester |
+| `keyword-suggest-search-input` | Search input in KeywordSuggester panel |
+| `keyword-suggest-search-clear-btn` | Clear button for search input in KeywordSuggester |
+| `keyword-suggest-sort-select` | Sort dropdown select (Newest / Top Downloads) in KeywordSuggester |
+| `keyword-suggest-image-card-{id}` | Reference image card in KeywordSuggester grid |
+| `keyword-suggest-select-all-images-btn` | Select all reference images button in KeywordSuggester |
+| `keyword-suggest-clear-images-btn` | Clear selected reference images button in KeywordSuggester |
+| `keyword-suggest-tag-{keyword}` | Individual keyword tag pill button in KeywordSuggester |
+| `keyword-suggest-select-all-tags-btn` | Select all suggested keyword tags button |
+| `keyword-suggest-clear-tags-btn` | Deselect all suggested keyword tags button |
+| `keyword-suggest-copy-tags-btn` | Button in KeywordSuggester footer to copy selected keywords to clipboard |
+| `keyword-suggest-header-copy-btn` | Button in KeywordSuggester header to copy selected keywords to clipboard |
+| `keyword-suggest-apply-btn` | Button to inject selected keywords into active asset in MetadataEditor |
+| `metadata-keyword-limit-warning` | Warning badge/text in MetadataEditor when keywords count exceeds 50 |
+| `metadata-title-input` | Textarea for editing vector title in MetadataEditor |
+| `metadata-title-error` | Validation error message displayed under title input when saving without title |
 
 

@@ -5,6 +5,7 @@ import { useAssetProcessor } from "@/hooks/useAssetProcessor";
 import { Dropzone } from "@/components/upload/Dropzone";
 import { AssetQueue } from "@/components/upload/AssetQueue";
 import { MetadataEditor } from "@/components/upload/MetadataEditor";
+import { KeywordSuggester } from "@/components/upload/KeywordSuggester";
 import { FolderPlus } from "lucide-react";
 
 export default function UploadPage() {
@@ -50,10 +51,10 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 h-auto lg:h-[calc(100vh-4rem)] flex flex-col">
-      <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 gap-4">
+    <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 space-y-4 h-auto xl:h-[calc(100vh-4rem)] flex flex-col">
+      <header className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Process & Upload</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Upload & Keyword Suggestion</h1>
         </div>
         <div className="flex items-center gap-3">
           {importMessage && (
@@ -78,9 +79,10 @@ export default function UploadPage() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:min-h-0">
-        {/* Left Column: Asset List */}
-        <div className="lg:col-span-5 flex flex-col space-y-4 lg:min-h-0">
+      {/* 3-Column Layout: Left (Queue) | Center (Metadata Editor) | Right (Keyword Suggester) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-5 min-h-0">
+        {/* Column 1: Asset Queue & Dropzone */}
+        <div className="lg:col-span-4 xl:col-span-3 flex flex-col space-y-4 min-h-0">
           <Dropzone onProcessFiles={processDroppedFiles} />
           <AssetQueue
             assetList={assetList}
@@ -92,16 +94,24 @@ export default function UploadPage() {
           />
         </div>
 
-        {/* Right Column: Active Metadata Editor */}
-        <div className="lg:col-span-7 bg-surface rounded-xl border border-border p-6 flex flex-col h-full shadow-sm relative overflow-hidden lg:min-h-0">
+        {/* Column 2: Active Metadata Editor */}
+        <div className="lg:col-span-8 xl:col-span-4 bg-surface rounded-xl border border-border p-5 flex flex-col h-full shadow-sm relative overflow-hidden min-h-0">
           <MetadataEditor
             activeAsset={activeAsset}
             onUpdateActiveAsset={updateActiveAsset}
             onEmbedExifForAsset={embedExifForAsset}
           />
         </div>
+
+        {/* Column 3: Keyword Suggestion Hub */}
+        <div className="lg:col-span-12 xl:col-span-5 h-full min-h-0">
+          <KeywordSuggester
+            activeKeywords={activeAsset?.keywords || ""}
+            activeAssetId={activeAssetId}
+            onApplyKeywords={(mergedKeywords) => updateActiveAsset({ keywords: mergedKeywords })}
+          />
+        </div>
       </div>
     </div>
   );
 }
-

@@ -41,6 +41,16 @@
 - **Decision:** 
   1. Build a native macOS launcher (`VectorAutomator.app`) using AppleScript compilation (`osacompile`) with dynamic Node PATH discovery (`/opt/homebrew/bin`, `~/.nvm`), background daemon management, port readiness polling, and custom icon branding via Cocoa `NSWorkspace.shared.setIcon`.
   2. Implement an aggregated `GET /api/dashboard` endpoint and Bento Cockpit UI on the root route (`/`) featuring 4 KPI cards, a monthly pace progress tracker (target: 50 vectors/mo), a 3-card Quick Action launchpad, recent vector uploads, and top performers with 1-click clipboard keyword copy.
-  3. Add subtle 13px copy buttons with dynamic green checkmark feedback next to Title and Keywords in `PortfolioDetail`.
-- **Impact:** Delivers a true native-like desktop experience without heavy Electron bundling, eliminates initial Next.js boilerplate from home route, and gives the contributor immediate operational visibility on startup.
+## ADR-008: Multi-Reference Keyword Suggester, 5-Scope Search, and Pre-Save Validation Gate
+- **Date:** 2026-08-18
+- **Context:** Contributors needed to aggregate high-performing keywords from multiple reference portfolio vectors into active assets in `UploadPage` without displacing existing keywords, without duplicating identical words, and with the ability to curate from an expansive pool (>50 words) while preventing microstock rejection (>50 keywords or empty title) upon export.
+- **Decision:**
+  1. Build pure keyword analytics engine (`keywordAnalytics.ts`) providing `aggregateKeywordTokens` (frequency, total downloads/earnings, Top-5 Golden Star flags, ranking score) and `mergeKeywords` supporting non-destructive case-insensitive deduplicated appending up to a 100-word soft limit.
+  2. Implement 5 search scopes (`all`, `title`, `keywords` [default], `code`, `ids`) on `/api/portfolio` and strictly exclude database internal CUID `id` from matching to prevent false positives.
+  3. Enforce pre-save validation gates in `MetadataEditor`:
+     - If keywords count exceeds 50, render a live red warning badge and red border, and disable the `Save Metadata` button with clear word-reduction feedback.
+     - If title is empty on save attempt, focus the title textarea and highlight it with a red border (`border-destructive`) that clears automatically upon typing.
+  4. Standardize action button sizing and spacing across `MetadataEditor` and `KeywordSuggester` for visual harmony.
+- **Impact:** Eliminates metadata loss and keyword duplicates, allows extensive candidate accumulation with safety guards, and ensures 100% microstock compliance before file export.
+
 

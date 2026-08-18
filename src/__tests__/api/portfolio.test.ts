@@ -94,6 +94,114 @@ describe('Portfolio API Route', () => {
         })
       );
     });
+
+    it('UT-API-PF-SEARCH-02: searches multi-word queries with tokenized AND/OR condition', async () => {
+      mockFindMany.mockResolvedValue([{ id: '1', title: 'Infographic 5 Steps', keywords: 'business, step' }]);
+      mockCount.mockResolvedValue(1);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio?search=infographic+5');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.meta.total).toBe(1);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { title: { contains: 'infographic' } },
+                  { keywords: { contains: 'infographic' } },
+                ]),
+              }),
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { title: { contains: '5' } },
+                  { keywords: { contains: '5' } },
+                ]),
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('UT-API-PF-SEARCH-FIELD-01: scopes search to specific searchField (title, keywords, code, ids)', async () => {
+      mockFindMany.mockResolvedValue([{ id: '1', title: 'Infographic 5 Steps', keywords: 'business, step' }]);
+      mockCount.mockResolvedValue(1);
+
+      // Search title only
+      const reqTitle = new NextRequest('http://localhost:3000/api/portfolio?search=infographic&searchField=title');
+      await GET(reqTitle);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { title: { contains: 'infographic' } },
+            ],
+          }),
+        })
+      );
+
+      // Search keywords only
+      const reqKeywords = new NextRequest('http://localhost:3000/api/portfolio?search=business&searchField=keywords');
+      await GET(reqKeywords);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { keywords: { contains: 'business' } },
+            ],
+          }),
+        })
+      );
+
+      // Search code only
+      const reqCode = new NextRequest('http://localhost:3000/api/portfolio?search=2608-01&searchField=code');
+      await GET(reqCode);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { code: { contains: '2608-01' } },
+            ],
+          }),
+        })
+      );
+
+      // Search ids only
+      const reqIds = new NextRequest('http://localhost:3000/api/portfolio?search=569029521&searchField=ids');
+      await GET(reqIds);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { asId: { contains: '569029521' } },
+              { ssId: { contains: '569029521' } },
+              { vzId: { contains: '569029521' } },
+            ],
+          }),
+        })
+      );
+    });
+
+    it('UT-API-PF-SORT-EARNINGS-01: sorts enriched images by totalEarnings descending', async () => {
+      mockFindMany.mockResolvedValue([
+        { id: '1', title: 'A', stats: [{ platform: 'Adobe', earnings: 5.0, downloads: 2 }] },
+        { id: '2', title: 'B', stats: [{ platform: 'Adobe', earnings: 50.0, downloads: 10 }] },
+      ]);
+      mockCount.mockResolvedValue(2);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio?sortBy=earnings&sortOrder=desc');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data[0].id).toBe('2'); // $50.00 first
+      expect(data.data[1].id).toBe('1'); // $5.00 second
+      expect(data.data[0].totalEarnings).toBe(50.0);
+    });
   });
 
   describe('PATCH', () => {

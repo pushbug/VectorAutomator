@@ -16,27 +16,64 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const search = searchParams.get('search') || '';
+    const searchField = searchParams.get('searchField') || searchParams.get('field') || 'all';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
     const skip = (page - 1) * limit;
 
-    const where: any = search
+    const getFieldConditions = (term: string) => {
+      if (searchField === 'title') {
+        return [
+          { title: { contains: term } },
+        ];
+      }
+      if (searchField === 'keywords' || searchField === 'keyword') {
+        return [
+          { keywords: { contains: term } },
+        ];
+      }
+      if (searchField === 'code') {
+        return [
+          { code: { contains: term } },
+        ];
+      }
+      if (searchField === 'ids' || searchField === 'id') {
+        return [
+          { asId: { contains: term } },
+          { ssId: { contains: term } },
+          { vzId: { contains: term } },
+        ];
+      }
+      return [
+        { title: { contains: term } },
+        { keywords: { contains: term } },
+        { category: { contains: term } },
+        { code: { contains: term } },
+        { tags: { contains: term } },
+        { notes: { contains: term } },
+        { asId: { contains: term } },
+        { ssId: { contains: term } },
+        { vzId: { contains: term } },
+      ];
+    };
+
+    const searchTerms = search.trim().split(/\s+/).filter(Boolean);
+    const searchCondition = searchTerms.length === 1
       ? {
-          OR: [
-            { title: { contains: search } },
-            { keywords: { contains: search } },
-            { category: { contains: search } },
-            { code: { contains: search } },
-            { tags: { contains: search } },
-            { notes: { contains: search } },
-            { asId: { contains: search } },
-            { ssId: { contains: search } },
-            { vzId: { contains: search } },
-            { id: { contains: search } },
-          ],
+          OR: getFieldConditions(searchTerms[0]),
+        }
+      : searchTerms.length > 1
+      ? {
+          AND: searchTerms.map((term) => ({
+            OR: getFieldConditions(term),
+          })),
         }
       : {};
+
+    const where: any = {
+      ...searchCondition,
+    };
 
     if (startDate || endDate) {
       where.createdAt = {};
@@ -51,16 +88,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const orderByClause: any = sortBy === 'createdAt'
-      ? [
-          { year: sortOrder },
-          { month: sortOrder },
-          { seqNumber: sortOrder },
-          { createdAt: sortOrder },
-        ]
-      : {
-          [sortBy]: sortOrder,
-        };
+    let orderByClause: any;
+    if (sortBy === 'createdAt') {
+      orderByClause = [
+        { year: sortOrder },
+        { month: sortOrder },
+        { seqNumber: sortOrder },
+        { createdAt: sortOrder },
+      ];
+    } else if (sortBy === 'totalDownloads') {
+      orderByClause = [
+        { totalDownloads: sortOrder },
+        { year: 'desc' },
+        { month: 'desc' },
+        { seqNumber: 'desc' },
+        { createdAt: 'desc' },
+      ];
+    } else if (sortBy === 'earnings') {
+      orderByClause = [
+        { totalDownloads: 'desc' },
+        { year: 'desc' },
+        { month: 'desc' },
+        { seqNumber: 'desc' },
+        { createdAt: 'desc' },
+      ];
+    } else {
+      orderByClause = [
+        { [sortBy]: sortOrder },
+        { createdAt: 'desc' },
+      ];
+    }
 
     const [images, totalCount] = await Promise.all([
       prisma.image.findMany({
@@ -77,7 +134,7 @@ export async function GET(request: NextRequest) {
       prisma.image.count({ where }),
     ]);
 
-    const enrichedImages = images.map((img: any) => {
+    let enrichedImages = images.map((img: any) => {
       const stats = img.stats || [];
       const totalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
       const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
@@ -96,6 +153,14 @@ export async function GET(request: NextRequest) {
         platformBreakdown,
       };
     });
+
+    if (sortBy === 'earnings') {
+      enrichedImages = enrichedImages.sort((a, b) => {
+        const diff = (b.totalEarnings || 0) - (a.totalEarnings || 0);
+        if (diff !== 0) return sortOrder === 'asc' ? -diff : diff;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
 
     return NextResponse.json({
       data: enrichedImages,

@@ -30,11 +30,19 @@
 | `UT-IMPORT-QUEUE-01` | Verify AssetQueue selection toggling and batch importing to portfolio with queue clearing | `src/__tests__/useAssetProcessor.test.ts` |
 | `UT-API-DASH-01` | Verify dashboard API aggregated metrics calculations, zero-data safety, and error handling | `src/__tests__/api/dashboard.test.ts` |
 | `UT-UI-DASH-01` | Verify Dashboard HomePage KPI rendering, monthly goal pace, quick action routes, and copy trigger | `src/__tests__/components/Dashboard.test.tsx` |
+| `UT-LIB-KEYWORD-ANALYTICS-01` | Verify keyword extraction, deduplication, accumulated downloads/earnings, and Top-5 primary flags | `src/__tests__/lib/keywordAnalytics.test.ts` |
+| `UT-UI-KEYWORD-SUGGEST-01` | Verify KeywordSuggester portfolio search, sort toggle, image selection, tag badges, and injection | `src/__tests__/components/KeywordSuggester.test.tsx` |
+| `UT-API-PF-SEARCH-FIELD-01` | Verify portfolio API searchField scoping (all, title_keywords, code_ids) and secondary tie-breaking | `src/__tests__/api/portfolio.test.ts` |
+| `UT-UI-KEYWORD-SUGGEST-SEARCH-FIELD-01` | Verify KeywordSuggester searchField select dropdown and Top Earnings sorting | `src/__tests__/components/KeywordSuggester.test.tsx` |
+| `UT-UI-METADATA-KEYWORD-GATE-01` | Verify MetadataEditor soft cap to 100 words, red warning on >50, and Save button disabled gate | `src/__tests__/components/MetadataEditor.test.tsx` |
+| `UT-UI-KEYWORD-SUGGEST-COPY-01` | Verify KeywordSuggester copy selected tags to clipboard and deduplicated append merge | `src/__tests__/components/KeywordSuggester.test.tsx` |
+| `UT-UI-METADATA-TITLE-VALIDATION-01` | Verify MetadataEditor title required validation on Save, focusing input and rendering red border/error | `src/__tests__/components/MetadataEditor.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
 |---------|-------------|--------|
 | `E2E-UPL-01` | Happy path: Upload, auto-pair, gen metadata, save EXIF | `e2e/upload.spec.ts` |
+| `E2E-UPL-02` | Keyword Suggestion: Portfolio reference search, scoping, tag selection, copy, and non-destructive injection | `e2e/upload.spec.ts` |
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |

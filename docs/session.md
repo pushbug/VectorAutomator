@@ -1,25 +1,27 @@
-### Goal: Implement standalone macOS local launcher with custom AppKit icon and modern Bento Cockpit Dashboard with 1-click keyword copying.
+### Goal: Implement multi-reference Keyword Suggester with 5-scope search, non-destructive deduplicated append, 100-word soft limit with pre-save validation gate, and title validation.
 
 ### Status: COMPLETE
 
 ### Done:
-- Created native macOS double-click launcher (`scripts/launch.sh`, `scripts/create-mac-app.sh`, `scripts/generate-icon.sh`) with Retina blue "V" icon and direct desktop placement (`VectorAutomator.app`).
-- Built aggregated Dashboard API endpoint (`GET /api/dashboard`) computing total/monthly vectors, downloads, month earnings, latest sequence code, recent uploads, and top performers (`src/app/api/dashboard/route.ts`).
-- Created Bento Cockpit Dashboard components (`DashboardHeader`, `KpiCards`, `MonthlyGoalCard`, `QuickActionHub`, `ActivitySplitGrid`) under `src/components/dashboard/` with semantic Tailwind v4 tokens.
-- Replaced default starter template in `src/app/page.tsx` with dynamic Dashboard layout, loading skeletons, and error retry boundaries.
-- Added subtle 13px copy buttons with dynamic green checkmark feedback next to Title and Keywords in `src/components/portfolio/PortfolioDetail.tsx`.
-- Registered test IDs (`UT-API-DASH-01`, `UT-UI-DASH-01`) and selectors in `docs/tests/CATALOG.md` and `docs/tests/SELECTORS.md`.
-- Documented feature specification in `docs/features/dashboard.md`, registered in `docs/INDEX.md`, and logged ADR-007 in `docs/decisions.md`. Passed full TypeScript check and all 74 Vitest tests across 16 suites.
+- Built pure keyword analytics engine (`src/lib/keywordAnalytics.ts`) supporting non-destructive case-insensitive deduplication, 100-word soft cap, and weighted scoring.
+- Implemented 5 search scopes (`all`, `title`, `keywords` [default], `code`, `ids`) on `src/app/api/portfolio/route.ts` and eliminated CUID false positives.
+- Created `src/components/upload/KeywordSuggester.tsx` with 50/50 split layout, thumbnail previews via `/api/image`, and dual clipboard copy buttons.
+- Updated `src/components/upload/MetadataEditor.tsx` with soft-cap 100-word input, live red warning badge/border on >50 keywords, Save button disabled gate, and title red border validation.
+- Standardized action button sizing, typography, and spacing across `MetadataEditor` and `KeywordSuggester` footers.
+- Added comprehensive unit and E2E test suites (`UT-LIB-KEYWORD-ANALYTICS-01`, `UT-UI-KEYWORD-SUGGEST-01`, `UT-UI-KEYWORD-SUGGEST-SEARCH-FIELD-01`, `UT-UI-METADATA-KEYWORD-GATE-01`, `UT-UI-KEYWORD-SUGGEST-COPY-01`, `UT-UI-METADATA-TITLE-VALIDATION-01`, `E2E-UPL-02`).
+- Documented feature in `docs/features/keyword_suggest.md`, registered in `docs/INDEX.md`, and logged ADR-008 in `docs/decisions.md`. Passed full TypeScript check and 101 Vitest tests across 19 suites.
 
 ### Next:
 - 1. Implement Phase 3/4 CSV batch import for stock platform monthly statement uploads.
 - 2. Implement SFTP auto-uploader module for Adobe Stock and Shutterstock.
 
 ### Decisions:
-- macOS app bundle is built with absolute launcher targeting and custom Cocoa icon attribute (`NSWorkspace.shared.setIcon`) so it can live directly on `~/Desktop` or Dock without symlink degradation.
-- Dashboard provides high-level operational visibility (KPIs, monthly target pace, quick launchpad, fast keyword copying) while deferring deep analytics to `/sales` and library management to `/portfolio`.
+- Keyword ingestion preserves 100% of existing words in original order when appending, filtering duplicate tokens case-insensitively.
+- Allows collection of up to 100 candidate keywords with a strict pre-save validation gate requiring <= 50 words to prevent microstock rejection.
+- Search queries exclude database internal CUID `id` to prevent single-digit false positives (e.g. searching '5').
+- Title input renders a reactive red border on save attempt when empty, clearing immediately upon typing.
 
 ### Skills:
-- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of macOS launcher, dashboard aggregations, Bento UI components, and portfolio copy controls.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Verification of component state isolation, zero-data safety, test suite execution, and git cleanliness.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-007), documentation sync, and git synchronization.
+- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of keyword analytics engine, 5 search scopes, UI panels, soft limit gates, and button standardization.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Multi-layer auditing of keyword deduplication, pre-save gates, visual harmony, and test coverage.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-008), documentation sync, and git synchronization.
