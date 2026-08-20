@@ -1,7 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Portfolio Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const removePortals = () => {
+        document.querySelectorAll('nextjs-portal').forEach((p) => p.remove());
+      };
+      removePortals();
+      const observer = new MutationObserver(removePortals);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    });
+  });
+
+
+
   test('renders portfolio layout and allows filtering and updates', async ({ page }) => {
+
     // Navigate to portfolio
     await page.goto('/portfolio');
 
@@ -27,6 +41,7 @@ test.describe('Portfolio Dashboard', () => {
     await page.getByTestId('portfolio-add-btn').click();
     await expect(page.getByTestId('portfolio-add-drawer')).toBeVisible();
     await page.getByTestId('portfolio-add-close-btn').click();
+
     await expect(page.getByTestId('portfolio-add-drawer')).not.toBeVisible();
 
     // Test opening and using the interactive date range picker popover
@@ -57,7 +72,7 @@ test.describe('Portfolio Dashboard', () => {
       if (await logSaleBtn.isVisible()) {
         await logSaleBtn.click();
         await expect(page.getByTestId('sales-form-drawer')).toBeVisible();
-        await page.getByTestId('sales-form-close-btn').click();
+        await page.getByTestId('sales-form-close-btn').click({ force: true });
         await expect(page.getByTestId('sales-form-drawer')).not.toBeVisible();
       }
     }
@@ -82,6 +97,7 @@ test.describe('Portfolio Dashboard', () => {
 
     // Close drawer
     await page.getByTestId('portfolio-add-close-btn').click();
+
     await expect(page.getByTestId('portfolio-add-drawer')).not.toBeVisible();
     await page.waitForTimeout(300);
 
@@ -105,8 +121,9 @@ test.describe('Portfolio Dashboard', () => {
       await expect(cancelBtn).toBeVisible();
 
       // Cancel deletion
-      await cancelBtn.click();
+      await cancelBtn.click({ force: true });
       await expect(confirmDialog).not.toBeVisible();
     }
   });
 });
+

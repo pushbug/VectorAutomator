@@ -37,6 +37,33 @@
 | `UT-UI-METADATA-KEYWORD-GATE-01` | Verify MetadataEditor soft cap to 100 words, red warning on >50, and Save button disabled gate | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-UI-KEYWORD-SUGGEST-COPY-01` | Verify KeywordSuggester copy selected tags to clipboard and deduplicated append merge | `src/__tests__/components/KeywordSuggester.test.tsx` |
 | `UT-UI-METADATA-TITLE-VALIDATION-01` | Verify MetadataEditor title required validation on Save, focusing input and rendering red border/error | `src/__tests__/components/MetadataEditor.test.tsx` |
+| `UT-SALES-DATE-01` | Verify SmartPasteModal statement date selection and date mode toggling | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-UNMATCHED-01` | Verify /api/sales/paste-sync persists unlinked platformStats with platformAssetId | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-RECONCILE-01` | Verify auto-reconciliation updates unlinked platformStats to imageId when platform asset IDs match | `src/__tests__/lib/salesReconciler.test.ts` |
+| `UT-SALES-PASTE-DL-01` | Verify fallback download count to 1 when earnings > 0 and downloads column is omitted | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-UI-SALES-DATE-FILTER-01` | Verify SalesTable DateRangePicker selection and date filtering integration | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-IMAGE-DRAWER-01` | Verify clicking artwork in SalesTable triggers onSelectImage callback | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-SORT-01` | Verify clicking SalesTable column headers triggers sortBy and sortOrder callbacks | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-HOVER-PREVIEW-01` | Verify hovering over artwork thumbnail in SalesTable renders enlarged preview popover | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-ACTION-MENU-01` | Verify 3-dots action menu in SalesTable opens and executes Preview and Delete actions | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-UNLINKED-FILTER-01` | Verify selecting Unlinked filter button triggers onPlatformFilterChange with unlinked and filters imageId=null | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-SALES-SMART-PASTE-LIVE-STATS-01` | Verify real-time detected items count and estimated total revenue on paste in SmartPasteModal | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-PORTFOLIO-DETAIL-EARNINGS-01` | Verify total revenue and per-platform breakdown rendering in PortfolioDetail | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-API-PF-SUMMARY-01` | Verify Portfolio API computes and returns totalImages, totalDownloads, and totalEarnings in summary | `src/__tests__/api/portfolio.test.ts` |
+| `UT-UI-PORTFOLIO-SUMMARY-01` | Verify PortfolioPage renders summary bar with artworks count, downloads, and revenue | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-API-SALES-BATCH-01` | Verify batch delete API permanently deletes selected platformStats and syncs image rollups | `src/__tests__/api/sales_batch.test.ts` |
+| `UT-API-SALES-BATCH-DATE-01` | Verify batch update date API performs collision-safe merging and re-syncs rollups | `src/__tests__/api/sales_batch.test.ts` |
+| `UT-UI-SALES-BULK-01` | Verify row multi-selection, select-all on page, floating action bar, and bulk action triggers | `src/__tests__/components/SalesComponents.test.tsx` |
+
+
+
+
+
+
+
+
+
+
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -46,5 +73,7 @@
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |
-| `E2E-SALES-02` | Verify opening Smart Paste modal, parsing pasted stock data, preview, and submission | `e2e/sales.spec.ts` |
+| `E2E-SALES-02` | Verify opening Smart Paste modal, real-time live stats, preview header, and submission | `e2e/sales.spec.ts` |
+| `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |
+
 

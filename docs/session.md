@@ -1,28 +1,26 @@
-### Goal: Implement multi-reference Keyword Suggester with 5-scope search, non-destructive deduplicated append, 100-word soft limit with pre-save validation gate, and title validation.
+### Goal: Implement Batch Sales Operations (Bulk Delete & Bulk Date Update), Dynamic Portfolio Metrics Bar, Smart Paste popover & layout enhancements, High-Contrast Revenue styling, and unified search clear buttons.
 
 ### Status: COMPLETE
 
 ### Done:
-- Built pure keyword analytics engine (`src/lib/keywordAnalytics.ts`) supporting non-destructive case-insensitive deduplication, 100-word soft cap, and weighted scoring.
-- Implemented 5 search scopes (`all`, `title`, `keywords` [default], `code`, `ids`) on `src/app/api/portfolio/route.ts` and eliminated CUID false positives.
-- Created `src/components/upload/KeywordSuggester.tsx` with 50/50 split layout, thumbnail previews via `/api/image`, and dual clipboard copy buttons.
-- Updated `src/components/upload/MetadataEditor.tsx` with soft-cap 100-word input, live red warning badge/border on >50 keywords, Save button disabled gate, and title red border validation.
-- Implemented automatic Title pre-fill using EPS/JPG `baseName` on drop in `src/hooks/useAssetProcessor.ts`.
-- Standardized action button sizing, typography, and spacing across `MetadataEditor` and `KeywordSuggester` footers.
-- Added comprehensive unit and E2E test suites (`UT-LIB-KEYWORD-ANALYTICS-01`, `UT-UI-KEYWORD-SUGGEST-01`, `UT-UI-KEYWORD-SUGGEST-SEARCH-FIELD-01`, `UT-UI-METADATA-KEYWORD-GATE-01`, `UT-UI-KEYWORD-SUGGEST-COPY-01`, `UT-UI-METADATA-TITLE-VALIDATION-01`, `E2E-UPL-02`).
-- Documented feature in `docs/features/keyword_suggest.md`, registered in `docs/INDEX.md`, and logged ADR-008 in `docs/decisions.md`. Passed full TypeScript check and 101 Vitest tests across 19 suites.
+- Built dedicated batch sales operations (`/api/sales/batch`) supporting multi-row deletion with automatic rollup recalculation and collision-safe bulk date shifting.
+- Added multi-row checkbox selection, select-all on page, floating bulk action bar, and `BulkDateModal` in `src/components/sales/SalesTable.tsx` and `src/components/sales/BulkDateModal.tsx`.
+- Extended `GET /api/portfolio` to compute aggregate metrics (`totalImages`, `totalDownloads`, `totalEarnings`) and rendered sticky summary bar on `/portfolio` with dynamic date range text.
+- Enhanced `SmartPasteModal` with overflow-safe popover positioning, right-aligned action buttons, full-height textarea expansion, and canonical `min-h-115` class.
+- Standardized high-contrast revenue text (`text-foreground font-bold`) and grey download icons (`text-muted`) with numbers across Portfolio and Sales modules.
+- Replaced search clear text buttons with inside-input `X` icon and collision-safe padding in `PortfolioFilter` and `SalesTable`.
+- Aligned `KeywordSuggester` filter and search input heights to `h-10` and removed footer divider to maximize keyword cloud space.
 
 ### Next:
 - 1. Implement Phase 3/4 CSV batch import for stock platform monthly statement uploads.
 - 2. Implement SFTP auto-uploader module for Adobe Stock and Shutterstock.
 
 ### Decisions:
-- Keyword ingestion preserves 100% of existing words in original order when appending, filtering duplicate tokens case-insensitively.
-- Allows collection of up to 100 candidate keywords with a strict pre-save validation gate requiring <= 50 words to prevent microstock rejection.
-- Search queries exclude database internal CUID `id` to prevent single-digit false positives (e.g. searching '5').
-- Title input renders a reactive red border on save attempt when empty, clearing immediately upon typing.
+- Batch date updating accumulates values (`downloads`, `earnings`) into existing target-date records and deletes source records to safely avoid unique key collisions.
+- Portfolio summary metrics are aggregated dynamically across active search/date filters on the server to ensure O(1) transfer without fetching full table lists.
+- High-contrast accessibility standards mandate `text-foreground font-bold` for revenue numbers and `text-muted` for icons to guarantee optimal visibility across light and dark modes.
 
 ### Skills:
-- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of keyword analytics engine, 5 search scopes, UI panels, soft limit gates, and button standardization.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Multi-layer auditing of keyword deduplication, pre-save gates, visual harmony, and test coverage.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-008), documentation sync, and git synchronization.
+- [`coding`](.agents/skills/coding/SKILL.md) — Implemented batch APIs, bulk action toolbars, portfolio summary calculation, and UI refinements.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Gatekeeper validation, regression audits, selector checks, and verification across 126 Vitest tests.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, decision logging (ADR-009), doc updates, and git synchronization.

@@ -39,8 +39,15 @@ Always use `data-testid` for element selection in E2E tests.
 | `delete-confirm-btn` | The confirmation button inside delete modal |
 | `delete-cancel-btn` | The cancel button inside delete modal |
 | `portfolio-detail-log-sale-btn` | The button in portfolio detail to trigger log sale drawer |
+| `portfolio-summary-bar` | Summary bar container displaying total artworks, downloads, and revenue in Portfolio |
+| `portfolio-summary-count` | Total artworks count text inside portfolio summary bar |
+| `portfolio-summary-downloads` | Total downloads count text inside portfolio summary bar |
+| `portfolio-summary-earnings` | Total revenue amount text inside portfolio summary bar |
 | `sales-kpi-total-earnings` | The KPI card display for total earnings |
 | `sales-kpi-total-downloads` | The KPI card display for total downloads |
+| `sales-kpi-top-platform` | The KPI card display for top performing platform |
+| `sales-kpi-avg-download` | The KPI card display for average earnings per download |
+
 | `sales-add-sale-btn` | The button in sales page header to open log sale drawer |
 | `sales-form-drawer` | The slide-over drawer modal for logging a sale |
 | `sales-form-image-select` | The image picker/search input in sales drawer |
@@ -109,5 +116,47 @@ Always use `data-testid` for element selection in E2E tests.
 | `metadata-keyword-limit-warning` | Warning badge/text in MetadataEditor when keywords count exceeds 50 |
 | `metadata-title-input` | Textarea for editing vector title in MetadataEditor |
 | `metadata-title-error` | Validation error message displayed under title input when saving without title |
+| `smart-paste-date-input` | Date input / trigger for statement date in Smart Paste modal |
+| `smart-paste-platform-{platform}` | Platform select button inside Smart Paste modal toolbar |
+| `smart-paste-unlinked-badge` | Status badge indicating an unmatched unlinked sales record |
+| `smart-paste-summary-date` | Statement date display text in Smart Paste preview summary header |
+| `smart-paste-summary-revenue` | Total revenue display text in Smart Paste preview summary header |
+| `smart-paste-live-stats` | Real-time detected items count and estimated revenue badge in Smart Paste input view |
+
+
+
+| `sales-date-picker-trigger` | Button/input triggering the date range picker popover in Sales page |
+| `sales-table-artwork-btn-{id}` | Clickable artwork trigger button/area in sales table row |
+| `sales-sort-date-btn` | Button in SalesTable header to sort by Date |
+| `sales-sort-image-btn` | Button in SalesTable header to sort by Image |
+| `sales-sort-platform-btn` | Button in SalesTable header to sort by Platform |
+| `sales-sort-downloads-btn` | Button in SalesTable header to sort by Downloads count |
+| `sales-sort-earnings-btn` | Button in SalesTable header to sort by Earnings amount |
+| `sales-image-hover-preview` | Floating enlarged image preview popover on thumbnail hover |
+| `sales-row-menu-btn-{id}` | Button to open 3-dots action dropdown menu in sales table row |
+| `sales-row-menu-dropdown-{id}` | Dropdown menu container with Preview and Delete actions |
+| `sales-row-preview-btn-{id}` | Preview action button inside row dropdown menu |
+| `sales-row-delete-btn-{id}` | Delete action button inside row dropdown menu |
+| `sales-pagination-prev-btn` | Button to navigate to previous page in SalesTable |
+| `sales-pagination-next-btn` | Button to navigate to next page in SalesTable |
+| `sales-pagination-page-input` | Number input for direct page jump in SalesTable |
+| `sales-platform-filter-{platform}` | Platform filter button in SalesTable toolbar (all, Shutterstock, Adobe Stock, Vecteezy, unlinked) |
+| `sales-select-all-checkbox` | Checkbox in table header to toggle selection of all items on current page |
+| `sales-row-checkbox-{id}` | Checkbox in sales table row to toggle individual row selection |
+| `sales-bulk-action-bar` | Floating action toolbar displayed when one or more sales rows are selected |
+| `sales-bulk-delete-btn` | Button in floating bulk action bar to delete selected sales records |
+| `sales-bulk-date-btn` | Button in floating bulk action bar to open bulk change date modal |
+| `sales-bulk-date-modal` | Modal dialog for picking new date for batch update |
+| `sales-bulk-date-input` | Date picker component inside bulk date modal |
+| `sales-bulk-date-confirm-btn` | Button to confirm applying new date to selected records |
+| `sales-bulk-date-cancel-btn` | Button to cancel bulk date update modal |
+| `sales-bulk-date-close-btn` | Close button inside bulk date modal header |
+
+
+
+
+
+
+
 
 

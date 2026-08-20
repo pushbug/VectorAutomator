@@ -17,8 +17,9 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
+
 
   // Prevent hydration mismatch for theme toggle
   useEffect(() => {

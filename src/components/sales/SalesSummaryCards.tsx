@@ -1,21 +1,22 @@
 'use client';
 
 import React from 'react';
-import { DollarSign, Download, Trophy, Layers } from 'lucide-react';
+import { DollarSign, Download, Trophy, TrendingUp } from 'lucide-react';
 
 interface SalesSummaryCardsProps {
   totalEarnings: number;
   totalDownloads: number;
   topPlatform: string;
-  totalRecords: number;
+  totalRecords?: number;
 }
 
 export function SalesSummaryCards({
   totalEarnings,
   totalDownloads,
   topPlatform,
-  totalRecords,
 }: SalesSummaryCardsProps) {
+  const avgPerDownload = totalDownloads > 0 ? totalEarnings / totalDownloads : 0;
+
   const cards = [
     {
       title: 'Total Revenue',
@@ -32,20 +33,22 @@ export function SalesSummaryCards({
       color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
     },
     {
+      title: 'Avg. / Download',
+      value: `$${avgPerDownload.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: TrendingUp,
+      testId: 'sales-kpi-avg-download',
+      color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+    },
+    {
       title: 'Top Platform',
       value: topPlatform || '-',
       icon: Trophy,
       testId: 'sales-kpi-top-platform',
       color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
     },
-    {
-      title: 'Logged Transactions',
-      value: totalRecords.toLocaleString('en-US'),
-      icon: Layers,
-      testId: 'sales-kpi-total-records',
-      color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-    },
   ];
+
+
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

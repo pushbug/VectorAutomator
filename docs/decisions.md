@@ -53,4 +53,13 @@
   4. Standardize action button sizing and spacing across `MetadataEditor` and `KeywordSuggester` for visual harmony.
 - **Impact:** Eliminates metadata loss and keyword duplicates, allows extensive candidate accumulation with safety guards, and ensures 100% microstock compliance before file export.
 
+## ADR-009: Batch Sales Operations, Dynamic Portfolio Metrics Bar, and High-Contrast Contrast Theme
+- **Date:** 2026-08-20
+- **Context:** Contributors required bulk management capabilities for sales records (multi-row delete and mass date corrections with duplicate conflict merging), dynamic portfolio summary counters across date ranges, and improved readability for revenue values across light/dark themes.
+- **Decision:**
+  1. **Batch Sales API (`/api/sales/batch`):** Implemented dedicated `DELETE` and `PATCH` endpoints. Bulk deletion atomically removes selected records and recalculates parent image rollup metrics (`totalDownloads`, `ssDownloads`, `asDownloads`). Bulk date update shifts records to a target UTC midnight date with collision-safe merging (accumulating downloads/earnings and removing source records to prevent unique key collisions).
+  2. **Portfolio Summary Metrics Bar:** Extended `GET /api/portfolio` to compute aggregate totals (`totalImages`, `totalDownloads`, `totalEarnings`) across matching records, rendered in a sticky responsive bar on `/portfolio` with dynamic date range text.
+  3. **High-Contrast Theme Standards:** Replaced low-contrast `text-emerald-500` revenue text with `text-foreground font-bold` (black in light mode, white in dark mode) and standardized download icons with `text-muted` and numbers with `text-foreground font-medium`.
+- **Impact:** Enables fast multi-record sales cleanup, provides clear date-filtered portfolio metrics, and delivers optimal readability and accessibility across all screen sizes and color themes.
+
 

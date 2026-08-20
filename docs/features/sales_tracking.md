@@ -36,3 +36,9 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
   - **Tier 4 (Interactive Disambiguation):** Dropdown selector allowing manual artwork mapping for ambiguous dates.
 - **Batch Atomic Upsert:** Automatically binds platform IDs to `Image`, upserts `PlatformStats` on `(imageId, platform, date)`, and updates rollup counters in a single Prisma transaction.
 
+## 6. Batch Sales Operations (`/api/sales/batch`)
+- **Multi-Row Selection:** Checkboxes in `SalesTable` header and rows support selective batch actions or "Select All" on current page with automatic state reset on filter/page changes.
+- **Bulk Delete:** Atomic deletion of selected `PlatformStats` IDs with safe re-synchronization of `totalDownloads`, `ssDownloads`, and `asDownloads` rollups on all affected parent images.
+- **Collision-Safe Bulk Date Update:** Shifts dates for selected records to a target UTC midnight date (`YYYY-MM-DDT00:00:00.000Z`). If a record already exists on the target date for `(imageId, platform, targetDate)`, values (`downloads`, `earnings`) are accumulated into the target record and the source duplicate is removed without unique constraint violations. Unlinked records (`imageId = null`) are handled safely without throwing null errors.
+
+

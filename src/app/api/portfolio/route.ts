@@ -3,10 +3,12 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import path from 'path';
 import fs from 'fs/promises';
+import { reconcileImageSales } from '@/lib/salesReconciler';
 
 const dbPath = path.resolve(process.cwd(), 'dev.db');
 const adapter = new PrismaBetterSqlite3({ url: dbPath });
 const prisma = new PrismaClient({ adapter });
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [images, totalCount] = await Promise.all([
+    const [images, totalCount, allMatchingImages] = await Promise.all([
       prisma.image.findMany({
         where,
         skip,
@@ -132,7 +134,28 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.image.count({ where }),
+      prisma.image.findMany({
+        where,
+        select: {
+          totalDownloads: true,
+          stats: {
+            select: {
+              earnings: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const totalDownloads = (allMatchingImages || []).reduce(
+      (sum: number, img: any) => sum + (img.totalDownloads || 0),
+      0
+    );
+    const totalEarnings = (allMatchingImages || []).reduce(
+      (sum: number, img: any) =>
+        sum + (img.stats || []).reduce((sSum: number, s: any) => sSum + (s.earnings || 0), 0),
+      0
+    );
 
     let enrichedImages = images.map((img: any) => {
       const stats = img.stats || [];
@@ -168,7 +191,12 @@ export async function GET(request: NextRequest) {
         total: totalCount,
         page,
         limit,
-        totalPages: Math.ceil(totalCount / limit),
+        totalPages: Math.ceil(totalCount / limit) || 1,
+      },
+      summary: {
+        totalImages: totalCount,
+        totalDownloads,
+        totalEarnings,
       },
     });
   } catch (error) {
@@ -344,12 +372,52 @@ export async function PATCH(request: NextRequest) {
       dataToUpdate.totalDownloads = dataToUpdate.ssDownloads + dataToUpdate.asDownloads;
     }
 
-    const updatedImage = await prisma.image.update({
+    let updatedImage = await prisma.image.update({
       where: { id },
       data: dataToUpdate,
+      include: {
+        stats: {
+          orderBy: { date: 'desc' },
+        },
+      },
     });
 
-    return NextResponse.json(updatedImage);
+    // Auto-reconcile unlinked sales if platform IDs exist/changed
+    if (updatedImage.asId || updatedImage.ssId || updatedImage.vzId) {
+      await reconcileImageSales(prisma, updatedImage);
+      // Re-fetch to get updated rollups & stats if reconcile modified records
+      const reFetched = await prisma.image.findUnique({
+        where: { id },
+        include: {
+          stats: {
+            orderBy: { date: 'desc' },
+          },
+        },
+      });
+      if (reFetched) {
+        updatedImage = reFetched;
+      }
+    }
+
+    const stats = (updatedImage as any).stats || [];
+    const totalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
+    const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
+    for (const stat of stats) {
+      if (!platformBreakdown[stat.platform]) {
+        platformBreakdown[stat.platform] = { downloads: 0, earnings: 0 };
+      }
+      platformBreakdown[stat.platform].downloads += stat.downloads;
+      platformBreakdown[stat.platform].earnings += stat.earnings;
+    }
+
+    return NextResponse.json({
+      ...updatedImage,
+      totalEarnings,
+      platformBreakdown,
+    });
+
+
+
   } catch (error: any) {
     console.error('Failed to update portfolio data:', error);
     if (error.code === 'P2002') {

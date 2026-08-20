@@ -37,15 +37,18 @@ model Image {
 }
 
 model PlatformStats {
-  id        String   @id @default(cuid())
-  imageId   String
-  image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  platform  String   // "Shutterstock", "Adobe Stock", etc.
-  downloads Int      @default(0)
-  earnings  Float    @default(0)
-  date      DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  imageId         String?
+  image           Image?   @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  platform        String   // "Shutterstock", "Adobe Stock", etc.
+  platformAssetId String?  // Microstock platform Asset ID (e.g. "1929092005")
+  downloads       Int      @default(0)
+  earnings        Float    @default(0)
+  date            DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([imageId, platform, date])
+  @@index([platform, platformAssetId])
 }
+

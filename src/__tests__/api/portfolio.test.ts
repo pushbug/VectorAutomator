@@ -24,9 +24,16 @@ vi.mock('@/generated/prisma/client', () => {
         update: mockUpdate,
         delete: mockDelete,
       };
+      platformStats = {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue({}),
+        delete: vi.fn().mockResolvedValue({}),
+      };
     },
   };
 });
+
 
 vi.mock('fs/promises', () => ({
   default: {
@@ -66,6 +73,29 @@ describe('Portfolio API Route', () => {
           ]
         })
       );
+    });
+
+    it('UT-API-PF-SUMMARY-01: calculates and returns totalImages, totalDownloads, and totalEarnings in summary', async () => {
+      mockFindMany
+        .mockResolvedValueOnce([
+          { id: '1', title: 'Image 1', totalDownloads: 50, stats: [{ platform: 'Adobe Stock', earnings: 25.0 }] },
+        ])
+        .mockResolvedValueOnce([
+          { totalDownloads: 50, stats: [{ earnings: 25.0 }] },
+          { totalDownloads: 30, stats: [{ earnings: 15.0 }] },
+        ]);
+      mockCount.mockResolvedValue(2);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio?page=1&limit=10');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary).toEqual({
+        totalImages: 2,
+        totalDownloads: 80,
+        totalEarnings: 40.0,
+      });
     });
 
     it('UT-API-PF-SEARCH-01: searches across title, keywords, tags, code, and platform asset IDs', async () => {

@@ -5,7 +5,7 @@ import { PortfolioGrid } from '@/components/portfolio/PortfolioGrid';
 import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { AddImageDrawer } from '@/components/portfolio/AddImageDrawer';
 import { SaleEntryDrawer } from '@/components/sales/SaleEntryDrawer';
-import { Plus } from 'lucide-react';
+import { Plus, Calendar, Layers, Download } from 'lucide-react';
 
 export default function PortfolioPage() {
   const [images, setImages] = useState([]);
@@ -15,6 +15,13 @@ export default function PortfolioPage() {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isLogSaleDrawerOpen, setIsLogSaleDrawerOpen] = useState(false);
   
+  // Summary metrics state
+  const [summary, setSummary] = useState({
+    totalImages: 0,
+    totalDownloads: 0,
+    totalEarnings: 0,
+  });
+
   // Pagination and filtering state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,8 +49,15 @@ export default function PortfolioPage() {
       if (!res.ok) throw new Error('Failed to fetch data');
       
       const json = await res.json();
-      setImages(json.data);
-      setTotalPages(json.meta.totalPages);
+      setImages(json.data || []);
+      setTotalPages(json.meta?.totalPages || 1);
+      if (json.summary) {
+        setSummary({
+          totalImages: json.summary.totalImages ?? (json.meta?.total || 0),
+          totalDownloads: json.summary.totalDownloads ?? 0,
+          totalEarnings: json.summary.totalEarnings ?? 0,
+        });
+      }
       
       // Update selectedImage if it exists using functional state update to avoid re-render cycles
       setSelectedImage((prev: any) => {
@@ -119,6 +133,20 @@ export default function PortfolioPage() {
     }
   };
 
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+    return dateStr;
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6" data-testid="portfolio-layout">
       <div className="mb-4">
@@ -135,6 +163,66 @@ export default function PortfolioPage() {
           </button>
         </div>
         <PortfolioFilter onFilterChange={handleFilterChange} />
+
+        {/* Portfolio Summary Stats Bar */}
+        <div
+          data-testid="portfolio-summary-bar"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-surface/70 border border-border rounded-xl text-xs text-muted -mt-2 shadow-2xs backdrop-blur-xs"
+        >
+          <div className="flex items-center gap-2 font-medium">
+            {filters.startDate || filters.endDate ? (
+              <div className="flex items-center gap-1.5 text-foreground">
+                <Calendar size={14} className="text-primary shrink-0" />
+                <span>
+                  Stats for{' '}
+                  <strong className="text-foreground">
+                    {filters.startDate ? formatDisplayDate(filters.startDate) : 'Beginning'}
+                    {' — '}
+                    {filters.endDate ? formatDisplayDate(filters.endDate) : 'Present'}
+                  </strong>
+                  :
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-foreground">
+                <Layers size={14} className="text-primary shrink-0" />
+                <span>
+                  {filters.search ? (
+                    <>
+                      Search results for <strong className="text-foreground">&quot;{filters.search}&quot;</strong>:
+                    </>
+                  ) : (
+                    'All Portfolio Artworks:'
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 font-mono text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted">Artworks:</span>
+              <strong data-testid="portfolio-summary-count" className="text-foreground font-bold font-sans">
+                {summary.totalImages.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Download size={13} className="text-muted shrink-0" />
+              <span className="text-muted">Downloads:</span>
+              <strong data-testid="portfolio-summary-downloads" className="text-foreground font-bold">
+                {summary.totalDownloads.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted">Revenue:</span>
+              <strong data-testid="portfolio-summary-earnings" className="text-foreground font-bold">
+                ${summary.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </strong>
+            </div>
+          </div>
+        </div>
       </div>
       
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden gap-4 md:gap-6 min-h-0">

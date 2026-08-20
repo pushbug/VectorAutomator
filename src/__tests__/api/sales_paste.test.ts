@@ -3,13 +3,23 @@ import { parseStockPaste } from '@/lib/stockPasteParser';
 import { POST } from '@/app/api/sales/paste-sync/route';
 import { NextRequest } from 'next/server';
 
-const { mockFindMany, mockFindUnique, mockUpdate, mockUpsert, mockStatsFindMany } = vi.hoisted(() => {
+const {
+  mockFindMany,
+  mockFindUnique,
+  mockUpdate,
+  mockUpsert,
+  mockStatsFindMany,
+  mockFindFirst,
+  mockCreate,
+} = vi.hoisted(() => {
   return {
     mockFindMany: vi.fn(),
     mockFindUnique: vi.fn(),
     mockUpdate: vi.fn(),
     mockUpsert: vi.fn(),
     mockStatsFindMany: vi.fn(),
+    mockFindFirst: vi.fn(),
+    mockCreate: vi.fn(),
   };
 });
 
@@ -28,6 +38,9 @@ vi.mock('@/generated/prisma/client', () => {
       platformStats = {
         upsert: mockUpsert,
         findMany: mockStatsFindMany,
+        findFirst: mockFindFirst,
+        create: mockCreate,
+        update: mockUpdate,
       };
       $transaction = vi.fn(async (callback) => {
         return callback({
@@ -38,6 +51,9 @@ vi.mock('@/generated/prisma/client', () => {
           platformStats: {
             upsert: mockUpsert,
             findMany: mockStatsFindMany,
+            findFirst: mockFindFirst,
+            create: mockCreate,
+            update: mockUpdate,
           },
         });
       });
@@ -79,7 +95,7 @@ $63.01
       dateDisplay: '2/27/2026',
       dateStr: '2026-02-27',
       earnings: 207.04,
-      downloads: undefined,
+      downloads: 1,
     });
     expect(parsed[2]).toEqual({
       assetId: '569029521',
@@ -87,9 +103,22 @@ $63.01
       dateDisplay: '2/7/2023',
       dateStr: '2023-02-07',
       earnings: 63.01,
-      downloads: undefined,
+      downloads: 1,
     });
   });
+
+  it('UT-SALES-PASTE-DL-01: defaults downloads to 1 when earnings > 0 and download token is omitted', () => {
+    const rawPaste = `
+583485973\tVectors\t3/21/2023\t$1.10
+638902325\tVectors\t8/24/2023\t$0.00
+    `;
+
+    const parsed = parseStockPaste(rawPaste);
+    expect(parsed.length).toBe(2);
+    expect(parsed[0].downloads).toBe(1);
+    expect(parsed[1].downloads).toBe(0);
+  });
+
 
   it('UT-SALES-PASTE-02: parses single-line TSV table rows with downloads', () => {
     const rawPaste = `
@@ -110,7 +139,6 @@ $63.01
   });
 
   it('UT-SALES-PASTE-03: /api/sales/paste-sync previews and commits atomic sync', async () => {
-    // Mock DB images
     mockFindMany.mockResolvedValue([
       {
         id: 'img1',
@@ -125,7 +153,6 @@ $63.01
       },
     ]);
 
-    // Test preview action
     const previewReq = new NextRequest('http://localhost:3000/api/sales/paste-sync', {
       method: 'POST',
       body: JSON.stringify({
@@ -148,7 +175,6 @@ $63.01
     expect(previewData.rows[0].matchedImage?.id).toBe('img1');
     expect(previewData.rows[0].matchType).toBe('exact_date');
 
-    // Test commit action
     mockStatsFindMany.mockResolvedValue([{ platform: 'Adobe Stock', earnings: 63.01, downloads: 0 }]);
     mockFindUnique.mockResolvedValue({
       id: 'img1',
@@ -246,5 +272,71 @@ $93.77
     expect(data.rows[0].candidates.length).toBe(2);
     expect(data.rows[0].matchedImage).toBeNull();
   });
-});
 
+  it('UT-SALES-DATE-01: /api/sales/paste-sync overrides target date with statementDate when useStatementDate is true', async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    const req = new NextRequest('http://localhost:3000/api/sales/paste-sync', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'preview',
+        platform: 'Adobe Stock',
+        statementDate: '2026-08-20',
+        useStatementDate: true,
+        rawText: `
+1929092005
+Vectors
+2/27/2026
+$207.04
+        `,
+      }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.rows.length).toBe(1);
+    expect(data.rows[0].dateStr).toBe('2026-08-20');
+    expect(data.rows[0].uploadDateStr).toBe('2026-02-27');
+  });
+
+  it('UT-SALES-UNMATCHED-01: /api/sales/paste-sync commits unmatched sales with null imageId and platformAssetId', async () => {
+    mockFindFirst.mockResolvedValue(null);
+    mockCreate.mockResolvedValue({ id: 'unlinked-stat-1' });
+
+    const commitReq = new NextRequest('http://localhost:3000/api/sales/paste-sync', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'commit',
+        platform: 'Adobe Stock',
+        items: [
+          {
+            imageId: null,
+            assetId: '1929092005',
+            dateStr: '2026-08-20',
+            earnings: 207.04,
+            downloads: 15,
+          },
+        ],
+      }),
+    });
+
+    const res = await POST(commitReq);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.syncedCount).toBe(1);
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: {
+        imageId: null,
+        platform: 'Adobe Stock',
+        platformAssetId: '1929092005',
+        date: new Date('2026-08-20T00:00:00.000Z'),
+        earnings: 207.04,
+        downloads: 15,
+      },
+    });
+  });
+});

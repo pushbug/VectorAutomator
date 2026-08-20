@@ -18,9 +18,16 @@ vi.mock('@/generated/prisma/client', () => {
         findFirst: mockFindFirst,
         findUnique: mockFindUnique,
       };
+      platformStats = {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue({}),
+        delete: vi.fn().mockResolvedValue({}),
+      };
     },
   };
 });
+
 
 vi.mock('fs/promises', () => ({
   default: {

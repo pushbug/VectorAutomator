@@ -37,6 +37,7 @@ interface PortfolioDetailProps {
   onLogSale?: (image: PortfolioImage) => void;
   onEdit?: (image: PortfolioImage) => void;
   onClose: () => void;
+  className?: string;
 }
 
 const PLATFORMS_DEFAULT = ['Shutterstock', 'Adobe Stock', 'Vecteezy'];
@@ -54,13 +55,16 @@ export function PortfolioDetail({
   onLogSale,
   onEdit,
   onClose,
+  className,
 }: PortfolioDetailProps) {
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
   const [idInputVal, setIdInputVal] = useState('');
   const [isSavingId, setIsSavingId] = useState(false);
   const [copiedField, setCopiedField] = useState<'title' | 'keywords' | null>(null);
+  const [enrichedData, setEnrichedData] = useState<PortfolioImage | null>(null);
 
   const handleCopy = (text: string, field: 'title' | 'keywords') => {
     if (!text) return;
@@ -69,13 +73,42 @@ export function PortfolioDetail({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+
+  React.useEffect(() => {
+    setEnrichedData(null);
+    if (!image?.id) return;
+
+    if (image.totalEarnings !== undefined && image.platformBreakdown !== undefined) {
+      return;
+    }
+
+    let isMounted = true;
+    fetch(`/api/portfolio?search=${encodeURIComponent(image.code || image.id)}&limit=1`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (isMounted && json.data && json.data.length > 0) {
+          const found = json.data.find((item: any) => item.id === image.id);
+          if (found) {
+            setEnrichedData(found);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to enrich image details:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [image?.id, image?.code, image?.totalEarnings, image?.platformBreakdown]);
+
   if (!image) return null;
+
+  const activeImage = enrichedData ? { ...image, ...enrichedData } : image;
 
   const handleDelete = async () => {
     if (!onDelete) return;
     setIsDeleting(true);
     try {
-      await onDelete(image.id);
+      await onDelete(activeImage.id);
       setIsDeleteDialogOpen(false);
     } catch (err) {
       console.error('Failed to delete image:', err);
@@ -85,16 +118,16 @@ export function PortfolioDetail({
   };
 
   const getPlatformId = (p: string) => {
-    if (p === 'Shutterstock') return image.ssId;
-    if (p === 'Adobe Stock') return image.asId;
-    if (p === 'Vecteezy') return image.vzId;
+    if (p === 'Shutterstock') return activeImage.ssId;
+    if (p === 'Adobe Stock') return activeImage.asId;
+    if (p === 'Vecteezy') return activeImage.vzId;
     return null;
   };
 
   const handleSaveId = async (p: string) => {
     setIsSavingId(true);
     try {
-      const payload: any = { id: image.id };
+      const payload: any = { id: activeImage.id };
       const cleaned = idInputVal.trim() || null;
       if (p === 'Shutterstock') payload.ssId = cleaned;
       if (p === 'Adobe Stock') payload.asId = cleaned;
@@ -108,15 +141,12 @@ export function PortfolioDetail({
 
       if (res.ok) {
         const updated = await res.json();
+        setEnrichedData(updated);
         if (onImageUpdated) {
           onImageUpdated({
-            ...image,
+            ...activeImage,
             ...updated,
           });
-        } else {
-          if (p === 'Shutterstock') image.ssId = cleaned;
-          if (p === 'Adobe Stock') image.asId = cleaned;
-          if (p === 'Vecteezy') image.vzId = cleaned;
         }
         setEditingPlatform(null);
       }
@@ -127,30 +157,53 @@ export function PortfolioDetail({
     }
   };
 
-  const imageUrl = `/api/image?path=${encodeURIComponent(image.filePath)}`;
-  const totalEarnings = image.totalEarnings || 0;
+  const imageUrl = `/api/image?path=${encodeURIComponent(activeImage.filePath)}`;
+
+  const stats = (activeImage as any).stats || [];
+  let computedTotalEarnings = activeImage.totalEarnings;
+  let computedPlatformBreakdown = activeImage.platformBreakdown;
+
+  if (computedTotalEarnings === undefined && stats.length > 0) {
+    computedTotalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
+  }
+  if (!computedPlatformBreakdown && stats.length > 0) {
+    computedPlatformBreakdown = {};
+    for (const s of stats) {
+      if (!computedPlatformBreakdown[s.platform]) {
+        computedPlatformBreakdown[s.platform] = { downloads: 0, earnings: 0 };
+      }
+      computedPlatformBreakdown[s.platform].downloads += s.downloads;
+      computedPlatformBreakdown[s.platform].earnings += s.earnings;
+    }
+  }
+
+  const totalEarnings = computedTotalEarnings || 0;
 
   // Build platform entries list
   const platformsToDisplay = Array.from(
     new Set([
       ...PLATFORMS_DEFAULT,
-      ...Object.keys(image.platformBreakdown || {}),
+      ...Object.keys(computedPlatformBreakdown || {}),
     ])
   );
+
 
   return (
     <div
       data-testid="portfolio-detail-panel"
-      className="w-full md:w-96 lg:w-md xl:w-120 shrink-0 bg-surface border border-border rounded-2xl shadow-sm p-5 h-full overflow-y-auto flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-200"
+      className={`bg-surface border border-border shadow-sm p-5 h-full overflow-y-auto flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-200 ${
+        className || 'w-full md:w-96 lg:w-md xl:w-120 shrink-0 rounded-2xl'
+      }`}
     >
+
       <div>
         <div className="flex justify-between items-center mb-3 gap-2">
-          {image.code ? (
+          {activeImage.code ? (
             <div
               data-testid="portfolio-detail-code"
               className="inline-block px-2.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-bold text-xs border border-primary/20"
             >
-              {image.code}
+              {activeImage.code}
             </div>
           ) : <div />}
           <div className="flex items-center gap-1.5">
@@ -158,7 +211,7 @@ export function PortfolioDetail({
               <button
                 type="button"
                 data-testid="portfolio-detail-edit-btn"
-                onClick={() => onEdit(image)}
+                onClick={() => onEdit(activeImage)}
                 className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted hover:text-foreground bg-background/50 hover:bg-background border border-border/80 rounded-md transition-colors cursor-pointer"
                 title="Edit Image"
               >
@@ -179,7 +232,7 @@ export function PortfolioDetail({
         <div className="relative w-full aspect-video bg-muted rounded-md mb-4 overflow-hidden shrink-0">
           <Image
             src={imageUrl}
-            alt={image.title}
+            alt={activeImage.title}
             fill
             className="object-cover"
             unoptimized // Avoid CPU spike from aggressive local resizing
@@ -190,8 +243,8 @@ export function PortfolioDetail({
           <div>
             <h3 className="font-semibold text-muted mb-1">Upload Date</h3>
             <p data-testid="portfolio-detail-upload-date" className="text-foreground font-medium">
-              {image.createdAt
-                ? new Date(image.createdAt).toLocaleDateString('en-US', {
+              {activeImage.createdAt
+                ? new Date(activeImage.createdAt).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -206,7 +259,7 @@ export function PortfolioDetail({
               <button
                 type="button"
                 data-testid="portfolio-copy-title-btn"
-                onClick={() => handleCopy(image.title, 'title')}
+                onClick={() => handleCopy(activeImage.title, 'title')}
                 title={copiedField === 'title' ? 'Copied!' : 'Copy Title'}
                 className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
               >
@@ -218,7 +271,7 @@ export function PortfolioDetail({
               </button>
             </div>
             <p data-testid="portfolio-detail-title" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">
-              {image.title}
+              {activeImage.title}
             </p>
           </div>
 
@@ -228,7 +281,7 @@ export function PortfolioDetail({
               <button
                 type="button"
                 data-testid="portfolio-copy-keywords-btn"
-                onClick={() => handleCopy(image.keywords, 'keywords')}
+                onClick={() => handleCopy(activeImage.keywords, 'keywords')}
                 title={copiedField === 'keywords' ? 'Copied!' : 'Copy Keywords'}
                 className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
               >
@@ -239,27 +292,27 @@ export function PortfolioDetail({
                 )}
               </button>
             </div>
-            <p data-testid="portfolio-detail-keywords" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">{image.keywords}</p>
+            <p data-testid="portfolio-detail-keywords" className="whitespace-pre-wrap leading-relaxed text-foreground wrap-break-word">{activeImage.keywords}</p>
           </div>
 
-          {image.category && (
+          {activeImage.category && (
             <div>
               <h3 className="font-semibold text-muted mb-1">Category</h3>
-              <p data-testid="portfolio-detail-category" className="whitespace-pre-wrap leading-relaxed text-foreground font-medium wrap-break-word">{image.category}</p>
+              <p data-testid="portfolio-detail-category" className="whitespace-pre-wrap leading-relaxed text-foreground font-medium wrap-break-word">{activeImage.category}</p>
             </div>
           )}
 
-          {image.tags && (
+          {activeImage.tags && (
             <div>
               <h3 className="font-semibold text-muted mb-1">Tags</h3>
-              <p data-testid="portfolio-detail-tags" className="whitespace-pre-wrap leading-relaxed text-foreground font-medium wrap-break-word">{image.tags}</p>
+              <p data-testid="portfolio-detail-tags" className="whitespace-pre-wrap leading-relaxed text-foreground font-medium wrap-break-word">{activeImage.tags}</p>
             </div>
           )}
 
-          {image.notes && (
+          {activeImage.notes && (
             <div>
               <h3 className="font-semibold text-muted mb-1">Notes</h3>
-              <p data-testid="portfolio-detail-notes" className="whitespace-pre-wrap leading-relaxed text-foreground bg-background/50 p-2.5 rounded-lg border border-border/60 text-xs wrap-break-word">{image.notes}</p>
+              <p data-testid="portfolio-detail-notes" className="whitespace-pre-wrap leading-relaxed text-foreground bg-background/50 p-2.5 rounded-lg border border-border/60 text-xs wrap-break-word">{activeImage.notes}</p>
             </div>
           )}
 
@@ -271,7 +324,7 @@ export function PortfolioDetail({
                 <button
                   type="button"
                   data-testid="portfolio-detail-log-sale-btn"
-                  onClick={() => onLogSale(image)}
+                  onClick={() => onLogSale(activeImage)}
                   className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
                 >
                   <PlusCircle size={14} />
@@ -286,13 +339,13 @@ export function PortfolioDetail({
                 <p className="text-[11px] text-muted uppercase font-medium">Downloads</p>
                 <p className="text-base font-bold text-foreground font-mono tabular-nums flex items-center gap-1 mt-0.5">
                   <Download size={14} className="text-muted shrink-0" />
-                  <span>{image.totalDownloads.toLocaleString()}</span>
+                  <span>{activeImage.totalDownloads.toLocaleString()}</span>
                 </p>
               </div>
               <div>
                 <p className="text-[11px] text-muted uppercase font-medium">Revenue</p>
-                <p className="text-base font-bold text-emerald-500 font-mono tabular-nums flex items-center gap-1 mt-0.5">
-                  <DollarSign size={14} className="text-emerald-500 shrink-0" />
+                <p className="text-base font-bold text-foreground font-mono tabular-nums flex items-center gap-1 mt-0.5">
+                  <DollarSign size={14} className="text-foreground shrink-0" />
                   <span>${totalEarnings.toFixed(2)}</span>
                 </p>
               </div>
@@ -305,14 +358,13 @@ export function PortfolioDetail({
                 {platformsToDisplay.map((p) => {
                   let pDownloads = 0;
                   let pEarnings = 0;
-
-                  if (image.platformBreakdown && image.platformBreakdown[p]) {
-                    pDownloads = image.platformBreakdown[p].downloads;
-                    pEarnings = image.platformBreakdown[p].earnings;
+                  if (computedPlatformBreakdown && computedPlatformBreakdown[p]) {
+                    pDownloads = computedPlatformBreakdown[p].downloads;
+                    pEarnings = computedPlatformBreakdown[p].earnings;
                   } else if (p === 'Shutterstock') {
-                    pDownloads = image.ssDownloads || 0;
+                    pDownloads = activeImage.ssDownloads || 0;
                   } else if (p === 'Adobe Stock') {
-                    pDownloads = image.asDownloads || 0;
+                    pDownloads = activeImage.asDownloads || 0;
                   }
 
                   const currentId = getPlatformId(p);
@@ -392,12 +444,12 @@ export function PortfolioDetail({
 
                       {/* Bottom row: Downloads & Earnings */}
                       <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs font-mono tabular-nums">
-                        <span className="text-muted flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-medium text-foreground">
                           <Download size={12} className="text-muted shrink-0" />
-                          <span>{pDownloads.toLocaleString()} dl</span>
+                          <span>{pDownloads.toLocaleString()}</span>
                         </span>
-                        <span className="font-semibold text-emerald-500 flex items-center gap-0.5">
-                          <DollarSign size={12} className="text-emerald-500 shrink-0" />
+                        <span className="font-bold text-foreground flex items-center gap-0.5">
+                          <DollarSign size={12} className="text-foreground shrink-0" />
                           <span>${pEarnings.toFixed(2)}</span>
                         </span>
                       </div>
@@ -427,12 +479,13 @@ export function PortfolioDetail({
 
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
-        imageCode={image.code ? image.code : `#${image.id.slice(0, 8)}`}
+        imageCode={activeImage.code ? activeImage.code : `#${activeImage.id.slice(0, 8)}`}
         imageSrc={imageUrl}
         isDeleting={isDeleting}
         onConfirm={handleDelete}
         onCancel={() => setIsDeleteDialogOpen(false)}
       />
+
     </div>
   );
 }

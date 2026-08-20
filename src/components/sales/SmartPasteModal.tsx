@@ -2,7 +2,11 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, Sparkles, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Check } from 'lucide-react';
+import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check } from 'lucide-react';
+import { SingleDatePicker } from '../portfolio/SingleDatePicker';
+import { parseStockPaste } from '@/lib/stockPasteParser';
+
+
 
 interface MatchedImage {
   id: string;
@@ -17,6 +21,8 @@ interface PreviewRow {
   type?: string;
   dateStr: string;
   dateDisplay: string;
+  uploadDateStr?: string;
+  uploadDateDisplay?: string;
   earnings: number;
   downloads?: number;
   matchType: 'exact_id' | 'exact_date' | 'multi_exact_date' | 'proximity' | 'unmatched';
@@ -36,13 +42,24 @@ type PlatformType = (typeof SUPPORTED_PLATFORMS)[number];
 export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalProps) {
   const [platform, setPlatform] = useState<PlatformType>('Adobe Stock');
   const [rawText, setRawText] = useState('');
+  const [statementDate, setStatementDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const quickStats = React.useMemo(() => {
+    if (!rawText.trim()) return { count: 0, total: 0 };
+    const parsed = parseStockPaste(rawText);
+    return {
+      count: parsed.length,
+      total: parsed.reduce((sum, r) => sum + r.earnings, 0),
+    };
+  }, [rawText]);
+
   if (!isOpen) return null;
+
 
   const handleParse = async () => {
     if (!rawText.trim()) {
@@ -60,8 +77,11 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
           action: 'preview',
           platform,
           rawText,
+          statementDate,
+          useStatementDate: true,
         }),
       });
+
 
       if (!res.ok) {
         throw new Error('Failed to parse pasted data');
@@ -95,19 +115,17 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
   };
 
   const handleCommit = async () => {
-    // Filter items with matchedImage
-    const syncItems = rows
-      .filter((r) => r.matchedImage)
-      .map((r) => ({
-        imageId: r.matchedImage!.id,
-        assetId: r.assetId,
-        dateStr: r.dateStr,
-        earnings: r.earnings,
-        downloads: r.downloads,
-      }));
+    // Collect all rows, preserving null imageId for unmatched staging
+    const syncItems = rows.map((r) => ({
+      imageId: r.matchedImage?.id || null,
+      assetId: r.assetId,
+      dateStr: r.dateStr,
+      earnings: r.earnings,
+      downloads: r.downloads,
+    }));
 
     if (syncItems.length === 0) {
-      setErrorMsg('No matched images selected for synchronization.');
+      setErrorMsg('No items available for synchronization.');
       return;
     }
 
@@ -144,14 +162,27 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
   };
 
   const matchedCount = rows.filter((r) => r.matchedImage).length;
+  const unlinkedCount = rows.length - matchedCount;
+  const totalParsedEarnings = rows.reduce((sum, r) => sum + r.earnings, 0);
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
 
   return (
     <div
       data-testid="smart-paste-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
     >
-      <div className="bg-surface border border-border rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
+
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -159,7 +190,6 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">Smart Paste Stock Statement</h2>
-              <p className="text-xs text-muted">Highlight &amp; copy rows from your stock contributor dashboard and paste below</p>
             </div>
           </div>
           <button
@@ -173,7 +203,7 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+        <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4 relative z-20 min-h-115">
           {errorMsg && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
               <AlertCircle size={16} className="shrink-0" />
@@ -182,22 +212,28 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
           )}
 
           {step === 'input' ? (
-            <div className="flex flex-col gap-4">
-              {/* Platform Selector */}
-              <div>
-                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-                  Target Stock Platform
-                </label>
-                <div className="flex gap-2">
+            <div className="flex flex-col gap-4 flex-1 min-h-0">
+              {/* Controls Toolbar: Statement Date Picker (Left) & Platform Selector (Right) */}
+              <div className="p-3 bg-background border border-border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-30 overflow-visible shrink-0">
+                <div className="w-full sm:w-60 relative z-30" data-testid="smart-paste-date-input">
+                  <SingleDatePicker
+                    value={statementDate}
+                    onChange={setStatementDate}
+                    testId="smart-paste-date-input"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
                   {SUPPORTED_PLATFORMS.map((p) => (
                     <button
                       key={p}
                       type="button"
+                      data-testid={`smart-paste-platform-${p.toLowerCase().replace(/\s+/g, '-')}`}
                       onClick={() => setPlatform(p)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                         platform === p
                           ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                          : 'bg-background text-muted border-border hover:text-foreground hover:bg-muted/10'
+                          : 'bg-surface text-muted border-border hover:text-foreground hover:bg-muted/10'
                       }`}
                     >
                       {p}
@@ -206,121 +242,155 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                 </div>
               </div>
 
-              {/* Textarea */}
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="smart-paste-textarea" className="block text-xs font-semibold text-muted uppercase tracking-wider">
-                  Paste Clipboard Text
-                </label>
+              {/* Textarea with Realtime Live Stats filling full available vertical space */}
+              <div className="flex flex-col gap-1.5 relative z-10 flex-1 min-h-0">
+                <div className="flex items-center justify-between shrink-0">
+                  <label htmlFor="smart-paste-textarea" className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                    Paste Clipboard Text
+                  </label>
+                  {quickStats.count > 0 && (
+                    <div data-testid="smart-paste-live-stats" className="flex items-center gap-3 text-xs font-mono">
+                      <span className="text-muted">
+                        Detected: <strong className="text-foreground font-bold">{quickStats.count} items</strong>
+                      </span>
+                      <span className="text-muted">
+                        Estimated: <strong className="text-foreground font-bold">${quickStats.total.toFixed(2)}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <textarea
                   id="smart-paste-textarea"
                   data-testid="smart-paste-textarea"
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
-                  rows={8}
-                  placeholder={`Highlight table rows from Adobe Stock / Shutterstock and paste here...\n\nExample:\n1929092005\tVectors\t2/27/2026\t$207.04\n1056563551\tVectors\t10/31/2024\t$93.77\n569029521\tVectors\t2/7/2023\t$63.01`}
-                  className="w-full p-3 font-mono text-xs bg-background border border-border rounded-xl text-foreground focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30 leading-relaxed resize-y"
+                  placeholder="Highlight table rows from Adobe Stock / Shutterstock and paste here..."
+                  className="w-full flex-1 min-h-60 p-3.5 font-mono text-xs bg-background border border-border rounded-xl text-foreground focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30 leading-relaxed resize-none"
                 />
               </div>
 
-              <div className="p-3 bg-muted/10 rounded-xl border border-border/60 text-xs text-muted flex items-start gap-2">
-                <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Zero-Risk &amp; 100% Safe:</strong> Processing runs entirely on your local machine. The system extracts Asset IDs, upload dates, and earnings to match your portfolio artworks without external bot requests.
-                </span>
-              </div>
             </div>
           ) : (
             /* Step 2: Live Match Preview Table */
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-                  Parsed Items: <strong className="text-foreground">{rows.length}</strong> (Matched: <strong className="text-emerald-500">{matchedCount}</strong>)
-                </span>
-                <span className="text-xs text-muted">Platform: <strong className="text-foreground">{platform}</strong></span>
+              {/* Summary Header with Date & Total Revenue */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-surface border border-border rounded-xl">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
+                  <span>Parsed Items: <strong className="text-foreground">{rows.length}</strong></span>
+                  <span>(Matched: <strong className="text-blue-500">{matchedCount}</strong>, Unlinked: <strong className="text-muted">{unlinkedCount}</strong>)</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <span className="text-muted">Date:</span>
+                    <strong data-testid="smart-paste-summary-date" className="text-foreground font-bold">{formatDisplayDate(statementDate)}</strong>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <span className="text-muted">Total Revenue:</span>
+                    <strong data-testid="smart-paste-summary-revenue" className="text-foreground font-bold text-sm">
+                      ${totalParsedEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted">Platform:</span>
+                    <strong className="text-foreground font-medium">{platform}</strong>
+                  </div>
+                </div>
               </div>
 
-              <div className="border border-border rounded-xl overflow-hidden bg-background max-h-96 overflow-y-auto">
+              <div className="border border-border rounded-xl overflow-hidden bg-background max-h-[62vh] overflow-y-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-surface border-b border-border sticky top-0 z-10">
                     <tr>
-                      <th className="p-2.5 font-semibold text-muted">Stock Data</th>
-                      <th className="p-2.5 font-semibold text-muted">Status</th>
-                      <th className="p-2.5 font-semibold text-muted">Matched Portfolio Image</th>
+                      <th className="p-3 font-semibold text-muted w-44">Stock Data</th>
+                      <th className="p-3 font-semibold text-muted w-44">Status</th>
+                      <th className="p-3 font-semibold text-muted">Matched Portfolio Image</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {rows.map((row, idx) => (
                       <tr key={`${row.assetId}-${idx}`} className="hover:bg-surface/50 transition-colors">
                         {/* Stock Data Column */}
-                        <td className="p-2.5 font-mono">
+                        <td className="p-3 font-mono">
                           <div className="font-bold text-foreground">#{row.assetId}</div>
-                          <div className="text-[11px] text-muted">{row.dateDisplay}</div>
-                          <div className="text-emerald-500 font-bold mt-0.5">${row.earnings.toFixed(2)}</div>
+                          <div className="text-[11px] text-muted">
+                            {row.dateDisplay}
+                            {row.uploadDateDisplay && row.uploadDateDisplay !== row.dateDisplay && (
+                              <span className="ml-1 text-[10px] text-muted/70">(Up: {row.uploadDateDisplay})</span>
+                            )}
+                          </div>
+                          <div className="text-foreground font-bold mt-0.5">${row.earnings.toFixed(2)}</div>
                         </td>
 
                         {/* Status Column */}
-                        <td className="p-2.5">
+                        <td className="p-3">
                           {row.matchType === 'exact_id' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-medium text-[11px]">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-medium text-[11px]">
                               <Check size={12} /> Matched by ID
                             </span>
                           )}
                           {row.matchType === 'exact_date' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 font-medium text-[11px]">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-medium text-[11px]">
                               <Check size={12} /> Matched Date
                             </span>
                           )}
                           {row.matchType === 'multi_exact_date' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-medium text-[11px]">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium text-[11px]">
                               Multi-Match
                             </span>
                           )}
                           {row.matchType === 'proximity' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-medium text-[11px]">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium text-[11px]">
                               Suggested (±7d)
                             </span>
                           )}
                           {row.matchType === 'unmatched' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 font-medium text-[11px]">
-                              Unmatched
+                            <span
+                              data-testid="smart-paste-unlinked-badge"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-500/10 text-muted border border-border font-medium text-[11px]"
+                            >
+                              Unlinked (Staged)
                             </span>
                           )}
                         </td>
 
                         {/* Matched Image Selection Column */}
-                        <td className="p-2.5">
+
+                        <td className="p-3">
                           {row.matchedImage ? (
-                            <div className="flex items-center gap-2">
-                              <div className="relative w-9 h-9 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
+                            <div className="flex items-center gap-2.5">
+                              <div className="relative w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
                                 <Image
                                   src={`/api/image?path=${encodeURIComponent(row.matchedImage.filePath)}`}
                                   alt={row.matchedImage.title}
                                   fill
-                                  sizes="36px"
+                                  sizes="40px"
                                   className="object-contain p-0.5"
                                   unoptimized
                                 />
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <div className="font-mono font-bold text-foreground truncate">{row.matchedImage.code || `#${row.matchedImage.id.slice(0, 8)}`}</div>
-                                <div className="text-[11px] text-muted truncate max-w-xs">{row.matchedImage.title}</div>
+                                <div className="text-[11px] text-muted truncate max-w-md">{row.matchedImage.title}</div>
                               </div>
                             </div>
                           ) : row.candidates.length > 0 ? (
                             <select
                               value=""
                               onChange={(e) => handleCandidateSelect(idx, e.target.value)}
-                              className="w-full px-2 py-1 bg-surface border border-border rounded text-xs text-foreground focus:outline-hidden"
+                              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-lg text-xs text-foreground focus:outline-hidden"
                             >
                               <option value="">Select matching artwork...</option>
                               {row.candidates.map((c) => (
                                 <option key={c.id} value={c.id}>
-                                  {c.code ? `${c.code}: ` : ''}{c.title.slice(0, 40)}
+                                  {c.code ? `${c.code}: ` : ''}{c.title.slice(0, 60)}
                                 </option>
                               ))}
                             </select>
                           ) : (
-                            <span className="text-xs text-muted italic">No artwork found around this date</span>
+                            <span className="text-xs text-muted/70 italic">Will save as unlinked sales record</span>
                           )}
                         </td>
                       </tr>
@@ -330,10 +400,11 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
               </div>
             </div>
           )}
+
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-border bg-surface flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-border bg-surface flex items-center justify-between relative z-10">
           {step === 'preview' ? (
             <>
               <button
@@ -350,7 +421,7 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                 type="button"
                 data-testid="smart-paste-submit-btn"
                 onClick={handleCommit}
-                disabled={isSubmitting || matchedCount === 0}
+                disabled={isSubmitting || rows.length === 0}
                 className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-all cursor-pointer"
               >
                 {isSubmitting ? (
@@ -361,17 +432,17 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                 ) : (
                   <>
                     <Sparkles size={14} />
-                    <span>Confirm &amp; Sync {matchedCount} Items</span>
+                    <span>Confirm &amp; Sync {rows.length} Items ({matchedCount} linked, {unlinkedCount} unlinked)</span>
                   </>
                 )}
               </button>
             </>
           ) : (
-            <>
+            <div className="flex items-center justify-end gap-2.5 w-full">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 bg-background border border-border rounded-lg text-xs font-semibold text-muted hover:text-foreground transition-colors cursor-pointer"
+                className="px-3.5 py-2 bg-background border border-border rounded-lg text-xs font-semibold text-muted hover:text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -391,11 +462,15 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                 ) : (
                   <>
                     <Sparkles size={14} />
-                    <span>Parse &amp; Match Data</span>
+                    <span>
+                      {quickStats.count > 0
+                        ? `Parse & Match ${quickStats.count} Items ($${quickStats.total.toFixed(2)})`
+                        : 'Parse & Match Data'}
+                    </span>
                   </>
                 )}
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>

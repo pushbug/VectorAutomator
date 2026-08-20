@@ -1,7 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Upload Workflow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const removePortals = () => {
+        document.querySelectorAll('nextjs-portal').forEach((p) => p.remove());
+      };
+      removePortals();
+      const observer = new MutationObserver(removePortals);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    });
+  });
+
+
+
   test('User can upload file, edit metadata, and save', async ({ page }) => {
+
     // Navigate to the upload page
     await page.goto('/upload');
 
@@ -133,6 +147,10 @@ test.describe('Upload Workflow', () => {
     const titleInput = page.getByTestId('metadata-title-input');
     await expect(titleInput).toHaveValue('banner');
 
+    // Add a keyword so save button is not disabled by empty keyword list
+    await page.getByTestId('metadata-keywords-input').fill('vector');
+    await page.getByTestId('metadata-keywords-input').press('Enter');
+
     // Test Title validation: Clear title and click Save
     await titleInput.fill('');
     const saveBtn = page.getByTestId('save-metadata-btn');
@@ -142,6 +160,7 @@ test.describe('Upload Workflow', () => {
     // Enter title to clear red border
     await titleInput.fill('Business Strategy Banner');
     await expect(titleInput).not.toHaveClass(/border-destructive/);
+
 
     // Select reference image card in KeywordSuggester
     const imageCard = page.getByTestId('keyword-suggest-image-card-vec-1');

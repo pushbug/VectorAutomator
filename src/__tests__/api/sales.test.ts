@@ -88,7 +88,26 @@ describe('Sales API Route', () => {
       expect(data.summary.totalDownloads).toBe(15);
       expect(data.summary.topPlatform).toBe('Adobe Stock');
     });
+
+    it('filters sales by platform=unlinked (imageId=null)', async () => {
+      mockStatsFindMany.mockResolvedValueOnce([]);
+      mockStatsCount.mockResolvedValueOnce(0);
+      mockStatsFindMany.mockResolvedValueOnce([]);
+
+      const request = new NextRequest('http://localhost:3000/api/sales?platform=unlinked');
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+      expect(mockStatsFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            imageId: null,
+          }),
+        })
+      );
+    });
   });
+
 
   describe('POST', () => {
     it('creates new sale and recalculates image rollups', async () => {

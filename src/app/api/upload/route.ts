@@ -3,10 +3,12 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import path from 'path';
 import fs from 'fs/promises';
+import { reconcileImageSales } from '@/lib/salesReconciler';
 
 const dbPath = path.resolve(process.cwd(), 'dev.db');
 const adapter = new PrismaBetterSqlite3({ url: dbPath });
 const prisma = new PrismaClient({ adapter });
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -166,7 +168,7 @@ export async function POST(request: NextRequest) {
       initialStats.push({ platform: 'Vecteezy', downloads: validVzDownloads, earnings: 0, date: createdAt });
     }
 
-    const newImage = await prisma.image.create({
+    let newImage = await prisma.image.create({
       data: {
         code,
         year,
@@ -196,7 +198,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (newImage.asId || newImage.ssId || newImage.vzId) {
+      await reconcileImageSales(prisma, newImage);
+      newImage = (await prisma.image.findUnique({ where: { id: newImage.id } })) || newImage;
+    }
+
     return NextResponse.json(newImage, { status: 201 });
+
   } catch (error: any) {
     console.error('Upload Error:', error);
     if (error.code === 'P2002') {

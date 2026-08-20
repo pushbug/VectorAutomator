@@ -179,14 +179,14 @@ export function KeywordSuggester({
         </div>
 
         {/* Sort Select */}
-        <div className="flex items-center gap-1.5 bg-background border border-border rounded-lg px-2.5 py-1 text-xs">
-          <ArrowUpDown size={12} className="text-muted shrink-0" />
+        <div className="flex items-center gap-1.5 bg-background border border-border rounded-lg px-3 h-10 text-xs shrink-0">
+          <ArrowUpDown size={13} className="text-muted shrink-0" />
           <select
             data-testid="keyword-suggest-sort-select"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
             aria-label="Sort reference images"
-            className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
+            className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer font-medium"
           >
             <option value="totalDownloads">Top Downloads</option>
             <option value="earnings">Top Earnings ($)</option>
@@ -197,7 +197,7 @@ export function KeywordSuggester({
 
       {/* Search Input with Target Scope Select */}
       <div className="flex items-center gap-2 mb-3 shrink-0">
-        <div className="flex items-center bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs shrink-0">
+        <div className="flex items-center bg-background border border-border rounded-lg px-3 text-xs shrink-0 h-10">
           <select
             data-testid="keyword-suggest-search-field-select"
             value={searchField}
@@ -213,8 +213,8 @@ export function KeywordSuggester({
           </select>
         </div>
 
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <div className="relative flex-1 flex items-center">
+          <Search size={14} className="absolute left-3 text-muted pointer-events-none" />
           <input
             data-testid="keyword-suggest-search-input"
             type="text"
@@ -231,14 +231,15 @@ export function KeywordSuggester({
                 ? "Search Shutterstock, Adobe, Vecteezy ID..."
                 : "Search across all fields..."
             }
-            className="w-full bg-background border border-border rounded-lg pl-9 pr-8 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all"
+            className="w-full bg-background border border-border rounded-lg pl-9 pr-8 h-10 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all"
           />
           {searchQuery && (
             <button
               type="button"
               data-testid="keyword-suggest-search-clear-btn"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              className="absolute right-2.5 text-muted hover:text-foreground p-1 rounded-full hover:bg-muted/10 transition-colors cursor-pointer"
+              title="Clear search"
             >
               <X size={14} />
             </button>
@@ -476,7 +477,7 @@ export function KeywordSuggester({
       </div>
 
       {/* Footer Action Bar */}
-      <div className="mt-4 pt-4 border-t border-border flex flex-col gap-2.5 shrink-0">
+      <div className="mt-3 flex flex-col gap-2 shrink-0">
         {appliedFeedback && (
           <div className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-center font-medium">
             {appliedFeedback}
@@ -488,7 +489,7 @@ export function KeywordSuggester({
             data-testid="keyword-suggest-copy-tags-btn"
             onClick={handleCopyTags}
             disabled={selectedTagNames.size === 0 && keywordTokens.length === 0}
-            className="bg-surface-hover hover:bg-border border border-border text-foreground text-sm font-medium py-2.5 px-4 rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+            className="bg-surface-hover hover:bg-border border border-border text-foreground text-sm font-medium h-10 px-4 rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
             title="Copy selected keywords to clipboard"
           >
             {copiedFeedback ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
@@ -500,7 +501,7 @@ export function KeywordSuggester({
             data-testid="keyword-suggest-apply-btn"
             onClick={handleApply}
             disabled={!activeAssetId || selectedTagNames.size === 0}
-            className="flex-1 bg-primary hover:bg-blue-700 text-primary-foreground text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex-1 bg-primary hover:bg-blue-700 text-primary-foreground text-sm font-semibold h-10 px-4 rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Sparkles size={15} />
             <span>

@@ -7,7 +7,8 @@ const dbPath = path.resolve(process.cwd(), 'dev.db');
 const adapter = new PrismaBetterSqlite3({ url: dbPath });
 const prisma = new PrismaClient({ adapter });
 
-async function syncImageRollup(imageId: string) {
+async function syncImageRollup(imageId?: string | null) {
+  if (!imageId) return;
   const allStats = await prisma.platformStats.findMany({
     where: { imageId },
   });
@@ -30,6 +31,7 @@ async function syncImageRollup(imageId: string) {
   });
 }
 
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
@@ -40,27 +42,47 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const sortBy = searchParams.get('sortBy') || 'date';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
+
+    let orderBy: any = { date: sortOrder };
+    if (sortBy === 'earnings') {
+      orderBy = { earnings: sortOrder };
+    } else if (sortBy === 'downloads') {
+      orderBy = { downloads: sortOrder };
+    } else if (sortBy === 'platform') {
+      orderBy = { platform: sortOrder };
+    } else if (sortBy === 'image') {
+      orderBy = [
+        { image: { code: sortOrder } },
+        { platformAssetId: sortOrder },
+      ];
+    } else {
+      orderBy = { date: sortOrder };
+    }
 
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
-    if (platform && platform !== 'all') {
+    if (platform === 'unlinked') {
+      where.imageId = null;
+    } else if (platform && platform !== 'all') {
       where.platform = platform;
     }
 
-    if (imageId) {
+    if (imageId && platform !== 'unlinked') {
       where.imageId = imageId;
     }
 
     if (search) {
-      where.image = {
-        OR: [
-          { code: { contains: search } },
-          { title: { contains: search } },
-        ],
-      };
+      where.OR = [
+        { image: { code: { contains: search } } },
+        { image: { title: { contains: search } } },
+        { platformAssetId: { contains: search } },
+      ];
     }
+
 
     if (startDate || endDate) {
       where.date = {};
@@ -81,18 +103,19 @@ export async function GET(request: NextRequest) {
         where,
         skip,
         take: limit,
-        orderBy: { date: 'desc' },
+        orderBy,
         include: {
+
           image: {
-            select: {
-              id: true,
-              code: true,
-              title: true,
-              filePath: true,
+            include: {
+              stats: {
+                orderBy: { date: 'desc' },
+              },
             },
           },
         },
       }),
+
       prisma.platformStats.count({ where }),
       prisma.platformStats.findMany({
         where,
@@ -126,8 +149,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const enrichedSales = sales.map((sale: any) => {
+      if (!sale.image) return sale;
+      const stats = sale.image.stats || [];
+      const imgTotalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
+      const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
+      for (const stat of stats) {
+        if (!platformBreakdown[stat.platform]) {
+          platformBreakdown[stat.platform] = { downloads: 0, earnings: 0 };
+        }
+        platformBreakdown[stat.platform].downloads += stat.downloads;
+        platformBreakdown[stat.platform].earnings += stat.earnings;
+      }
+      return {
+        ...sale,
+        image: {
+          ...sale.image,
+          totalEarnings: imgTotalEarnings,
+          platformBreakdown,
+        },
+      };
+    });
+
     return NextResponse.json({
-      data: sales,
+      data: enrichedSales,
+
       meta: {
         total: totalCount,
         page,
@@ -246,10 +292,13 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.platformStats.delete({ where: { id } });
 
-    // Sync rollup fields on Image entity
-    await syncImageRollup(imageId);
+    // Sync rollup fields on Image entity if image was linked
+    if (imageId) {
+      await syncImageRollup(imageId);
+    }
 
     return NextResponse.json({ success: true, deletedId: id });
+
   } catch (error) {
     console.error('Failed to delete sale record:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

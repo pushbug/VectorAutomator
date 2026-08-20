@@ -39,8 +39,13 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
       const assetId = match[1];
       const type = match[2] || 'Vectors';
       const dateDisplay = match[3];
-      const downloads = match[4] ? parseInt(match[4].replace(/,/g, ''), 10) : undefined;
       const earnings = parseFloat(match[5].replace(/,/g, '')) || 0;
+      const downloads = match[4]
+        ? parseInt(match[4].replace(/,/g, ''), 10)
+        : (earnings > 0 ? 1 : 0);
+
+
+
 
       const dateParts = dateDisplay.split('/');
       const month = dateParts[0].padStart(2, '0');
@@ -139,8 +144,9 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
           dateDisplay,
           dateStr,
           earnings,
-          downloads,
+          downloads: downloads !== undefined ? downloads : (earnings > 0 ? 1 : 0),
         });
+
 
         i = j - 1; // Advance pointer
       }

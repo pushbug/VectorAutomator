@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Image from 'next/image';
+import { Download } from 'lucide-react';
 
 interface PortfolioImage {
   id: string;
@@ -106,10 +107,10 @@ export function PortfolioGrid({
                 {/* Line 2: Total Downloads & Total Earnings */}
                 <div className="flex items-center justify-between text-xs font-mono tabular-nums text-muted">
                   <span className="flex items-center gap-1 font-medium text-foreground">
+                    <Download size={13} className="text-muted shrink-0" />
                     <span>{img.totalDownloads.toLocaleString()}</span>
-                    <span className="text-[11px] text-muted">dl</span>
                   </span>
-                  <span className="font-semibold text-emerald-500">
+                  <span className="font-bold text-foreground">
                     ${(img.totalEarnings || 0).toFixed(2)}
                   </span>
                 </div>

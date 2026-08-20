@@ -11,7 +11,14 @@ const prisma = new PrismaClient({ adapter });
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, platform = 'Adobe Stock', rawText, items } = body;
+    const {
+      action,
+      platform = 'Adobe Stock',
+      rawText,
+      items,
+      statementDate,
+      useStatementDate = false,
+    } = body;
 
     // ----------------------------------------------------
     // Action 1: PREVIEW
@@ -41,6 +48,11 @@ export async function POST(request: NextRequest) {
       });
 
       const previewRows = parsedRows.map((row) => {
+        const effectiveDateStr =
+          useStatementDate && statementDate ? statementDate : row.dateStr;
+        const effectiveDateDisplay =
+          useStatementDate && statementDate ? statementDate : row.dateDisplay;
+
         // Priority 1: Match by existing platform ID
         const matched = allImages.find((img) => {
           if (platform === 'Adobe Stock' && img.asId === row.assetId) return true;
@@ -52,6 +64,10 @@ export async function POST(request: NextRequest) {
         if (matched) {
           return {
             ...row,
+            uploadDateStr: row.dateStr,
+            uploadDateDisplay: row.dateDisplay,
+            dateStr: effectiveDateStr,
+            dateDisplay: effectiveDateDisplay,
             matchType: 'exact_id',
             matchedImage: {
               id: matched.id,
@@ -64,7 +80,7 @@ export async function POST(request: NextRequest) {
           };
         }
 
-        // Priority 2: Match by exact creation date
+        // Priority 2: Match by exact creation date (using parsed artwork upload date)
         const rowDate = new Date(`${row.dateStr}T00:00:00.000Z`);
         const exactMatches = allImages.filter((img) => {
           const imgDate = new Date(img.createdAt);
@@ -79,6 +95,10 @@ export async function POST(request: NextRequest) {
           const single = exactMatches[0];
           return {
             ...row,
+            uploadDateStr: row.dateStr,
+            uploadDateDisplay: row.dateDisplay,
+            dateStr: effectiveDateStr,
+            dateDisplay: effectiveDateDisplay,
             matchType: 'exact_date',
             matchedImage: {
               id: single.id,
@@ -100,17 +120,28 @@ export async function POST(request: NextRequest) {
           return diff <= sevenDaysMs;
         });
 
-        const candidates = (exactMatches.length > 1 ? exactMatches : proximityMatches).map((img) => ({
-          id: img.id,
-          code: img.code,
-          title: img.title,
-          filePath: img.filePath,
-          createdAt: img.createdAt.toISOString(),
-        }));
+        const candidates = (exactMatches.length > 1 ? exactMatches : proximityMatches).map(
+          (img) => ({
+            id: img.id,
+            code: img.code,
+            title: img.title,
+            filePath: img.filePath,
+            createdAt: img.createdAt.toISOString(),
+          })
+        );
 
         return {
           ...row,
-          matchType: exactMatches.length > 1 ? 'multi_exact_date' : candidates.length > 0 ? 'proximity' : 'unmatched',
+          uploadDateStr: row.dateStr,
+          uploadDateDisplay: row.dateDisplay,
+          dateStr: effectiveDateStr,
+          dateDisplay: effectiveDateDisplay,
+          matchType:
+            exactMatches.length > 1
+              ? 'multi_exact_date'
+              : candidates.length > 0
+              ? 'proximity'
+              : 'unmatched',
           matchedImage: candidates.length === 1 ? candidates[0] : null,
           candidates,
         };
@@ -130,67 +161,111 @@ export async function POST(request: NextRequest) {
       await prisma.$transaction(async (tx) => {
         for (const item of items) {
           const { imageId, assetId, dateStr, earnings, downloads } = item;
-          if (!imageId) continue;
-
-          // 1. Permanently link platform Asset ID on Image
-          const updateData: Record<string, string> = {};
-          if (platform === 'Adobe Stock' && assetId) updateData.asId = assetId;
-          if (platform === 'Shutterstock' && assetId) updateData.ssId = assetId;
-          if (platform === 'Vecteezy' && assetId) updateData.vzId = assetId;
-
-          if (Object.keys(updateData).length > 0) {
-            await tx.image.update({
-              where: { id: imageId },
-              data: updateData,
-            });
-          }
-
-          // 2. Normalize date to UTC Midnight
           const normalizedDate = new Date(`${dateStr}T00:00:00.000Z`);
+          const numEarnings = Number(earnings) || 0;
+          const resolvedDownloads =
+            downloads !== undefined
+              ? Number(downloads)
+              : numEarnings > 0
+              ? 1
+              : 0;
 
-          // 3. Upsert PlatformStats record
-          await tx.platformStats.upsert({
-            where: {
-              imageId_platform_date: {
+          if (imageId) {
+            // Case A: Matched to Image in Portfolio
+            // 1. Permanently link platform Asset ID on Image
+            const updateData: Record<string, string> = {};
+            if (platform === 'Adobe Stock' && assetId) updateData.asId = assetId;
+            if (platform === 'Shutterstock' && assetId) updateData.ssId = assetId;
+            if (platform === 'Vecteezy' && assetId) updateData.vzId = assetId;
+
+            if (Object.keys(updateData).length > 0) {
+              await tx.image.update({
+                where: { id: imageId },
+                data: updateData,
+              });
+            }
+
+            // 2. Upsert PlatformStats record
+            await tx.platformStats.upsert({
+              where: {
+                imageId_platform_date: {
+                  imageId,
+                  platform,
+                  date: normalizedDate,
+                },
+              },
+              create: {
                 imageId,
                 platform,
+                platformAssetId: assetId || null,
+                date: normalizedDate,
+                earnings: numEarnings,
+                downloads: resolvedDownloads,
+              },
+              update: {
+                platformAssetId: assetId || undefined,
+                earnings: numEarnings,
+                downloads: resolvedDownloads,
+              },
+            });
+
+            // 3. Recalculate and update image rollups
+            const allStats = await tx.platformStats.findMany({
+              where: { imageId },
+            });
+
+            const totalDownloads = allStats.reduce(
+              (sum: number, s: any) => sum + (s.downloads || 0),
+              0
+            );
+            const ssDownloads = allStats
+              .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
+              .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
+            const asDownloads = allStats
+              .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
+              .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
+
+            await tx.image.update({
+              where: { id: imageId },
+              data: {
+                totalDownloads,
+                ssDownloads,
+                asDownloads,
+              },
+            });
+          } else {
+            // Case B: Unlinked (imageId is null)
+            const existingUnlinked = await tx.platformStats.findFirst({
+              where: {
+                imageId: null,
+                platform,
+                platformAssetId: assetId || null,
                 date: normalizedDate,
               },
-            },
-            create: {
-              imageId,
-              platform,
-              date: normalizedDate,
-              earnings: Number(earnings) || 0,
-              downloads: Number(downloads) || 0,
-            },
-            update: {
-              earnings: Number(earnings) || 0,
-              ...(downloads !== undefined ? { downloads: Number(downloads) } : {}),
-            },
-          });
+            });
 
-          // 4. Recalculate and update image rollups
-          const allStats = await tx.platformStats.findMany({
-            where: { imageId },
-          });
+            if (existingUnlinked) {
+              await tx.platformStats.update({
+                where: { id: existingUnlinked.id },
+                data: {
+                  earnings: numEarnings,
+                  downloads: resolvedDownloads,
+                },
+              });
+            } else {
+              await tx.platformStats.create({
+                data: {
+                  imageId: null,
+                  platform,
+                  platformAssetId: assetId || null,
+                  date: normalizedDate,
+                  earnings: numEarnings,
+                  downloads: resolvedDownloads,
+                },
+              });
+            }
+          }
 
-          const totalDownloads = allStats.reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-          const ssDownloads = allStats
-            .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
-            .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-          const asDownloads = allStats
-            .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
-            .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-
-          await tx.image.update({
-            where: { id: imageId },
-            data: {
-              totalDownloads,
-              ssDownloads,
-              asDownloads,
-            },
-          });
         }
       });
 

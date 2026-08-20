@@ -58,4 +58,65 @@ describe('PortfolioGrid Component', () => {
     fireEvent.blur(pageInput);
     expect(handlePageChange).toHaveBeenCalledWith(1);
   });
+
+  it('UT-UI-PORTFOLIO-DETAIL-EARNINGS-01: renders total revenue and platform breakdown correctly', async () => {
+    const { PortfolioDetail } = await import('@/components/portfolio/PortfolioDetail');
+    const mockImageWithStats = {
+      id: 'img1',
+      code: '2408-71',
+      title: 'Infographic Banner',
+      keywords: 'infographic, vector',
+      status: 'uploaded',
+      filePath: '/path/to/img1.jpg',
+      ssId: '2509573381',
+      asId: '949535178',
+      vzId: null,
+      ssDownloads: 0,
+      asDownloads: 4,
+      totalDownloads: 4,
+      totalEarnings: 6.41,
+      platformBreakdown: {
+        'Adobe Stock': { downloads: 4, earnings: 6.41 },
+        'Shutterstock': { downloads: 0, earnings: 0.0 },
+      },
+      createdAt: '2024-08-30T00:00:00.000Z',
+    };
+
+    render(
+      <PortfolioDetail
+        image={mockImageWithStats}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByText('$6.41')).toHaveLength(2);
+    expect(screen.getAllByText('4')).toHaveLength(2);
+    expect(screen.getByText('#949535178')).toBeInTheDocument();
+
+  });
+
+  it('UT-UI-PORTFOLIO-SUMMARY-01: renders portfolio dashboard summary bar with artworks count, downloads, and revenue', async () => {
+    // Mock global fetch for PortfolioPage
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: mockImages,
+        meta: { total: 125, totalPages: 2, page: 1, limit: 100 },
+        summary: {
+          totalImages: 125,
+          totalDownloads: 450,
+          totalEarnings: 285.5,
+        },
+      }),
+    });
+
+    const PortfolioPage = (await import('@/app/portfolio/page')).default;
+    render(<PortfolioPage />);
+
+    expect(await screen.findByTestId('portfolio-summary-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('portfolio-summary-count')).toHaveTextContent('125');
+    expect(screen.getByTestId('portfolio-summary-downloads')).toHaveTextContent('450');
+    expect(screen.getByTestId('portfolio-summary-earnings')).toHaveTextContent('$285.50');
+  });
 });
+

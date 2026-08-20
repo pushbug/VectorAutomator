@@ -7,7 +7,12 @@ interface DateRangePickerProps {
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD
   onChange: (range: { startDate: string; endDate: string }) => void;
+  showLabel?: boolean;
+  label?: string;
+  testIdPrefix?: string;
+  className?: string;
 }
+
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -19,7 +24,16 @@ const MONTH_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-export function DateRangePicker({ startDate, endDate, onChange }: DateRangePickerProps) {
+export function DateRangePicker({
+  startDate,
+  endDate,
+  onChange,
+  showLabel = true,
+  label = 'Date Range',
+  testIdPrefix = 'portfolio-date',
+  className,
+}: DateRangePickerProps) {
+
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'month' | 'year'>('day');
   const [hoverDate, setHoverDate] = useState<string | null>(null);
@@ -119,7 +133,6 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
     if (parts.length === 3) {
       const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       return date.toLocaleDateString('en-US', {
-        weekday: 'short',
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -321,16 +334,16 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
   };
 
   return (
-    <div className="relative" ref={containerRef}>
-      <label className="block text-sm font-medium text-foreground mb-1">Date Range</label>
+    <div className={`relative ${className || 'w-full'}`} ref={containerRef}>
+      {showLabel && <label className="block text-sm font-medium text-foreground mb-1">{label}</label>}
       <div
-        data-testid="portfolio-date-picker-trigger"
+        data-testid={`${testIdPrefix}-picker-trigger`}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between gap-2 px-3 py-2 border border-border rounded-md bg-background text-foreground cursor-pointer hover:border-primary/60 transition-colors h-10.5 min-w-65"
+        className="flex items-center justify-between gap-2 px-3 py-2 border border-border rounded-md bg-background text-foreground cursor-pointer hover:border-primary/60 transition-colors h-10.5 w-full select-none"
       >
-        <div className="flex items-center gap-2 text-sm truncate">
-          <CalendarIcon size={16} className="text-primary shrink-0" />
-          <span className={startDate ? 'text-foreground font-medium' : 'text-muted'}>
+        <div className="flex items-center gap-2 text-xs truncate min-w-0 flex-1">
+          <CalendarIcon size={15} className="text-primary shrink-0" />
+          <span className={`truncate ${startDate ? 'text-foreground font-medium' : 'text-muted'}`}>
             {startDate && endDate
               ? `${formatDisplayDate(startDate)} – ${formatDisplayDate(endDate)}`
               : startDate
@@ -341,9 +354,9 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
         {startDate && (
           <button
             type="button"
-            data-testid="portfolio-date-clear-btn"
+            data-testid={`${testIdPrefix}-clear-btn`}
             onClick={handleClear}
-            className="text-muted hover:text-foreground p-1 rounded-full hover:bg-muted/10 transition-colors"
+            className="text-muted hover:text-foreground p-1 rounded-full hover:bg-muted/10 transition-colors cursor-pointer shrink-0 ml-1"
             title="Clear dates"
           >
             <X size={14} />
@@ -353,9 +366,10 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
 
       {isOpen && (
         <div
-          data-testid="portfolio-date-picker-popover"
+          data-testid={`${testIdPrefix}-picker-popover`}
           className="absolute top-full left-0 mt-2 z-50 bg-surface border border-border rounded-xl shadow-xl p-4 w-80 md:w-150"
         >
+
           {/* Header navigation */}
           <div className="flex items-center justify-between mb-4">
             <button
