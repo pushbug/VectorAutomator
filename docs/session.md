@@ -1,26 +1,26 @@
-### Goal: Implement Batch Sales Operations (Bulk Delete & Bulk Date Update), Dynamic Portfolio Metrics Bar, Smart Paste popover & layout enhancements, High-Contrast Revenue styling, and unified search clear buttons.
+### Goal: Refactor architectural redundancies (Prisma singleton, rollup synchronization, image code parsing, platform constants, and UI formatters) and expand test suite with batch sales E2E.
 
 ### Status: COMPLETE
 
 ### Done:
-- Built dedicated batch sales operations (`/api/sales/batch`) supporting multi-row deletion with automatic rollup recalculation and collision-safe bulk date shifting.
-- Added multi-row checkbox selection, select-all on page, floating bulk action bar, and `BulkDateModal` in `src/components/sales/SalesTable.tsx` and `src/components/sales/BulkDateModal.tsx`.
-- Extended `GET /api/portfolio` to compute aggregate metrics (`totalImages`, `totalDownloads`, `totalEarnings`) and rendered sticky summary bar on `/portfolio` with dynamic date range text.
-- Enhanced `SmartPasteModal` with overflow-safe popover positioning, right-aligned action buttons, full-height textarea expansion, and canonical `min-h-115` class.
-- Standardized high-contrast revenue text (`text-foreground font-bold`) and grey download icons (`text-muted`) with numbers across Portfolio and Sales modules.
-- Replaced search clear text buttons with inside-input `X` icon and collision-safe padding in `PortfolioFilter` and `SalesTable`.
-- Aligned `KeywordSuggester` filter and search input heights to `h-10` and removed footer divider to maximize keyword cloud space.
+- Centralized `PrismaClient` initialization into a global singleton in `src/lib/prisma.ts` with `globalThis` connection caching to prevent Next.js HMR memory leaks and SQLite locks across all 6 API routes.
+- Unified parent image rollup calculation into a transaction-safe pure function `syncImageRollup(prismaOrTx, imageId)` in `src/lib/salesReconciler.ts` supporting both standalone client and interactive transaction contexts.
+- Extracted image code parsing (`parseImageCode`) and monthly sequence generation (`getNextImageCode`) into `src/lib/imageCode.ts` and integrated across `/api/upload` and `/api/portfolio`.
+- Centralized microstock platform definitions in `src/lib/platforms.ts` and null-safe formatting helpers (`formatCurrency`, `formatNumber`, `formatTableDate`, `formatDisplayDate`) in `src/lib/formatters.ts`.
+- Updated UI components (`PortfolioDetail`, `SalesTable`, `SmartPasteModal`, `SaleEntryDrawer`, `SalesSummaryCards`, `KpiCards`, and `/portfolio`) to use centralized platform themes and formatters.
+- Added standalone unit tests (`UT-SALES-ROLLUP-01`, `UT-CODE-SEQ-01`), resolved React `act(...)` warning in `KeywordSuggester.test.tsx`, and added Playwright test scenario `E2E-SALES-04` for batch sales operations.
+- Appended ADR-010 to `docs/decisions.md` and registered all test IDs in `docs/tests/CATALOG.md` (134/134 Vitest tests passing).
 
 ### Next:
 - 1. Implement Phase 3/4 CSV batch import for stock platform monthly statement uploads.
 - 2. Implement SFTP auto-uploader module for Adobe Stock and Shutterstock.
 
 ### Decisions:
-- Batch date updating accumulates values (`downloads`, `earnings`) into existing target-date records and deletes source records to safely avoid unique key collisions.
-- Portfolio summary metrics are aggregated dynamically across active search/date filters on the server to ensure O(1) transfer without fetching full table lists.
-- High-contrast accessibility standards mandate `text-foreground font-bold` for revenue numbers and `text-muted` for icons to guarantee optimal visibility across light and dark modes.
+- Centralized `PrismaClient` in `src/lib/prisma.ts` caches the instance on `globalThis` in development mode to prevent SQLite connection exhaustion during HMR reloads.
+- `syncImageRollup` accepts either a standalone `PrismaClient` or an interactive transaction client (`tx`) to prevent SQLite concurrency deadlocks inside `$transaction` blocks.
+- Formatters provide safe fallbacks (`$0.00` for currency, `0` for numbers, `-` for dates) to ensure zero UI runtime crashes on uninitialized metrics.
 
 ### Skills:
-- [`coding`](.agents/skills/coding/SKILL.md) — Implemented batch APIs, bulk action toolbars, portfolio summary calculation, and UI refinements.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Gatekeeper validation, regression audits, selector checks, and verification across 126 Vitest tests.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, decision logging (ADR-009), doc updates, and git synchronization.
+- [`coding`](.agents/skills/coding/SKILL.md) — Implemented database singleton, rollup reconciliation, code parsing, formatters, and UI integrations.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Gatekeeper audits, regression checks, selector validation, and test suite verification across 134 tests.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-010), doc updates, and git synchronization.

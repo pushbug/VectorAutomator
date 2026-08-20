@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { KeywordSuggester } from '@/components/upload/KeywordSuggester';
 
@@ -247,7 +247,9 @@ describe('KeywordSuggester Component (UT-UI-KEYWORD-SUGGEST-01)', () => {
     });
 
     // Click Copy Tags button
-    fireEvent.click(screen.getByTestId('keyword-suggest-copy-tags-btn'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('keyword-suggest-copy-tags-btn'));
+    });
     expect(writeTextMock).toHaveBeenCalled();
 
     // Click Apply Keywords button

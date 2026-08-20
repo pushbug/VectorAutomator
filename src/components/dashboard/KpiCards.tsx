@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, Sparkles, Download, DollarSign } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface KpiCardsProps {
   totalVectors: number;
@@ -21,7 +22,7 @@ export function KpiCards({
       id: 'total-vectors',
       testId: 'dash-kpi-total-vectors',
       title: 'Total Vectors',
-      value: totalVectors.toLocaleString(),
+      value: formatNumber(totalVectors),
       subtitle: 'In local portfolio',
       icon: Layers,
       iconBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -30,7 +31,7 @@ export function KpiCards({
       id: 'monthly-vectors',
       testId: 'dash-kpi-monthly-vectors',
       title: 'Monthly Output',
-      value: monthlyVectors.toLocaleString(),
+      value: formatNumber(monthlyVectors),
       subtitle: currentMonthName || 'This month',
       icon: Sparkles,
       iconBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
@@ -39,7 +40,7 @@ export function KpiCards({
       id: 'total-downloads',
       testId: 'dash-kpi-total-downloads',
       title: 'Total Downloads',
-      value: totalDownloads.toLocaleString(),
+      value: formatNumber(totalDownloads),
       subtitle: 'Adobe + Shutterstock',
       icon: Download,
       iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
@@ -48,7 +49,7 @@ export function KpiCards({
       id: 'month-earnings',
       testId: 'dash-kpi-month-earnings',
       title: 'Month Earnings',
-      value: `$${currentMonthEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatCurrency(currentMonthEarnings),
       subtitle: 'Current period revenue',
       icon: DollarSign,
       iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { DollarSign, Download, Trophy, TrendingUp } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface SalesSummaryCardsProps {
   totalEarnings: number;
@@ -20,21 +21,21 @@ export function SalesSummaryCards({
   const cards = [
     {
       title: 'Total Revenue',
-      value: `$${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatCurrency(totalEarnings),
       icon: DollarSign,
       testId: 'sales-kpi-total-earnings',
       color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
     },
     {
       title: 'Total Downloads',
-      value: totalDownloads.toLocaleString('en-US'),
+      value: formatNumber(totalDownloads),
       icon: Download,
       testId: 'sales-kpi-total-downloads',
       color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
     },
     {
       title: 'Avg. / Download',
-      value: `$${avgPerDownload.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatCurrency(avgPerDownload),
       icon: TrendingUp,
       testId: 'sales-kpi-avg-download',
       color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',

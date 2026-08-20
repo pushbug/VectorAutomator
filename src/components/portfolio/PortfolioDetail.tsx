@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lucide-react';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
 
 interface PortfolioImage {
   id: string;
@@ -39,14 +40,6 @@ interface PortfolioDetailProps {
   onClose: () => void;
   className?: string;
 }
-
-const PLATFORMS_DEFAULT = ['Shutterstock', 'Adobe Stock', 'Vecteezy'];
-
-const PLATFORM_THEMES: Record<string, { dot: string; text: string; bg: string; border: string }> = {
-  Shutterstock: { dot: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
-  'Adobe Stock': { dot: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-  Vecteezy: { dot: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-};
 
 export function PortfolioDetail({
   image,

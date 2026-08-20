@@ -1,35 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
-
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
-
-async function syncRollupForImage(tx: any, imageId: string) {
-  if (!imageId) return;
-  const allStats = await tx.platformStats.findMany({
-    where: { imageId },
-  });
-
-  const totalDownloads = allStats.reduce((sum: number, s: any) => sum + s.downloads, 0);
-  const ssDownloads = allStats
-    .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
-    .reduce((sum: number, s: any) => sum + s.downloads, 0);
-  const asDownloads = allStats
-    .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
-    .reduce((sum: number, s: any) => sum + s.downloads, 0);
-
-  await tx.image.update({
-    where: { id: imageId },
-    data: {
-      totalDownloads,
-      ssDownloads,
-      asDownloads,
-    },
-  });
-}
+import { prisma } from '@/lib/prisma';
+import { syncImageRollup } from '@/lib/salesReconciler';
 
 /**
  * DELETE /api/sales/batch
@@ -70,7 +41,7 @@ export async function DELETE(request: NextRequest) {
       });
 
       for (const imageId of affectedImageIds) {
-        await syncRollupForImage(tx, imageId);
+        await syncImageRollup(tx, imageId);
       }
     });
 
@@ -202,7 +173,7 @@ export async function PATCH(request: NextRequest) {
 
       // Re-sync rollups for all affected images
       for (const imageId of affectedImageIds) {
-        await syncRollupForImage(tx, imageId);
+        await syncImageRollup(tx, imageId);
       }
     });
 

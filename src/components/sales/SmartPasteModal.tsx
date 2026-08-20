@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
 import { parseStockPaste } from '@/lib/stockPasteParser';
+import { SUPPORTED_PLATFORMS, PlatformType } from '@/lib/platforms';
+import { formatCurrency } from '@/lib/formatters';
 
 
 
@@ -36,8 +38,6 @@ interface SmartPasteModalProps {
   onSuccess: () => void;
 }
 
-const SUPPORTED_PLATFORMS = ['Adobe Stock', 'Shutterstock', 'Vecteezy'] as const;
-type PlatformType = (typeof SUPPORTED_PLATFORMS)[number];
 
 export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalProps) {
   const [platform, setPlatform] = useState<PlatformType>('Adobe Stock');
@@ -289,7 +289,7 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                   <div className="flex items-center gap-1.5 font-mono">
                     <span className="text-muted">Total Revenue:</span>
                     <strong data-testid="smart-paste-summary-revenue" className="text-foreground font-bold text-sm">
-                      ${totalParsedEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatCurrency(totalParsedEarnings)}
                     </strong>
                   </div>
 

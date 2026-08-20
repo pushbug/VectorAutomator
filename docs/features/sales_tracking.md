@@ -6,7 +6,7 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
 ## 2. Core Concepts
 - **Transaction-based Records (`PlatformStats`):** Sales are logged with a target Image reference, platform name, date, downloads, and earnings in USD.
 - **Date Normalization & Upsert:** The date is normalized to UTC midnight (`YYYY-MM-DDT00:00:00.000Z`). When logging a sale for the same `(imageId, platform, date)`, values are accumulated (downloads + newDownloads, earnings + newEarnings).
-- **Automated Rollups:** Whenever a sale is created, updated, or removed, the parent `Image` record recomputes:
+- **Automated Rollups:** Whenever a sale is created, updated, or removed, the parent `Image` record recomputes rollups via shared `syncImageRollup(prismaOrTx, imageId)`:
   - `totalDownloads` = $\sum \text{downloads across all platforms}$
   - `ssDownloads` = $\sum \text{downloads for Shutterstock}$
   - `asDownloads` = $\sum \text{downloads for Adobe Stock}$

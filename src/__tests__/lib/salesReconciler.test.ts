@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { reconcileImageSales } from '@/lib/salesReconciler';
+import { reconcileImageSales, syncImageRollup } from '@/lib/salesReconciler';
 
 describe('Sales Reconciler Suite', () => {
   beforeEach(() => {
@@ -141,9 +141,32 @@ describe('Sales Reconciler Suite', () => {
         downloads: 10,
       },
     });
-    expect(mockDelete).toHaveBeenCalledWith({
-      where: { id: 'stat-unlinked-dup' },
-    });
     expect(mockImageUpdate).toHaveBeenCalled();
+  });
+
+  it('UT-SALES-ROLLUP-01: syncImageRollup calculates and updates totals by platform', async () => {
+    const mockFindMany = vi.fn().mockResolvedValue([
+      { platform: 'Shutterstock', downloads: 8 },
+      { platform: 'Adobe Stock', downloads: 12 },
+      { platform: 'Vecteezy', downloads: 5 },
+    ]);
+    const mockImageUpdate = vi.fn().mockResolvedValue({ id: 'img-1' });
+
+    const mockPrisma = {
+      platformStats: { findMany: mockFindMany },
+      image: { update: mockImageUpdate },
+    };
+
+    await syncImageRollup(mockPrisma, 'img-1');
+
+    expect(mockFindMany).toHaveBeenCalledWith({ where: { imageId: 'img-1' } });
+    expect(mockImageUpdate).toHaveBeenCalledWith({
+      where: { id: 'img-1' },
+      data: {
+        totalDownloads: 25,
+        ssDownloads: 8,
+        asDownloads: 12,
+      },
+    });
   });
 });

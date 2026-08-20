@@ -1,35 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
-
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
-
-async function syncImageRollup(imageId?: string | null) {
-  if (!imageId) return;
-  const allStats = await prisma.platformStats.findMany({
-    where: { imageId },
-  });
-
-  const totalDownloads = allStats.reduce((sum, s) => sum + s.downloads, 0);
-  const ssDownloads = allStats
-    .filter((s) => s.platform.toLowerCase() === 'shutterstock')
-    .reduce((sum, s) => sum + s.downloads, 0);
-  const asDownloads = allStats
-    .filter((s) => s.platform.toLowerCase().includes('adobe'))
-    .reduce((sum, s) => sum + s.downloads, 0);
-
-  return prisma.image.update({
-    where: { id: imageId },
-    data: {
-      totalDownloads,
-      ssDownloads,
-      asDownloads,
-    },
-  });
-}
+import { prisma } from '@/lib/prisma';
+import { syncImageRollup } from '@/lib/salesReconciler';
 
 
 export async function GET(request: NextRequest) {
@@ -257,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sync rollup fields on Image entity
-    await syncImageRollup(imageId);
+    await syncImageRollup(prisma, imageId);
 
     return NextResponse.json({
       success: true,
@@ -294,7 +265,7 @@ export async function DELETE(request: NextRequest) {
 
     // Sync rollup fields on Image entity if image was linked
     if (imageId) {
-      await syncImageRollup(imageId);
+      await syncImageRollup(prisma, imageId);
     }
 
     return NextResponse.json({ success: true, deletedId: id });

@@ -54,16 +54,8 @@
 | `UT-API-SALES-BATCH-01` | Verify batch delete API permanently deletes selected platformStats and syncs image rollups | `src/__tests__/api/sales_batch.test.ts` |
 | `UT-API-SALES-BATCH-DATE-01` | Verify batch update date API performs collision-safe merging and re-syncs rollups | `src/__tests__/api/sales_batch.test.ts` |
 | `UT-UI-SALES-BULK-01` | Verify row multi-selection, select-all on page, floating action bar, and bulk action triggers | `src/__tests__/components/SalesComponents.test.tsx` |
-
-
-
-
-
-
-
-
-
-
+| `UT-SALES-ROLLUP-01` | Verify syncImageRollup calculates and updates totals by platform | `src/__tests__/lib/salesReconciler.test.ts` |
+| `UT-CODE-SEQ-01` | Verify getNextImageCode computes next monthly sequence | `src/__tests__/lib/formatters.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -75,5 +67,4 @@
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |
 | `E2E-SALES-02` | Verify opening Smart Paste modal, real-time live stats, preview header, and submission | `e2e/sales.spec.ts` |
 | `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |
-
-
+| `E2E-SALES-04` | Verify multi-row selection, select-all checkbox, floating action bar, and BulkDateModal | `e2e/sales.spec.ts` |

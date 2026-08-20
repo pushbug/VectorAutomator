@@ -19,8 +19,10 @@ test.describe('Portfolio Dashboard', () => {
     // Navigate to portfolio
     await page.goto('/portfolio');
 
-    // Verify main layout is present
+    // Verify main layout and summary bar are present
     await expect(page.getByTestId('portfolio-layout')).toBeVisible();
+    await expect(page.getByTestId('portfolio-summary-downloads')).toBeVisible();
+    await expect(page.getByTestId('portfolio-summary-earnings')).toBeVisible();
 
     // Verify filter components are visible
     const searchInput = page.getByTestId('portfolio-search-input');

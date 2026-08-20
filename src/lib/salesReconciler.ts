@@ -80,28 +80,40 @@ export async function reconcileImageSales(
   }
 
   if (reconciledCount > 0) {
-    // Recalculate rollups on parent Image
-    const allStats = await prismaClient.platformStats.findMany({
-      where: { imageId: image.id },
-    });
-
-    const totalDownloads = allStats.reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-    const ssDownloads = allStats
-      .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
-      .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-    const asDownloads = allStats
-      .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
-      .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-
-    await prismaClient.image.update({
-      where: { id: image.id },
-      data: {
-        totalDownloads,
-        ssDownloads,
-        asDownloads,
-      },
-    });
+    await syncImageRollup(prismaClient, image.id);
   }
 
   return { reconciledCount };
+}
+
+/**
+ * Synchronizes rollups (totalDownloads, ssDownloads, asDownloads) for an Image based on its PlatformStats records.
+ * Accepts either a standalone PrismaClient instance or an interactive transaction client (tx).
+ */
+export async function syncImageRollup(
+  prismaOrTx: any,
+  imageId?: string | null
+): Promise<any> {
+  if (!imageId || !prismaOrTx?.platformStats || !prismaOrTx?.image) return;
+
+  const allStats = await prismaOrTx.platformStats.findMany({
+    where: { imageId },
+  });
+
+  const totalDownloads = allStats.reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
+  const ssDownloads = allStats
+    .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
+    .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
+  const asDownloads = allStats
+    .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
+    .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
+
+  return prismaOrTx.image.update({
+    where: { id: imageId },
+    data: {
+      totalDownloads,
+      ssDownloads,
+      asDownloads,
+    },
+  });
 }

@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 import { parseStockPaste, ParsedStockRow } from '@/lib/stockPasteParser';
-
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
+import { syncImageRollup } from '@/lib/salesReconciler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -210,29 +205,7 @@ export async function POST(request: NextRequest) {
             });
 
             // 3. Recalculate and update image rollups
-            const allStats = await tx.platformStats.findMany({
-              where: { imageId },
-            });
-
-            const totalDownloads = allStats.reduce(
-              (sum: number, s: any) => sum + (s.downloads || 0),
-              0
-            );
-            const ssDownloads = allStats
-              .filter((s: any) => s.platform.toLowerCase() === 'shutterstock')
-              .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-            const asDownloads = allStats
-              .filter((s: any) => s.platform.toLowerCase().includes('adobe'))
-              .reduce((sum: number, s: any) => sum + (s.downloads || 0), 0);
-
-            await tx.image.update({
-              where: { id: imageId },
-              data: {
-                totalDownloads,
-                ssDownloads,
-                asDownloads,
-              },
-            });
+            await syncImageRollup(tx, imageId);
           } else {
             // Case B: Unlinked (imageId is null)
             const existingUnlinked = await tx.platformStats.findFirst({

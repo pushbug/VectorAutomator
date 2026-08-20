@@ -62,4 +62,16 @@
   3. **High-Contrast Theme Standards:** Replaced low-contrast `text-emerald-500` revenue text with `text-foreground font-bold` (black in light mode, white in dark mode) and standardized download icons with `text-muted` and numbers with `text-foreground font-medium`.
 - **Impact:** Enables fast multi-record sales cleanup, provides clear date-filtered portfolio metrics, and delivers optimal readability and accessibility across all screen sizes and color themes.
 
+## ADR-010: Core Architecture Redundancy Refactoring and Shared Utilities Infrastructure
+- **Date:** 2026-08-20
+- **Context:** The codebase accumulated duplicate Prisma client initializations across 6 API routes (risking SQLite connection leaks during Next.js HMR), redundant image rollup aggregation formulas in sales routes, duplicate `YYMM-Seq` regex parsing and next-sequence queries in upload/portfolio routes, and hardcoded platform lists/themes and inline formatters across UI components.
+- **Decision:**
+  1. **Prisma Singleton (`src/lib/prisma.ts`):** Centralized `PrismaClient` with `globalThis` caching to ensure a single connection instance across Next.js HMR cycles and prevent SQLite locks.
+  2. **Unified Image Rollups (`syncImageRollup` in `src/lib/salesReconciler.ts`):** Exported a pure, transaction-safe helper that accepts either a direct `PrismaClient` or an interactive transaction client `tx`, removing redundant copies from `/api/sales`, `/api/sales/batch`, and `/api/sales/paste-sync`.
+  3. **Image Code Parsing & Sequencing (`src/lib/imageCode.ts`):** Extracted `parseImageCode` and `getNextImageCode` into pure modules.
+  4. **Platform Constants & Theme Tokens (`src/lib/platforms.ts`):** Centralized `SUPPORTED_PLATFORMS`, `SALES_FILTER_PLATFORMS`, and `PLATFORM_THEMES`.
+  5. **Shared Formatters (`src/lib/formatters.ts`):** Built null-safe `formatCurrency`, `formatNumber`, `formatTableDate`, and `formatDisplayDate` helpers and replaced ad-hoc formatting across all components.
+  6. **Test Coverage & Log Hygiene:** Added unit tests (`UT-SALES-ROLLUP-01`, `UT-CODE-SEQ-01`), Playwright scenario `E2E-SALES-04`, and eliminated React timer warning in `KeywordSuggester.test.tsx` (134/134 tests passing).
+- **Impact:** Drastically improves maintainability, eliminates duplicate logic, guarantees connection safety, and maintains 100% test passing rate.
+
 

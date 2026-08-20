@@ -1,52 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { prisma } from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
-
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
-
+import { getNextImageCode, parseImageCode } from '@/lib/imageCode';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const dateStr = searchParams.get('date') || '';
     
-    let targetDate = new Date();
-    if (dateStr) {
-      const parsed = new Date(dateStr);
-      if (!isNaN(parsed.getTime())) {
-        targetDate = parsed;
-      }
-    }
-
-    const fullYear = targetDate.getFullYear();
-    const yy = String(fullYear).slice(-2);
-    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const month = targetDate.getMonth() + 1;
-
-    // Find highest seqNumber for this year and month
-    const highestImage = await prisma.image.findFirst({
-      where: {
-        year: fullYear,
-        month,
-      },
-      orderBy: { seqNumber: 'desc' },
-      select: { seqNumber: true },
-    });
-
-    const nextSeq = (highestImage?.seqNumber ?? 0) + 1;
-    const nextCode = `${yy}${mm}-${nextSeq}`;
-
-    return NextResponse.json({
-      nextCode,
-      year: fullYear,
-      month,
-      seqNumber: nextSeq,
-    });
+    const result = await getNextImageCode(prisma, dateStr);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Failed to get next image code:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -77,8 +42,6 @@ export async function POST(request: NextRequest) {
 
     const fullYear = createdAt.getFullYear();
     const monthNum = createdAt.getMonth() + 1;
-    const yy = String(fullYear).slice(-2);
-    const mm = String(monthNum).padStart(2, '0');
 
     let code: string | null = codeRaw || null;
     let year: number | null = fullYear;
@@ -99,31 +62,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Try parsing YYMM-Seq format e.g. 2608-123 or 2608-0123
-      const match = code.match(/^(\d{2})(\d{2})-(\d+)$/);
-      if (match) {
-        const parsedYear = 2000 + parseInt(match[1], 10);
-        const parsedMonth = parseInt(match[2], 10);
-        const parsedSeq = parseInt(match[3], 10);
-        year = parsedYear;
-        month = parsedMonth;
-        seqNumber = parsedSeq;
+      const parsedCode = parseImageCode(code);
+      if (parsedCode) {
+        year = parsedCode.year;
+        month = parsedCode.month;
+        seqNumber = parsedCode.seqNumber;
       }
     } else {
       // Auto-generate code based on highest sequence in that month and year
-      const highestImage = await prisma.image.findFirst({
-        where: {
-          year: fullYear,
-          month: monthNum,
-        },
-        orderBy: { seqNumber: 'desc' },
-        select: { seqNumber: true },
-      });
-
-      const nextSeq = (highestImage?.seqNumber ?? 0) + 1;
-      seqNumber = nextSeq;
-      code = `${yy}${mm}-${nextSeq}`;
-      year = fullYear;
-      month = monthNum;
+      const nextResult = await getNextImageCode(prisma, createdAt);
+      code = nextResult.nextCode;
+      year = nextResult.year;
+      month = nextResult.month;
+      seqNumber = nextResult.seqNumber;
     }
 
     const bytes = await file.arrayBuffer();

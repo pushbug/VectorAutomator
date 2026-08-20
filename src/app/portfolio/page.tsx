@@ -6,6 +6,7 @@ import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { AddImageDrawer } from '@/components/portfolio/AddImageDrawer';
 import { SaleEntryDrawer } from '@/components/sales/SaleEntryDrawer';
 import { Plus, Calendar, Layers, Download } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 export default function PortfolioPage() {
   const [images, setImages] = useState([]);
@@ -211,14 +212,14 @@ export default function PortfolioPage() {
               <Download size={13} className="text-muted shrink-0" />
               <span className="text-muted">Downloads:</span>
               <strong data-testid="portfolio-summary-downloads" className="text-foreground font-bold">
-                {summary.totalDownloads.toLocaleString()}
+                {formatNumber(summary.totalDownloads)}
               </strong>
             </div>
 
             <div className="flex items-center gap-1.5">
               <span className="text-muted">Revenue:</span>
               <strong data-testid="portfolio-summary-earnings" className="text-foreground font-bold">
-                ${summary.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(summary.totalEarnings)}
               </strong>
             </div>
           </div>

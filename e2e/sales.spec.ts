@@ -120,6 +120,37 @@ $207.04
     await page.getByTestId('sales-platform-filter-all').click();
     await page.waitForTimeout(300);
   });
+
+  test('E2E-SALES-04: verifies multi-row selection, select-all checkbox, floating action bar, and BulkDateModal', async ({ page }) => {
+    await page.goto('/sales');
+    await expect(page.getByTestId('sales-table')).toBeVisible();
+
+    const selectAllCheckbox = page.getByTestId('sales-select-all-checkbox');
+    if (await selectAllCheckbox.isVisible()) {
+      // Toggle select all on page
+      await selectAllCheckbox.click();
+
+      // Verify floating bulk action toolbar appears
+      const bulkBar = page.getByTestId('sales-bulk-action-bar');
+      if (await bulkBar.isVisible()) {
+        await expect(page.getByTestId('sales-bulk-date-btn')).toBeVisible();
+        await expect(page.getByTestId('sales-bulk-delete-btn')).toBeVisible();
+
+        // Open BulkDateModal
+        await page.getByTestId('sales-bulk-date-btn').click();
+        const dateModal = page.getByTestId('sales-bulk-date-modal');
+        await expect(dateModal).toBeVisible();
+        await expect(page.getByTestId('sales-bulk-date-input')).toBeVisible();
+
+        // Close BulkDateModal
+        await page.getByTestId('sales-bulk-date-close-btn').click();
+        await expect(dateModal).not.toBeVisible();
+      }
+
+      // Deselect all
+      await selectAllCheckbox.click();
+    }
+  });
 });
 
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Search, CheckCircle2, DollarSign, Download, Calendar } from 'lucide-react';
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
+import { SUPPORTED_PLATFORMS } from '@/lib/platforms';
 
 interface PortfolioImage {
   id: string;
@@ -19,11 +20,7 @@ interface SaleEntryDrawerProps {
   preselectedImage?: PortfolioImage | null;
 }
 
-const PLATFORMS = [
-  'Shutterstock',
-  'Adobe Stock',
-  'Vecteezy',
-];
+const PLATFORMS = SUPPORTED_PLATFORMS;
 
 const getTodayStr = () => {
   const d = new Date();

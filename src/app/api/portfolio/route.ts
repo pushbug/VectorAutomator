@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { prisma } from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
-
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
+import { parseImageCode } from '@/lib/imageCode';
 
 
 export async function GET(request: NextRequest) {
@@ -303,11 +299,11 @@ export async function PATCH(request: NextRequest) {
         }
 
         dataToUpdate.code = cleanedCode;
-        const match = cleanedCode.match(/^(\d{2})(\d{2})-(\d+)$/);
-        if (match) {
-          dataToUpdate.year = 2000 + parseInt(match[1], 10);
-          dataToUpdate.month = parseInt(match[2], 10);
-          dataToUpdate.seqNumber = parseInt(match[3], 10);
+        const parsedCode = parseImageCode(cleanedCode);
+        if (parsedCode) {
+          dataToUpdate.year = parsedCode.year;
+          dataToUpdate.month = parsedCode.month;
+          dataToUpdate.seqNumber = parsedCode.seqNumber;
         }
       } else {
         dataToUpdate.code = null;

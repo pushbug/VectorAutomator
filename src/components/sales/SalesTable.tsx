@@ -4,6 +4,8 @@ import React from 'react';
 import Image from 'next/image';
 import { Trash2, Download, Calendar, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Eye, X } from 'lucide-react';
 import { DateRangePicker } from '../portfolio/DateRangePicker';
+import { SALES_FILTER_PLATFORMS } from '@/lib/platforms';
+import { formatCurrency, formatNumber, formatTableDate } from '@/lib/formatters';
 
 export interface SaleItem {
   id: string;
@@ -137,17 +139,7 @@ export function SalesTable({
     }
   };
 
-  const platforms = ['all', 'Shutterstock', 'Adobe Stock', 'Vecteezy', 'unlinked'];
-
-  const formatTableDate = (dateStr: string) => {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
+  const platforms = SALES_FILTER_PLATFORMS;
 
   const handleHeaderClick = (column: string) => {
     if (!onSortChange) return;
@@ -455,7 +447,7 @@ export function SalesTable({
 
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="font-mono tabular-nums text-xs font-bold text-foreground">
-                        ${sale.earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrency(sale.earnings)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap relative">
