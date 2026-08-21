@@ -8,6 +8,7 @@ import {
   LayoutDashboard, 
   UploadCloud, 
   Image as ImageIcon,
+  Tag,
   DollarSign,
   Menu,
   Moon,
@@ -30,6 +31,7 @@ export default function Sidebar() {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Upload & Process", href: "/upload", icon: UploadCloud },
     { name: "Portfolio", href: "/portfolio", icon: ImageIcon },
+    { name: "Keyword Insights", href: "/keywords", icon: Tag },
     { name: "Sales & Earnings", href: "/sales", icon: DollarSign },
   ];
 

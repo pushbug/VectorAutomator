@@ -3,6 +3,8 @@ import {
   parseKeywordsString,
   aggregateKeywordTokens,
   mergeKeywords,
+  calculateKeywordTier,
+  calculateCoOccurringKeywords,
   PortfolioReferenceImage
 } from '@/lib/keywordAnalytics';
 
@@ -95,6 +97,43 @@ describe('Keyword Analytics Engine (UT-LIB-KEYWORD-ANALYTICS-01)', () => {
       expect(tokens[0].keyword).toBe('arrow');
     });
 
+    it('sorts by earnings and calculates RPI and RPD accurately', () => {
+      const tokens = aggregateKeywordTokens(sampleImages, { sortBy: 'earnings' });
+      expect(tokens[0].keyword).toBe('business'); // $30.70
+      expect(tokens[0].rpi).toBe(10.23); // 30.70 / 3
+      expect(tokens[0].rpd).toBe(0.41); // 30.70 / 75
+      expect(tokens[0].tier).toBe('star');
+    });
+
+    it('filters by search term and minFrequency', () => {
+      const filtered = aggregateKeywordTokens(sampleImages, { search: 'time', minFrequency: 1 });
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].keyword).toBe('timeline');
+
+      const freqFiltered = aggregateKeywordTokens(sampleImages, { minFrequency: 2 });
+      expect(freqFiltered.every(t => t.frequency >= 2)).toBe(true);
+    });
+
+    it('assigns dormant and untested tiers correctly for zero sales assets', () => {
+      const dormantImages: PortfolioReferenceImage[] = [
+        { id: '1', title: 'A', keywords: 'nichekeyword', totalDownloads: 0, totalEarnings: 0 },
+        { id: '2', title: 'B', keywords: 'nichekeyword', totalDownloads: 0, totalEarnings: 0 },
+        { id: '3', title: 'C', keywords: 'nichekeyword', totalDownloads: 0, totalEarnings: 0 },
+        { id: '4', title: 'D', keywords: 'rarekeyword', totalDownloads: 0, totalEarnings: 0 },
+      ];
+      const tokens = aggregateKeywordTokens(dormantImages);
+      const niche = tokens.find(t => t.keyword === 'nichekeyword');
+      const rare = tokens.find(t => t.keyword === 'rarekeyword');
+      expect(niche?.tier).toBe('dormant');
+      expect(rare?.tier).toBe('untested');
+    });
+
+    it('identifies draw_more tier for high RPI small asset pool keywords', () => {
+      expect(calculateKeywordTier(2, 10, 40.0)).toBe('draw_more'); // RPI = 20, freq = 2
+      expect(calculateKeywordTier(10, 100, 200.0)).toBe('star'); // high assets -> star
+      expect(calculateKeywordTier(5, 5, 2.5)).toBe('workhorse');
+    });
+
     it('handles images with 0 downloads gracefully without failing', () => {
       const zeroImages: PortfolioReferenceImage[] = [
         { id: '1', title: 'A', keywords: 'apple, banana', totalDownloads: 0 },
@@ -161,6 +200,55 @@ describe('Keyword Analytics Engine (UT-LIB-KEYWORD-ANALYTICS-01)', () => {
       expect(result.mergedArray).toEqual(['brandnew1', 'brandnew2']);
       expect(result.mergedArray).not.toContain('old1');
       expect(result.isOverStockLimit).toBe(false);
+    });
+  });
+
+  describe('calculateCoOccurringKeywords (UT-LIB-KW-RECIPE-01)', () => {
+    const recipeImages: PortfolioReferenceImage[] = [
+      {
+        id: 'img1',
+        title: 'Semi Circle Infographic',
+        keywords: 'semi, circle, infographic, diagram, steps',
+        totalDownloads: 50,
+        totalEarnings: 80.0
+      },
+      {
+        id: 'img2',
+        title: 'Semi Timeline Chart',
+        keywords: 'semi, timeline, infographic, roadmap',
+        totalDownloads: 30,
+        totalEarnings: 45.0
+      },
+      {
+        id: 'img3',
+        title: 'Unrelated Corporate Vector',
+        keywords: 'finance, business, corporate',
+        totalDownloads: 10,
+        totalEarnings: 15.0
+      }
+    ];
+
+    it('calculates top co-occurring keywords ranked by joint earnings and frequency', () => {
+      const result = calculateCoOccurringKeywords(recipeImages, 'semi', 5);
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(r => r.keyword === 'semi')).toBe(false); // primary is excluded
+
+      // "infographic" is present in both semi images (img1 + img2 = 80 + 45 = 125.0)
+      const infographic = result.find(r => r.keyword === 'infographic');
+      expect(infographic).toBeDefined();
+      expect(infographic?.count).toBe(2);
+      expect(infographic?.totalEarnings).toBe(125.0);
+
+      // "circle" is in img1 ($80.0)
+      const circle = result.find(r => r.keyword === 'circle');
+      expect(circle).toBeDefined();
+      expect(circle?.totalEarnings).toBe(80.0);
+    });
+
+    it('returns empty array when images or primaryKeyword is empty', () => {
+      expect(calculateCoOccurringKeywords([], 'semi')).toEqual([]);
+      expect(calculateCoOccurringKeywords(recipeImages, '')).toEqual([]);
     });
   });
 });

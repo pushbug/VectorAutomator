@@ -9,6 +9,7 @@ import {
   PortfolioReferenceImage,
   KeywordAnalyticsToken
 } from "@/lib/keywordAnalytics";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface KeywordSuggesterProps {
   activeKeywords: string;
@@ -137,12 +138,10 @@ export function KeywordSuggester({
       ? Array.from(selectedTagNames)
       : keywordTokens.map(t => t.keyword);
     const text = tagsToCopy.join(", ");
-    try {
-      await navigator.clipboard.writeText(text);
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopiedFeedback(true);
       setTimeout(() => setCopiedFeedback(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy to clipboard", err);
     }
   };
 

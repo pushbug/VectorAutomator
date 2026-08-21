@@ -56,6 +56,13 @@
 | `UT-UI-SALES-BULK-01` | Verify row multi-selection, select-all on page, floating action bar, and bulk action triggers | `src/__tests__/components/SalesComponents.test.tsx` |
 | `UT-SALES-ROLLUP-01` | Verify syncImageRollup calculates and updates totals by platform | `src/__tests__/lib/salesReconciler.test.ts` |
 | `UT-CODE-SEQ-01` | Verify getNextImageCode computes next monthly sequence | `src/__tests__/lib/formatters.test.ts` |
+| `UT-API-KW-01` | Verify /api/keywords token extraction, RPI/RPD calculations, sorting, and KPI summaries | `src/__tests__/api/keywords.test.ts` |
+| `UT-API-KW-02` | Verify /api/keywords filters token earnings and downloads by timeRange (30d, 90d, 1y) | `src/__tests__/api/keywords.test.ts` |
+| `UT-UI-KW-TABLE-01` | Verify KeywordTable sorting, search filtering, row selection, time range velocity, and bulk copy | `src/__tests__/components/KeywordTable.test.tsx` |
+| `UT-UI-KW-DRAWER-01` | Verify KeywordDetailDrawer fetches linked artworks and renders thumbnails/stats | `src/__tests__/components/KeywordDetailDrawer.test.tsx` |
+| `UT-UI-KW-RECIPE-01` | Verify Winning Tag Combinations recipe calculation and 1-click clipboard copy in drawer | `src/__tests__/components/KeywordDetailDrawer.test.tsx` |
+| `UT-LIB-CLIPBOARD-01` | Verify copyToClipboard handles Navigator Clipboard, fallback DOM execCommand, and errors | `src/__tests__/lib/clipboard.test.ts` |
+| `UT-UI-PAGINATION-CAPSULE-01` | Verify PaginationCapsule Prev/Next navigation, direct numeric input jump, and boundaries | `src/__tests__/components/PaginationCapsule.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -68,3 +75,5 @@
 | `E2E-SALES-02` | Verify opening Smart Paste modal, real-time live stats, preview header, and submission | `e2e/sales.spec.ts` |
 | `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |
 | `E2E-SALES-04` | Verify multi-row selection, select-all checkbox, floating action bar, and BulkDateModal | `e2e/sales.spec.ts` |
+| `E2E-KW-01` | Keyword Insights: Page navigation, KPI summary cards, table sorting, tier filtering, bulk copy, and artwork inspection drawer | `e2e/keywords.spec.ts` |
+

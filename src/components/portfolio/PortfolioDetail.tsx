@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lucide-react';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface PortfolioImage {
   id: string;
@@ -59,11 +60,13 @@ export function PortfolioDetail({
   const [copiedField, setCopiedField] = useState<'title' | 'keywords' | null>(null);
   const [enrichedData, setEnrichedData] = useState<PortfolioImage | null>(null);
 
-  const handleCopy = (text: string, field: 'title' | 'keywords') => {
+  const handleCopy = async (text: string, field: 'title' | 'keywords') => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
   };
 
 

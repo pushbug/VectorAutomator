@@ -151,6 +151,35 @@ Always use `data-testid` for element selection in E2E tests.
 | `sales-bulk-date-confirm-btn` | Button to confirm applying new date to selected records |
 | `sales-bulk-date-cancel-btn` | Button to cancel bulk date update modal |
 | `sales-bulk-date-close-btn` | Close button inside bulk date modal header |
+| `keyword-kpi-total-keywords` | Total unique keywords KPI summary card in Keyword Insights |
+| `keyword-kpi-tagged-assets` | Total tagged artworks KPI summary card in Keyword Insights |
+| `keyword-kpi-top-earning` | Top earning keyword KPI summary card in Keyword Insights |
+| `keyword-kpi-top-downloads` | Top downloaded keyword KPI summary card in Keyword Insights |
+| `keyword-search-input` | Search input field in KeywordTable toolbar |
+| `keyword-search-clear-btn` | Clear button for search input in KeywordTable |
+| `keyword-filter-tier-{tier}` | Tier filter button in KeywordTable toolbar (all, draw_more, star, workhorse, dormant, untested) |
+| `keyword-time-range-{range}` | Time range velocity filter button in KeywordTable toolbar (all, 30d, 90d, 1y) |
+| `keyword-table` | Data table container displaying keyword performance metrics |
+| `keyword-select-all-checkbox` | Header checkbox to toggle selection of all keywords on page |
+| `keyword-row-checkbox-{keyword}` | Checkbox in table row to select an individual keyword |
+| `keyword-tier-badge-{keyword}` | Tier status badge (Draw More, Star, Workhorse, Dormant, Untested) for a keyword |
+| `keyword-sort-frequency-btn` | Header button to sort by Assets / Frequency count |
+| `keyword-sort-downloads-btn` | Header button to sort by Total Downloads |
+| `keyword-sort-earnings-btn` | Header button to sort by Total Earnings |
+| `keyword-sort-rpi-btn` | Header button to sort by Revenue Per Image ($/image) |
+| `keyword-sort-rpd-btn` | Header button to sort by Revenue Per Download ($/download) |
+| `keyword-row-inspect-btn-{keyword}` | Button in row to open KeywordDetailDrawer slide-over |
+| `keyword-bulk-copy-btn` | Button in floating bulk action bar to copy selected keywords to clipboard |
+| `keyword-detail-drawer` | Slide-over drawer displaying portfolio artworks matching selected keyword |
+| `keyword-detail-close-btn` | Close button inside KeywordDetailDrawer header |
+| `keyword-drawer-winning-tags` | Container card in drawer header displaying top co-occurring winning tags |
+| `keyword-drawer-copy-recipe-btn` | Button in drawer header to copy winning tag recipe to clipboard |
+| `keyword-guide-btn` | Header button in Keyword Insights page to open Guidelines modal |
+| `keyword-guide-modal` | Modal dialog explaining keyword performance tiers, velocity, and metrics |
+| `keyword-guide-close-btn` | Close button inside Guidelines modal header |
+| `keyword-guide-got-it-btn` | Action button in Guidelines modal footer to close dialog |
+
+
 
 
 

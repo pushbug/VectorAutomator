@@ -20,7 +20,7 @@ test.describe('Sales & Earnings Management', () => {
     await page.goto('/sales');
 
     // Verify header and KPI summary cards
-    await expect(page.getByRole('heading', { name: /Sales & Earnings Manager/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Sales & Earnings$/i })).toBeVisible();
     await expect(page.getByTestId('sales-kpi-total-earnings')).toBeVisible();
     await expect(page.getByTestId('sales-kpi-total-downloads')).toBeVisible();
 

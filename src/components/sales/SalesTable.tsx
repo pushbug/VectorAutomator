@@ -6,6 +6,7 @@ import { Trash2, Download, Calendar, ArrowUpDown, ArrowUp, ArrowDown, MoreVertic
 import { DateRangePicker } from '../portfolio/DateRangePicker';
 import { SALES_FILTER_PLATFORMS } from '@/lib/platforms';
 import { formatCurrency, formatNumber, formatTableDate } from '@/lib/formatters';
+import { PaginationCapsule } from '../common/PaginationCapsule';
 
 export interface SaleItem {
   id: string;
@@ -113,31 +114,12 @@ export function SalesTable({
     y: number;
   } | null>(null);
   const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
-  const [inputPage, setInputPage] = React.useState(page.toString());
-
-  React.useEffect(() => {
-    setInputPage(page.toString());
-  }, [page]);
 
   React.useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
-
-  const handlePageCommit = (valStr: string) => {
-    if (!totalPages || !onPageChange) return;
-    const parsed = parseInt(valStr, 10);
-    if (!isNaN(parsed)) {
-      const clamped = Math.max(1, Math.min(totalPages, parsed));
-      setInputPage(clamped.toString());
-      if (clamped !== page) {
-        onPageChange(clamped);
-      }
-    } else {
-      setInputPage(page.toString());
-    }
-  };
 
   const platforms = SALES_FILTER_PLATFORMS;
 
@@ -184,9 +166,9 @@ export function SalesTable({
   };
 
   return (
-    <div className="bg-surface border border-border rounded-xl shadow-xs overflow-hidden relative">
+    <div className="bg-surface border border-border rounded-xl shadow-xs relative">
       {/* Controls Bar */}
-      <div className="p-4 border-b border-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-surface">
+      <div className="p-4 border-b border-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-surface rounded-t-xl">
         {/* Left controls: Date Range Filter & Search */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {onDateRangeChange && (
@@ -252,7 +234,7 @@ export function SalesTable({
       </div>
 
       {/* Table Content */}
-      <div className="overflow-x-auto">
+      <div className={`overflow-x-auto ${totalPages > 1 && onPageChange ? '' : 'rounded-b-xl'}`}>
         <table data-testid="sales-table" className="w-full text-left text-sm">
           <thead className="bg-background/50 border-b border-border text-xs uppercase tracking-wider text-muted">
             <tr>
@@ -515,46 +497,15 @@ export function SalesTable({
 
       {/* Pagination Bar */}
       {totalPages > 1 && onPageChange && (
-        <div className="p-4 border-t border-border flex justify-center items-center gap-3 bg-surface">
-          <div className="inline-flex items-center gap-2.5 bg-surface/90 backdrop-blur-xs border border-border px-3.5 py-1.5 rounded-xl shadow-xs">
-            <button
-              type="button"
-              data-testid="sales-pagination-prev-btn"
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-              disabled={page <= 1}
-              className="px-2.5 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-40 hover:bg-muted/10 transition-colors cursor-pointer"
-            >
-              Prev
-            </button>
-            <div className="flex items-center gap-1.5 text-xs text-foreground font-mono font-medium">
-              <span className="text-muted">Page</span>
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                data-testid="sales-pagination-page-input"
-                value={inputPage}
-                onChange={(e) => setInputPage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.currentTarget.blur();
-                  }
-                }}
-                onBlur={() => handlePageCommit(inputPage)}
-                className="w-12 h-6 px-1 text-center font-mono font-bold text-xs bg-background border border-border rounded-md text-foreground focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <span className="text-muted">of {totalPages}</span>
-            </div>
-            <button
-              type="button"
-              data-testid="sales-pagination-next-btn"
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-              className="px-2.5 py-1 bg-background border border-border rounded-lg text-xs font-medium disabled:opacity-40 hover:bg-muted/10 transition-colors cursor-pointer"
-            >
-              Next
-            </button>
-          </div>
+        <div className="p-4 border-t border-border flex justify-center items-center gap-3 bg-surface rounded-b-xl">
+          <PaginationCapsule
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            prevTestId="sales-pagination-prev-btn"
+            nextTestId="sales-pagination-next-btn"
+            inputTestId="sales-pagination-page-input"
+          />
         </div>
       )}
 

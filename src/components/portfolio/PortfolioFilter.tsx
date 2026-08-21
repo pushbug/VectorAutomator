@@ -23,7 +23,7 @@ export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
   }, [search, sortBy, sortOrder, startDate, endDate, onFilterChange]);
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 mb-6 bg-surface p-4 rounded-lg border border-border flex-wrap items-end">
+    <div className="flex flex-col md:flex-row gap-4 mb-6 bg-surface p-4 rounded-lg border border-border items-stretch md:items-end">
       <div className="w-full md:w-72 lg:w-80 shrink-0">
         <DateRangePicker
           startDate={startDate}
@@ -35,7 +35,7 @@ export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
         />
       </div>
 
-      <div className="flex-1 min-w-50">
+      <div className="w-full md:w-auto md:flex-1">
         <label htmlFor="portfolio-search" className="block text-sm font-medium text-foreground mb-1">Search</label>
         <div className="relative flex items-center">
           <input

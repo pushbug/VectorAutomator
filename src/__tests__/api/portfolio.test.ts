@@ -214,6 +214,21 @@ describe('Portfolio API Route', () => {
           }),
         })
       );
+      // Search exactKeyword only
+      const reqExact = new NextRequest('http://localhost:3000/api/portfolio?search=semi&searchField=exactKeyword');
+      await GET(reqExact);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { keywords: { equals: 'semi' } },
+              { keywords: { startsWith: 'semi,' } },
+              { keywords: { contains: ', semi,' } },
+              { keywords: { endsWith: ', semi' } },
+            ]),
+          }),
+        })
+      );
     });
 
     it('UT-API-PF-SORT-EARNINGS-01: sorts enriched images by totalEarnings descending', async () => {

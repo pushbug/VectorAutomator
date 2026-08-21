@@ -74,4 +74,14 @@
   6. **Test Coverage & Log Hygiene:** Added unit tests (`UT-SALES-ROLLUP-01`, `UT-CODE-SEQ-01`), Playwright scenario `E2E-SALES-04`, and eliminated React timer warning in `KeywordSuggester.test.tsx` (134/134 tests passing).
 - **Impact:** Drastically improves maintainability, eliminates duplicate logic, guarantees connection safety, and maintains 100% test passing rate.
 
-
+## ADR-011: Keyword Intelligence Analytics Engine, Velocity Filtering, and Shared UI Refactor
+- **Date:** 2026-08-21
+- **Context:** Contributors needed data-driven keyword performance analytics (earnings velocity across 30d/90d/1y/all, high-ROI niche detection `Draw More`, winning co-occurring tag recipes, and microstock Top 5 SEO placement indicators) to inform production strategy, alongside eliminating duplicated clipboard copying and pagination boilerplate across Portfolio, Sales, and Keywords.
+- **Decision:**
+  1. **Analytics Engine (`keywordAnalytics.ts` & `/api/keywords`):** Implemented pure token aggregation computing RPI ($/image), RPD ($/download), composite scoring, Top-5 primary frequency, and dynamic performance tiers (`draw_more`, `star`, `workhorse`, `dormant`, `untested`).
+  2. **Time Range Velocity:** Added 30d/90d/1y/all time filtering with date-scoped transaction aggregations to detect fast-growing vs stale keywords.
+  3. **Winning Tag Combinations:** Added co-occurring keyword discovery in `KeywordDetailDrawer` with 1-click recipe copy to clipboard.
+  4. **Guidelines Modal (`KeywordGuideModal`):** Built interactive reference modal explaining tier criteria, velocity, RPI/RPD formulas, and Top-5 microstock SEO strategy.
+  5. **Shared DRY Utilities:** Extracted `copyToClipboard` (`src/lib/clipboard.ts`) with modern Navigator and fallback DOM execution, and `PaginationCapsule` (`src/components/common/PaginationCapsule.tsx`) with boundary clamping and direct numeric page jump input across all tables.
+  6. **Test Coverage:** Added 34 new unit tests (168/168 passing) and comprehensive Playwright E2E suite `e2e/keywords.spec.ts` (9/9 suites passing).
+- **Impact:** Delivers actionable keyword intelligence for stock production, eliminates duplicate code, and maintains 100% test coverage and type safety.

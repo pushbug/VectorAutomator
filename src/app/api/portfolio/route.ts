@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
 import { parseImageCode } from '@/lib/imageCode';
+import { parseKeywordsString } from '@/lib/keywordAnalytics';
 
 
 export async function GET(request: NextRequest) {
@@ -24,6 +25,24 @@ export async function GET(request: NextRequest) {
       if (searchField === 'title') {
         return [
           { title: { contains: term } },
+        ];
+      }
+      if (searchField === 'exactKeyword') {
+        const trimmed = term.trim();
+        const lower = trimmed.toLowerCase();
+        return [
+          { keywords: { equals: lower } },
+          { keywords: { startsWith: `${lower},` } },
+          { keywords: { contains: `, ${lower},` } },
+          { keywords: { contains: `,${lower},` } },
+          { keywords: { endsWith: `, ${lower}` } },
+          { keywords: { endsWith: `,${lower}` } },
+          { keywords: { equals: trimmed } },
+          { keywords: { startsWith: `${trimmed},` } },
+          { keywords: { contains: `, ${trimmed},` } },
+          { keywords: { contains: `,${trimmed},` } },
+          { keywords: { endsWith: `, ${trimmed}` } },
+          { keywords: { endsWith: `,${trimmed}` } },
         ];
       }
       if (searchField === 'keywords' || searchField === 'keyword') {
@@ -56,7 +75,9 @@ export async function GET(request: NextRequest) {
       ];
     };
 
-    const searchTerms = search.trim().split(/\s+/).filter(Boolean);
+    const searchTerms = searchField === 'exactKeyword' 
+      ? [search.trim()].filter(Boolean)
+      : search.trim().split(/\s+/).filter(Boolean);
     const searchCondition = searchTerms.length === 1
       ? {
           OR: getFieldConditions(searchTerms[0]),
@@ -102,19 +123,29 @@ export async function GET(request: NextRequest) {
         { seqNumber: 'desc' },
         { createdAt: 'desc' },
       ];
-    } else if (sortBy === 'earnings') {
+    } else if (sortBy === 'earnings' || sortBy === 'totalEarnings') {
       orderByClause = [
-        { totalDownloads: 'desc' },
+        { totalDownloads: sortOrder },
         { year: 'desc' },
         { month: 'desc' },
         { seqNumber: 'desc' },
         { createdAt: 'desc' },
       ];
     } else {
-      orderByClause = [
-        { [sortBy]: sortOrder },
-        { createdAt: 'desc' },
-      ];
+      const allowedFields = ['title', 'code', 'category', 'status', 'totalDownloads'];
+      if (allowedFields.includes(sortBy)) {
+        orderByClause = [
+          { [sortBy]: sortOrder },
+          { createdAt: 'desc' },
+        ];
+      } else {
+        orderByClause = [
+          { year: sortOrder },
+          { month: sortOrder },
+          { seqNumber: sortOrder },
+          { createdAt: sortOrder },
+        ];
+      }
     }
 
     const [images, totalCount, allMatchingImages] = await Promise.all([
@@ -133,6 +164,7 @@ export async function GET(request: NextRequest) {
       prisma.image.findMany({
         where,
         select: {
+          keywords: true,
           totalDownloads: true,
           stats: {
             select: {
@@ -142,16 +174,6 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
-
-    const totalDownloads = (allMatchingImages || []).reduce(
-      (sum: number, img: any) => sum + (img.totalDownloads || 0),
-      0
-    );
-    const totalEarnings = (allMatchingImages || []).reduce(
-      (sum: number, img: any) =>
-        sum + (img.stats || []).reduce((sSum: number, s: any) => sSum + (s.earnings || 0), 0),
-      0
-    );
 
     let enrichedImages = images.map((img: any) => {
       const stats = img.stats || [];
@@ -181,16 +203,40 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    let matchingCandidates = allMatchingImages || [];
+    let finalTotalCount = totalCount;
+
+    if (searchField === 'exactKeyword') {
+      const target = search.trim().toLowerCase();
+      matchingCandidates = (allMatchingImages || []).filter((img: any) =>
+        parseKeywordsString(img.keywords).some((k) => k.toLowerCase() === target)
+      );
+      finalTotalCount = matchingCandidates.length;
+      enrichedImages = enrichedImages.filter((img: any) =>
+        parseKeywordsString(img.keywords).some((k) => k.toLowerCase() === target)
+      );
+    }
+
+    const totalDownloads = matchingCandidates.reduce(
+      (sum: number, img: any) => sum + (img.totalDownloads || 0),
+      0
+    );
+    const totalEarnings = matchingCandidates.reduce(
+      (sum: number, img: any) =>
+        sum + (img.stats || []).reduce((sSum: number, s: any) => sSum + (s.earnings || 0), 0),
+      0
+    );
+
     return NextResponse.json({
       data: enrichedImages,
       meta: {
-        total: totalCount,
+        total: finalTotalCount,
         page,
         limit,
-        totalPages: Math.ceil(totalCount / limit) || 1,
+        totalPages: Math.ceil(finalTotalCount / limit) || 1,
       },
       summary: {
-        totalImages: totalCount,
+        totalImages: finalTotalCount,
         totalDownloads,
         totalEarnings,
       },
