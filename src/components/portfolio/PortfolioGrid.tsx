@@ -27,7 +27,9 @@ interface PortfolioImage {
 interface PortfolioGridProps {
   images: PortfolioImage[];
   selectedId: string | null;
+  selectedImageIds?: string[];
   onSelect: (image: PortfolioImage) => void;
+  onToggleSelect?: (id: string) => void;
   isLoading: boolean;
   page: number;
   totalPages: number;
@@ -37,7 +39,9 @@ interface PortfolioGridProps {
 export function PortfolioGrid({ 
   images, 
   selectedId, 
+  selectedImageIds = [],
   onSelect, 
+  onToggleSelect,
   isLoading,
   page,
   totalPages,
@@ -51,30 +55,58 @@ export function PortfolioGrid({
     return <div className="flex-1 flex justify-center items-center h-full text-muted">No images found.</div>;
   }
 
+  const selectedSet = new Set(selectedImageIds);
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto pr-1 pb-4">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-          {images.map((img) => (
-            <div 
-              key={img.id}
-              data-testid="portfolio-grid-item"
-              onClick={() => onSelect(img)}
-              className={`cursor-pointer group flex flex-col rounded-xl overflow-hidden border bg-surface transition-all shadow-xs hover:shadow-md ${
-                selectedId === img.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'
-              }`}
-            >
-              {/* Full Image Container */}
-              <div className="relative aspect-4/3 sm:aspect-square w-full bg-background overflow-hidden flex items-center justify-center p-2">
-                <Image 
-                  src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
-                  alt={img.code || img.title}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                  className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
-                  unoptimized
-                />
-              </div>
+          {images.map((img) => {
+            const isChecked = selectedSet.has(img.id);
+            const isPanelSelected = selectedId === img.id;
+            return (
+              <div 
+                key={img.id}
+                data-testid="portfolio-grid-item"
+                onClick={() => onSelect(img)}
+                className={`cursor-pointer group relative flex flex-col rounded-xl overflow-hidden border bg-surface transition-all shadow-xs hover:shadow-md ${
+                  isChecked
+                    ? 'border-primary ring-2 ring-primary/40'
+                    : isPanelSelected
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                {/* Multi-select Checkbox on Top Left */}
+                {onToggleSelect && (
+                  <div 
+                    className="absolute top-2 left-2 z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      data-testid={`portfolio-checkbox-${img.id}`}
+                      checked={isChecked}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleSelect(img.id);
+                      }}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer accent-primary transition-opacity"
+                    />
+                  </div>
+                )}
+
+                {/* Full Image Container */}
+                <div className="relative aspect-4/3 sm:aspect-square w-full bg-background overflow-hidden flex items-center justify-center p-2">
+                  <Image 
+                    src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                    alt={img.code || img.title}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                    className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+                    unoptimized
+                  />
+                </div>
 
               {/* Bottom Info Section */}
               <div className="p-2.5 border-t border-border bg-surface flex flex-col gap-1">
@@ -97,7 +129,8 @@ export function PortfolioGrid({
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </div>
       

@@ -1,26 +1,27 @@
-### Goal: Implement Keyword Intelligence & Performance Analytics, Time Range Velocity, Winning Tag Combinations, Guidelines Modal, and DRY Refactor (Unified Clipboard & Shared Pagination Capsule).
+### Goal: Implement Artwork Collections & Theme Performance Tracking with multi-select clustering, real-time KPI rollups, dual View Modes (Grid vs Table), shared keyword intelligence, tag drill-down, and in-place metadata editing.
 
 ### Status: COMPLETE
 
 ### Done:
-- Built full `/keywords` intelligence dashboard with KPI summary cards, multi-tier ranking (`draw_more`, `star`, `workhorse`, `dormant`, `untested`), Top-5 SEO indicators, and composite performance scoring.
-- Implemented Time Range Velocity filtering (30d / 90d / 1y / all time) with date-scoped transaction aggregations on `/api/keywords` to surface trending vs stale keywords.
-- Built `KeywordDetailDrawer` slide-over with linked portfolio artwork thumbnails and Winning Tag Combinations recipe generator with 1-click clipboard export.
-- Created `KeywordGuideModal` explaining performance tiers, velocity, RPI/RPD formulas, Top-5 microstock SEO strategy, and priority cascade.
-- Centralized resilient clipboard copying into `src/lib/clipboard.ts` and extracted `PaginationCapsule.tsx` with direct numeric jump and boundary clamping across Portfolio, Sales, and Keywords.
-- Added 34 unit tests (`UT-LIB-CLIPBOARD-01`, `UT-UI-PAGINATION-CAPSULE-01`, etc.) and comprehensive Playwright E2E suite `e2e/keywords.spec.ts` (168/168 unit tests, 9/9 E2E suites passing).
-- Documented feature specification in `docs/features/keyword_analytics.md`, updated test catalog in `docs/tests/CATALOG.md`, and appended ADR-011 to `docs/decisions.md`.
+- Implemented relational data models (`Collection`, `CollectionItem`) in Prisma with cascade-safe join relations for non-destructive portfolio clustering.
+- Added persistent multi-selection checkboxes across pagination in `/portfolio` with floating action toolbar for 1-click collection creation and addition.
+- Built `/collections` dashboard with summary KPI cards, dual view mode toggle (`LayoutGrid` vs `List`), sortable `CollectionTable`, and unified `PaginationCapsule`.
+- Built `/collections/[id]` detail view with `TopSharedKeywordsBar` supporting multi-metric view modes (Frequency, Downloads, Revenue), 1-click clipboard export, and click-to-filter artwork grid drill-down.
+- Added in-place metadata editing via `EditCollectionModal` and 1-click `Set Cover` action on artwork cards.
+- Added unit tests (`UT-UI-COLLECTION-TABLE-01`, `UT-UI-COLLECTIONS-PAGE-01`, `UT-UI-COLLECTION-DETAIL-01`) and Playwright E2E specs (`E2E-COL-01`, `E2E-COL-02`), passing 185/185 unit tests.
+- Documented feature specification in `docs/features/collections.md`, updated `docs/tests/CATALOG.md` & `docs/tests/SELECTORS.md`, and appended ADR-012 to `docs/decisions.md`.
 
 ### Next:
 - 1. Implement Phase 3/4 CSV batch import for stock platform monthly statement uploads.
 - 2. Implement SFTP auto-uploader module for Adobe Stock and Shutterstock.
 
 ### Decisions:
-- `draw_more` tier requires `frequency <= 3 && totalDownloads >= 3 && rpi >= 15` to strictly isolate high-potential niches with proven market demand.
-- `copyToClipboard` provides fallback DOM `document.execCommand('copy')` to ensure reliable execution in non-secure or headless test environments.
-- `PaginationCapsule` enforces local numeric input state with clamping between `1` and `totalPages` on Enter/blur to prevent out-of-bound navigation.
+- Deleting a `Collection` record cascade-deletes join rows (`CollectionItem`) while keeping all associated `Image` records completely intact in the Portfolio.
+- View mode (`grid` | `table`) is persisted in `localStorage` (`collections_view_mode`) for seamless user experience across browser reloads.
+- Collection keyword rollups are aggregated dynamically across all images in the collection, exposing full ranked arrays to client-side multi-metric toggles.
+- Action buttons (Edit & Delete) in `CollectionTable` use `stopPropagation` to prevent triggering row-level navigation to collection detail.
 
 ### Skills:
-- [`coding`](.agents/skills/coding/SKILL.md) — Built keyword analytics engine, API routes, UI components, shared clipboard utility, and pagination capsule.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Multi-layer DB/API/UI cross-check audits, E2E validation, and accuracy verification across 168 tests.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-011), scoped doc updates, state eviction, and git delivery.
+- [`coding`](.agents/skills/coding/SKILL.md) — Built full-stack collections CRUD, database models, view mode toggles, table sorting, keyword drill-down, and modals.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Rigorous DOM/API cross-validation, React hook safety auditing, and browser E2E verification.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, decision logging (ADR-012), documentation sync, state cache eviction, and git delivery.

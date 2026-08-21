@@ -85,3 +85,16 @@
   5. **Shared DRY Utilities:** Extracted `copyToClipboard` (`src/lib/clipboard.ts`) with modern Navigator and fallback DOM execution, and `PaginationCapsule` (`src/components/common/PaginationCapsule.tsx`) with boundary clamping and direct numeric page jump input across all tables.
   6. **Test Coverage:** Added 34 new unit tests (168/168 passing) and comprehensive Playwright E2E suite `e2e/keywords.spec.ts` (9/9 suites passing).
 - **Impact:** Delivers actionable keyword intelligence for stock production, eliminates duplicate code, and maintains 100% test coverage and type safety.
+
+## ADR-012: Artwork Collections Theme Tracking, View Mode Toggle, and Keyword Intelligence
+- **Date:** 2026-08-22
+- **Context:** Microstock contributors needed a way to cluster portfolio artworks into theme collections or visual experiments, calculate aggregated financial metrics (Downloads, Revenue, RPI) in real-time, view Top Shared Keyword intersections with adaptive sorting and drill-down filtering, toggle between visual Grid Cards and analytical Sortable Tables, and edit collection metadata in-place without losing database referential integrity.
+- **Decision:**
+  1. **Relational Join Architecture:** Implemented `Collection` and `CollectionItem` models in Prisma with cascade deletion on join records, guaranteeing that deleting a collection never affects the underlying portfolio image assets.
+  2. **Multi-Select Portfolio Clustering:** Added persistent multi-selection checkboxes across pagination in `/portfolio` with a floating action toolbar for 1-click collection creation and addition.
+  3. **Dual View Modes (Grid vs Table):** Built `CollectionCard` (visual artwork preview and KPI summary) and `CollectionTable` (responsive tabular list with interactive sortable column headers and isolated action clicks) with `localStorage` view mode persistence.
+  4. **Shared Keyword Intelligence & Tag Drill-Down:** Enhanced `/api/collections/[id]` and `TopSharedKeywordsBar` with segmented view modes (`Frequency`, `Downloads`, `Revenue`), dynamic Top-15 slicing, and click-to-filter artwork grid drill-down with clearable filter badges.
+  5. **In-place Metadata & Cover Image Management:** Implemented `EditCollectionModal` with pencil edit triggers and 1-click `Set Cover` action on artwork cards in Collection Detail.
+  6. **Unified Pagination & DRY Types:** Integrated `PaginationCapsule` with automatic Page 1 reset guards on filter/sort changes, and unified shared `CollectionSummary` types across components.
+  7. **Comprehensive Test Suite:** Added unit tests (`UT-UI-COLLECTION-TABLE-01`, `UT-UI-COLLECTIONS-PAGE-01`, `UT-UI-COLLECTION-DETAIL-01`) and Playwright E2E specs (`E2E-COL-01`, `E2E-COL-02`), achieving 185/185 unit tests passing.
+- **Impact:** Provides a complete end-to-end theme management and financial analysis solution for stock creators while maintaining strict type safety, zero regressions, and full test automation.

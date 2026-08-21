@@ -63,6 +63,14 @@
 | `UT-UI-KW-RECIPE-01` | Verify Winning Tag Combinations recipe calculation and 1-click clipboard copy in drawer | `src/__tests__/components/KeywordDetailDrawer.test.tsx` |
 | `UT-LIB-CLIPBOARD-01` | Verify copyToClipboard handles Navigator Clipboard, fallback DOM execCommand, and errors | `src/__tests__/lib/clipboard.test.ts` |
 | `UT-UI-PAGINATION-CAPSULE-01` | Verify PaginationCapsule Prev/Next navigation, direct numeric input jump, and boundaries | `src/__tests__/components/PaginationCapsule.test.tsx` |
+| `UT-API-COLLECTION-01` | Verify /api/collections GET list with rollups and POST create collection with images | `src/__tests__/api/collections.test.ts` |
+| `UT-API-COLLECTION-DETAIL-02` | Verify /api/collections/[id] GET detail with Top 15 shared keywords, PATCH, and cascade DELETE | `src/__tests__/api/collections.test.ts` |
+| `UT-API-COLLECTION-ITEMS-03` | Verify /api/collections/[id]/items POST batch add and DELETE remove artwork item | `src/__tests__/api/collections.test.ts` |
+| `UT-UI-PORTFOLIO-MULTISELECT-01` | Verify PortfolioGrid multi-selection checkboxes, stopPropagation, and floating toolbar | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-UI-COLLECTION-CARDS-01` | Verify CollectionCard cover image, rollup KPIs, and edit/delete triggers | `src/__tests__/components/Collections.test.tsx` |
+| `UT-UI-COLLECTION-TABLE-01` | Verify CollectionTable columns, sortable headers, thumbnails, and isolated action triggers | `src/__tests__/components/Collections.test.tsx` |
+| `UT-UI-COLLECTIONS-PAGE-01` | Verify CollectionsPage view mode toggle (Grid/Table), search page reset, and pagination | `src/__tests__/components/Collections.test.tsx` |
+| `UT-UI-COLLECTION-DETAIL-01` | Verify TopSharedKeywordsBar view modes (Freq/DL/Rev), badges, tag drill-down, and 1-click clipboard copy | `src/__tests__/components/Collections.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -76,4 +84,6 @@
 | `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |
 | `E2E-SALES-04` | Verify multi-row selection, select-all checkbox, floating action bar, and BulkDateModal | `e2e/sales.spec.ts` |
 | `E2E-KW-01` | Keyword Insights: Page navigation, KPI summary cards, table sorting, tier filtering, bulk copy, and artwork inspection drawer | `e2e/keywords.spec.ts` |
+| `E2E-COL-01` | Artwork Collections: Create from portfolio multi-select, view card rollups, inspect Top-15 shared keywords, copy keywords, and delete collection | `e2e/collections.spec.ts` |
+| `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, tag drill-down filter & clear, and in-place pencil edit modal | `e2e/collections.spec.ts` |
 

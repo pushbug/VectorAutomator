@@ -5,16 +5,22 @@ import { PortfolioGrid } from '@/components/portfolio/PortfolioGrid';
 import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { AddImageDrawer } from '@/components/portfolio/AddImageDrawer';
 import { SaleEntryDrawer } from '@/components/sales/SaleEntryDrawer';
+import { PortfolioFloatingToolbar } from '@/components/portfolio/PortfolioFloatingToolbar';
+import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
+import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
 import { Plus, Calendar, Layers, Download } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 export default function PortfolioPage() {
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isLogSaleDrawerOpen, setIsLogSaleDrawerOpen] = useState(false);
+  const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+  const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   
   // Summary metrics state
   const [summary, setSummary] = useState({
@@ -60,7 +66,6 @@ export default function PortfolioPage() {
         });
       }
       
-      // Update selectedImage if it exists using functional state update to avoid re-render cycles
       setSelectedImage((prev: any) => {
         if (!prev) return null;
         const refreshed = json.data.find((img: any) => img.id === prev.id);
@@ -79,7 +84,6 @@ export default function PortfolioPage() {
 
   const handleFilterChange = useCallback((newFilters: { search: string; sortBy: string; sortOrder: string; startDate: string; endDate: string }) => {
     setFilters(prev => {
-      // Only update if values actually changed
       if (
         prev.search === newFilters.search &&
         prev.sortBy === newFilters.sortBy &&
@@ -91,8 +95,29 @@ export default function PortfolioPage() {
       }
       return newFilters;
     });
-    setPage(1); // Reset to page 1 on filter change
-    setSelectedImage(null); // Clear selection
+    setPage(1);
+    setSelectedImage(null);
+  }, []);
+
+  const handleToggleSelectImage = useCallback((id: string) => {
+    setSelectedImageIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  }, []);
+
+  const currentPageIds = images.map((img: any) => img.id);
+  const allCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every((id: string) => selectedImageIds.includes(id));
+
+  const handleToggleSelectPage = useCallback(() => {
+    if (allCurrentPageSelected) {
+      setSelectedImageIds(prev => prev.filter(id => !currentPageIds.includes(id)));
+    } else {
+      setSelectedImageIds(prev => Array.from(new Set([...prev, ...currentPageIds])));
+    }
+  }, [allCurrentPageSelected, currentPageIds]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedImageIds([]);
   }, []);
 
   const handleUpdateDownloads = async (id: string, ssDownloads: number, asDownloads: number) => {
@@ -106,7 +131,6 @@ export default function PortfolioPage() {
       if (!res.ok) throw new Error('Failed to update');
       const updatedImage = await res.json();
       
-      // Update local state
       setImages((prev: any) => prev.map((img: any) => img.id === id ? updatedImage : img));
       if (selectedImage?.id === id) {
         setSelectedImage(updatedImage);
@@ -127,6 +151,7 @@ export default function PortfolioPage() {
         throw new Error(data.error || 'Failed to delete image');
       }
       setSelectedImage(null);
+      setSelectedImageIds(prev => prev.filter(imgId => imgId !== id));
       await fetchPortfolio();
     } catch (error) {
       console.error('Error deleting image:', error);
@@ -230,7 +255,9 @@ export default function PortfolioPage() {
         <PortfolioGrid 
           images={images}
           selectedId={selectedImage?.id || null}
+          selectedImageIds={selectedImageIds}
           onSelect={setSelectedImage}
+          onToggleSelect={handleToggleSelectImage}
           isLoading={isLoading}
           page={page}
           totalPages={totalPages}
@@ -249,6 +276,34 @@ export default function PortfolioPage() {
           />
         )}
       </div>
+
+      <PortfolioFloatingToolbar
+        selectedCount={selectedImageIds.length}
+        totalOnPage={images.length}
+        allPageSelected={allCurrentPageSelected}
+        onCreateCollection={() => setIsCreateCollectionOpen(true)}
+        onAddToCollection={() => setIsAddToCollectionOpen(true)}
+        onToggleSelectPage={handleToggleSelectPage}
+        onClearSelection={handleClearSelection}
+      />
+
+      <CreateCollectionModal
+        isOpen={isCreateCollectionOpen}
+        onClose={() => setIsCreateCollectionOpen(false)}
+        selectedImageIds={selectedImageIds}
+        onSuccess={() => {
+          setSelectedImageIds([]);
+        }}
+      />
+
+      <AddToCollectionModal
+        isOpen={isAddToCollectionOpen}
+        onClose={() => setIsAddToCollectionOpen(false)}
+        selectedImageIds={selectedImageIds}
+        onSuccess={() => {
+          setSelectedImageIds([]);
+        }}
+      />
 
       <AddImageDrawer
         isOpen={isAddDrawerOpen}

@@ -12,6 +12,7 @@ Welcome to the central documentation index. All documentation should be linked h
 | Overview Dashboard | [docs/features/dashboard.md](file:///Users/baemon/Desktop/VectorAutomator/docs/features/dashboard.md) | Specification for Bento Cockpit Dashboard, metrics aggregations, and macOS launcher. |
 | Keyword Suggestion | [docs/features/keyword_suggest.md](file:///Users/baemon/Desktop/VectorAutomator/docs/features/keyword_suggest.md) | Specification for reference search, deduplication, soft limits, and metadata ingestion. |
 | Keyword Analytics | [docs/features/keyword_analytics.md](file:///Users/baemon/Desktop/VectorAutomator/docs/features/keyword_analytics.md) | Specification for keyword conversion rates, efficiency tiers, rankings, and drill-down. |
+| Artwork Collections | [docs/features/collections.md](file:///Users/baemon/Desktop/VectorAutomator/docs/features/collections.md) | Specification for artwork collections, multi-select clustering, rollups, and shared keywords. |
 | Decisions Log | [docs/decisions.md](file:///Users/baemon/Desktop/VectorAutomator/docs/decisions.md) | Architectural decision records (ADRs) and durable design rationale. |
 | Testing Overview | [docs/tests/OVERVIEW.md](file:///Users/baemon/Desktop/VectorAutomator/docs/tests/OVERVIEW.md) | E2E and Unit testing strategy, and test rules. |
 

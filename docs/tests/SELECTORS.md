@@ -178,6 +178,59 @@ Always use `data-testid` for element selection in E2E tests.
 | `keyword-guide-modal` | Modal dialog explaining keyword performance tiers, velocity, and metrics |
 | `keyword-guide-close-btn` | Close button inside Guidelines modal header |
 | `keyword-guide-got-it-btn` | Action button in Guidelines modal footer to close dialog |
+| `portfolio-checkbox-{id}` | Multi-select checkbox on individual portfolio grid card |
+| `portfolio-floating-toolbar` | Floating action toolbar for portfolio multi-selection |
+| `portfolio-create-collection-btn` | Button in floating toolbar to open Create Collection modal |
+| `portfolio-add-to-collection-btn` | Button in floating toolbar to open Add to Collection modal |
+| `portfolio-clear-selection-btn` | Button in floating toolbar to clear all selected images |
+| `collection-card-{id}` | Collection card container in collections overview grid |
+| `collection-card-cover-{id}` | Cover image link container on collection card |
+| `collection-card-title-{id}` | Title heading on collection card |
+| `collection-card-downloads-{id}` | Total downloads metric display on collection card |
+| `collection-card-earnings-{id}` | Total revenue metric display on collection card |
+| `collection-card-rpi-{id}` | Average RPI metric display on collection card |
+| `collection-add-btn` | Header button in Collections page to create a new collection |
+| `collection-search-input` | Search input field in Collections page toolbar |
+| `collection-sort-select` | Sort select dropdown in Collections page toolbar |
+| `collection-view-grid-btn` | Button in Collections toolbar to switch to Grid Cards view mode |
+| `collection-view-table-btn` | Button in Collections toolbar to switch to Table List view mode |
+| `collection-table` | Table view container on Collections page |
+| `collection-table-row-{id}` | Individual collection row in CollectionTable |
+| `collection-sort-header-{column}` | Interactive sortable column header button in CollectionTable |
+| `collection-table-edit-btn-{id}` | Edit action button inside CollectionTable row |
+| `collection-table-delete-btn-{id}` | Delete action button inside CollectionTable row |
+| `collection-pagination-prev-btn` | Previous page button for Collections pagination |
+| `collection-pagination-next-btn` | Next page button for Collections pagination |
+| `collection-pagination-page-input` | Jump to page input in Collections PaginationCapsule |
+| `collection-detail-title` | Header title in Collection detail view |
+| `collection-detail-description` | Description text in Collection detail view |
+| `collection-detail-back-btn` | Back button in Collection detail header |
+| `collection-detail-delete-btn` | Delete button in Collection detail header |
+| `collection-top-keywords-bar` | Top shared keywords container bar in Collection detail |
+| `collection-top-keyword-tag-{keyword}` | Individual shared keyword chip in TopSharedKeywordsBar |
+| `collection-copy-top-keywords-btn` | Button to copy all top shared keywords to clipboard |
+| `collection-keywords-view-freq-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Frequency |
+| `collection-keywords-view-dl-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Downloads |
+| `collection-keywords-view-rev-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Revenue |
+| `collection-keyword-filter-badge` | Active keyword filter pill indicator above collection artwork grid |
+| `collection-keyword-filter-clear-btn` | Clear button inside active keyword filter indicator |
+| `collection-artwork-item` | Artwork card inside Collection detail image grid |
+| `collection-item-remove-btn-{id}` | Button to remove an artwork item from the collection |
+| `collection-set-cover-btn-{id}` | Button to set artwork item as the collection cover image |
+| `collection-edit-btn` | Edit button in Collection detail header next to title |
+| `create-collection-modal` | Modal dialog for creating a new collection |
+| `create-collection-name-input` | Name input field inside Create Collection modal |
+| `create-collection-description-input` | Description textarea inside Create Collection modal |
+| `create-collection-submit-btn` | Submit button inside Create Collection modal |
+| `create-collection-close-btn` | Close button inside Create Collection modal header |
+| `edit-collection-modal` | Modal dialog for editing an existing collection |
+| `edit-collection-name-input` | Name input field inside Edit Collection modal |
+| `edit-collection-description-input` | Description textarea inside Edit Collection modal |
+| `edit-collection-submit-btn` | Submit button inside Edit Collection modal |
+| `edit-collection-close-btn` | Close button inside Edit Collection modal header |
+| `add-to-collection-modal` | Modal dialog for adding selected artworks to an existing collection |
+| `add-to-collection-select` | Destination collection select dropdown in Add to Collection modal |
+| `add-to-collection-submit-btn` | Submit button inside Add to Collection modal |
 
 
 

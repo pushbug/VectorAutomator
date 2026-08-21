@@ -118,5 +118,38 @@ describe('PortfolioGrid Component', () => {
     expect(screen.getByTestId('portfolio-summary-downloads')).toHaveTextContent('450');
     expect(screen.getByTestId('portfolio-summary-earnings')).toHaveTextContent('$285.50');
   });
+
+  it('UT-UI-PORTFOLIO-MULTISELECT-01: supports multi-select checkboxes without triggering image detail onSelect', () => {
+    const handleSelect = vi.fn();
+    const handleToggleSelect = vi.fn();
+
+    render(
+      <PortfolioGrid
+        images={mockImages}
+        selectedId={null}
+        selectedImageIds={['img1']}
+        onSelect={handleSelect}
+        onToggleSelect={handleToggleSelect}
+        isLoading={false}
+        page={1}
+        totalPages={1}
+        onPageChange={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByTestId('portfolio-checkbox-img1') as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox.checked).toBe(true);
+
+    // Click checkbox -> should call handleToggleSelect('img1') and NOT handleSelect
+    fireEvent.click(checkbox);
+    expect(handleToggleSelect).toHaveBeenCalledWith('img1');
+    expect(handleSelect).not.toHaveBeenCalled();
+
+    // Click item container -> should call handleSelect
+    const gridItem = screen.getByTestId('portfolio-grid-item');
+    fireEvent.click(gridItem);
+    expect(handleSelect).toHaveBeenCalledWith(mockImages[0]);
+  });
 });
 
