@@ -423,7 +423,7 @@ export function SalesTable({
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="font-mono tabular-nums text-xs font-medium text-foreground flex items-center justify-end gap-1">
                         <Download size={13} className="text-muted" />
-                        {sale.downloads.toLocaleString()}
+                        {formatNumber(sale.downloads)}
                       </span>
                     </td>
 

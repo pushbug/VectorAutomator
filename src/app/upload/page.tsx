@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAssetProcessor } from "@/hooks/useAssetProcessor";
 import { Dropzone } from "@/components/upload/Dropzone";
 import { AssetQueue } from "@/components/upload/AssetQueue";
-import { MetadataEditor } from "@/components/upload/MetadataEditor";
+import { MetadataEditor, KeywordMetricInfo } from "@/components/upload/MetadataEditor";
 import { KeywordSuggester } from "@/components/upload/KeywordSuggester";
+import { KeywordAnalyticsToken } from "@/lib/keywordAnalytics";
 import { FolderPlus } from "lucide-react";
 
 export default function UploadPage() {
@@ -25,6 +26,47 @@ export default function UploadPage() {
 
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [keywordMetricsMap, setKeywordMetricsMap] = useState<Record<string, KeywordMetricInfo>>({});
+
+  // Load global portfolio keyword statistics on mount for true all-time metrics lookup
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchGlobalKeywords = async () => {
+      try {
+        const res = await fetch('/api/keywords?mode=lookup');
+        if (res.ok) {
+          const json = await res.json();
+          if (!isCancelled && json.dictionary) {
+            setKeywordMetricsMap(json.dictionary);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching global keyword metrics:', err);
+      }
+    };
+    fetchGlobalKeywords();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const handleKeywordTokensChange = useCallback((tokens: KeywordAnalyticsToken[]) => {
+    // Merge tokens from selected references into global dictionary
+    setKeywordMetricsMap(prev => {
+      const next = { ...prev };
+      tokens.forEach(t => {
+        // Only override if not already in global dictionary or if newly discovered
+        if (!next[t.keyword.toLowerCase()]) {
+          next[t.keyword.toLowerCase()] = {
+            totalDownloads: t.totalDownloads,
+            totalEarnings: t.totalEarnings,
+            isTopFive: t.isTopFive
+          };
+        }
+      });
+      return next;
+    });
+  }, []);
 
   const selectedCount = assetList.filter(a => a.selectedForImport).length;
 
@@ -54,7 +96,7 @@ export default function UploadPage() {
     <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 space-y-4 h-auto xl:h-[calc(100vh-4rem)] flex flex-col">
       <header className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Upload & Keyword Suggestion</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Upload &amp; Keywords</h1>
         </div>
         <div className="flex items-center gap-3">
           {importMessage && (
@@ -100,6 +142,7 @@ export default function UploadPage() {
             activeAsset={activeAsset}
             onUpdateActiveAsset={updateActiveAsset}
             onEmbedExifForAsset={embedExifForAsset}
+            keywordMetricsMap={keywordMetricsMap}
           />
         </div>
 
@@ -109,6 +152,7 @@ export default function UploadPage() {
             activeKeywords={activeAsset?.keywords || ""}
             activeAssetId={activeAssetId}
             onApplyKeywords={(mergedKeywords) => updateActiveAsset({ keywords: mergedKeywords })}
+            onKeywordTokensChange={handleKeywordTokensChange}
           />
         </div>
       </div>

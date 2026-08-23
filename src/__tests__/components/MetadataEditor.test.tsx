@@ -56,15 +56,12 @@ describe('MetadataEditor Component (UT-UI-METADATA-KEYWORD-GATE-01)', () => {
     );
 
     // Find and click the delete button for keyword 'two'
-    const removeButtons = screen.getAllByRole('button');
-    const deleteBtn = removeButtons.find(b => b.closest('span')?.textContent?.includes('two'));
-    expect(deleteBtn).toBeDefined();
-    if (deleteBtn) {
-      fireEvent.click(deleteBtn);
-      expect(onUpdateMock).toHaveBeenCalledWith(expect.objectContaining({
-        keywords: expect.not.stringContaining('two')
-      }));
-    }
+    const deleteBtn = screen.getByTestId('metadata-keyword-remove-btn-two');
+    expect(deleteBtn).toBeInTheDocument();
+    fireEvent.click(deleteBtn);
+    expect(onUpdateMock).toHaveBeenCalledWith(expect.objectContaining({
+      keywords: expect.not.stringContaining('two')
+    }));
   });
 
   it('UT-UI-METADATA-TITLE-VALIDATION-01: shows red border on title textarea when save is clicked without title and clears on typing', () => {
@@ -109,5 +106,134 @@ describe('MetadataEditor Component (UT-UI-METADATA-KEYWORD-GATE-01)', () => {
     // Click Save Metadata again
     fireEvent.click(screen.getByTestId('save-metadata-btn'));
     expect(onEmbedMock).toHaveBeenCalledWith('asset-1');
+  });
+
+  it('UT-UI-METADATA-EDITOR-SORT-01: supports numbered row list view, metric badges, and dynamic sorting', () => {
+    const onUpdateMock = vi.fn();
+    const metricsAsset: Asset = {
+      id: 'asset-metrics',
+      baseName: '2608-02',
+      title: 'Infographic Vector',
+      keywords: 'banana, apple, cherry',
+      status: 'idle',
+    };
+
+    const keywordMetricsMap = {
+      banana: { totalDownloads: 100, totalEarnings: 50.0 },
+      apple: { totalDownloads: 500, totalEarnings: 250.0, isTopFive: true },
+      cherry: { totalDownloads: 300, totalEarnings: 120.0 }
+    };
+
+    render(
+      <MetadataEditor
+        activeAsset={metricsAsset}
+        onUpdateActiveAsset={onUpdateMock}
+        onEmbedExifForAsset={vi.fn()}
+        keywordMetricsMap={keywordMetricsMap}
+      />
+    );
+
+    // Row List View sorted by 'downloads' descending by default (apple -> cherry -> banana)
+    expect(screen.getByTestId('metadata-keyword-row-apple')).toBeInTheDocument();
+    expect(screen.getByTestId('metadata-keyword-row-cherry')).toBeInTheDocument();
+    expect(screen.getByTestId('metadata-keyword-row-banana')).toBeInTheDocument();
+
+    // Verify metrics in row view
+    expect(screen.getByText('500')).toBeInTheDocument();
+    expect(screen.getByText('$250.00')).toBeInTheDocument();
+
+    // Test Sort: Alphabetical (A-Z) -> apple, banana, cherry
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-alpha-btn'));
+    const rowsAfterAlpha = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(rowsAfterAlpha[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-apple');
+    expect(rowsAfterAlpha[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-banana');
+    expect(rowsAfterAlpha[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-cherry');
+
+    // Test Sort: Original -> banana, apple, cherry
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-orig-btn'));
+    const rowsAfterOrig = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(rowsAfterOrig[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-banana');
+    expect(rowsAfterOrig[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-apple');
+    expect(rowsAfterOrig[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-cherry');
+
+    // Test Sort: Revenue ($) -> apple ($250), cherry ($120), banana ($50)
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-rev-btn'));
+    const rowsAfterRev = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(rowsAfterRev[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-apple');
+    expect(rowsAfterRev[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-cherry');
+    expect(rowsAfterRev[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-banana');
+
+    // Remove banana
+    fireEvent.click(screen.getByTestId('metadata-keyword-remove-btn-banana'));
+    expect(onUpdateMock).toHaveBeenCalledWith(expect.objectContaining({
+      keywords: 'apple, cherry'
+    }));
+  });
+
+  it('UT-UI-METADATA-EDITOR-TIE-01: handles tie-breaking fallback to alphabetical, zero/missing metrics, and ascending/descending toggles', () => {
+    const onUpdateMock = vi.fn();
+    const tieAsset: Asset = {
+      id: 'asset-tie',
+      baseName: '2608-03',
+      title: 'Tie-break Test',
+      keywords: 'zebra, beta, alpha, unknown_keyword',
+      status: 'idle',
+    };
+
+    const keywordMetricsMap = {
+      alpha: { totalDownloads: 100, totalEarnings: 50.0 },
+      beta: { totalDownloads: 100, totalEarnings: 50.0 }, // Tied with alpha
+      zebra: { totalDownloads: 200, totalEarnings: 10.0 },
+      // unknown_keyword is missing from map -> defaults to 0 downloads / $0 earnings
+    };
+
+    render(
+      <MetadataEditor
+        activeAsset={tieAsset}
+        onUpdateActiveAsset={onUpdateMock}
+        onEmbedExifForAsset={vi.fn()}
+        keywordMetricsMap={keywordMetricsMap}
+      />
+    );
+
+    // Default: Sort by Downloads (descending) -> zebra (200) -> alpha (100) -> beta (100) -> unknown_keyword (0)
+    // alpha and beta have same downloads (100) -> tie-breaks alphabetically (alpha before beta)
+    const defaultRows = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(defaultRows[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-zebra');
+    expect(defaultRows[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
+    expect(defaultRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
+    expect(defaultRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-unknown_keyword');
+
+    // Click Downloads sort button again to toggle Ascending (Low to High)
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-dl-btn'));
+    const ascDlRows = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(ascDlRows[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-unknown_keyword');
+    expect(ascDlRows[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
+    expect(ascDlRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
+    expect(ascDlRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-zebra');
+
+    // Test Sort by Revenue ($) -> alpha ($50) -> beta ($50) -> zebra ($10) -> unknown_keyword ($0)
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-rev-btn'));
+    const revRows = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(revRows[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
+    expect(revRows[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
+    expect(revRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-zebra');
+    expect(revRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-unknown_keyword');
+
+    // Test Sort by Alphabetical (A-Z)
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-alpha-btn'));
+    const alphaAscRows = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(alphaAscRows[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
+    expect(alphaAscRows[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
+    expect(alphaAscRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-unknown_keyword');
+    expect(alphaAscRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-zebra');
+
+    // Click A-Z again to toggle Z-A
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-alpha-btn'));
+    const alphaDescRows = screen.getAllByTestId(/metadata-keyword-row-/);
+    expect(alphaDescRows[0]).toHaveAttribute('data-testid', 'metadata-keyword-row-zebra');
+    expect(alphaDescRows[1]).toHaveAttribute('data-testid', 'metadata-keyword-row-unknown_keyword');
+    expect(alphaDescRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
+    expect(alphaDescRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
   });
 });

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useTransition } from "react";
-import { Sparkles, Search, X, Check, Image as ImageIcon, Flame, DollarSign, Star, CheckSquare, Square, ArrowUpDown, Copy } from "lucide-react";
+import { Sparkles, Search, X, Check, Image as ImageIcon, Flame, DollarSign, Star, CheckSquare, Square, ArrowUpDown, Copy, Download, ArrowDownAZ } from "lucide-react";
 import {
   aggregateKeywordTokens,
   mergeKeywords,
   parseKeywordsString,
   PortfolioReferenceImage,
-  KeywordAnalyticsToken
+  KeywordAnalyticsToken,
+  KeywordSortMode
 } from "@/lib/keywordAnalytics";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -15,17 +16,20 @@ interface KeywordSuggesterProps {
   activeKeywords: string;
   activeAssetId: string | null;
   onApplyKeywords: (mergedKeywords: string) => void;
+  onKeywordTokensChange?: (tokens: KeywordAnalyticsToken[]) => void;
 }
 
 export function KeywordSuggester({
   activeKeywords,
   activeAssetId,
-  onApplyKeywords
+  onApplyKeywords,
+  onKeywordTokensChange
 }: KeywordSuggesterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchField, setSearchField] = useState<"all" | "title" | "keywords" | "code" | "ids">("keywords");
   const [sortBy, setSortBy] = useState<"totalDownloads" | "earnings" | "createdAt">("totalDownloads");
+  const [keywordSortBy, setKeywordSortBy] = useState<"score" | "downloads" | "earnings" | "alphabetical">("score");
   const [portfolioImages, setPortfolioImages] = useState<PortfolioReferenceImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
@@ -81,22 +85,28 @@ export function KeywordSuggester({
     return portfolioImages.filter(img => selectedImageIds.has(img.id));
   }, [portfolioImages, selectedImageIds]);
 
-  // Aggregated keyword tokens from selected reference images
+  // Aggregated keyword tokens from selected reference images with dynamic sort mode
   const keywordTokens = useMemo(() => {
-    return aggregateKeywordTokens(selectedImages, { sortBy: "score" });
-  }, [selectedImages]);
+    return aggregateKeywordTokens(selectedImages, { sortBy: keywordSortBy });
+  }, [selectedImages, keywordSortBy]);
+
+  // Notify parent of updated keyword tokens for metrics lookup
+  useEffect(() => {
+    onKeywordTokensChange?.(keywordTokens);
+  }, [keywordTokens, onKeywordTokensChange]);
 
   // Active asset keywords parsed set
   const activeKeywordsSet = useMemo(() => {
     return new Set(parseKeywordsString(activeKeywords).map(k => k.toLowerCase()));
   }, [activeKeywords]);
 
-  // Auto-select all new aggregated keyword tags when images selection changes
+  // Auto-select all new aggregated keyword tags only when images selection changes (not on sort change)
   useEffect(() => {
+    const tokens = aggregateKeywordTokens(selectedImages, { sortBy: "score" });
     const newTags = new Set<string>();
-    keywordTokens.forEach(t => newTags.add(t.keyword));
+    tokens.forEach(t => newTags.add(t.keyword));
     setSelectedTagNames(newTags);
-  }, [keywordTokens]);
+  }, [selectedImageIds, portfolioImages]);
 
   const toggleImageSelection = (id: string) => {
     setSelectedImageIds(prev => {
@@ -130,6 +140,36 @@ export function KeywordSuggester({
     } else {
       setSelectedTagNames(new Set(keywordTokens.map(t => t.keyword)));
     }
+  };
+
+  const handleToggleSingleKeyword = (keyword: string) => {
+    if (!activeAssetId) return;
+
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    const currentWords = parseKeywordsString(activeKeywords);
+    const existingLower = currentWords.map(k => k.toLowerCase());
+
+    if (existingLower.includes(normalizedKeyword)) {
+      // Cart remove: filter out this keyword
+      const updated = currentWords.filter(k => k.toLowerCase() !== normalizedKeyword).join(", ");
+      startTransition(() => {
+        onApplyKeywords(updated);
+      });
+      setAppliedFeedback(`Removed "${keyword}" from asset keywords (${Math.max(0, currentWords.length - 1)}/50)`);
+    } else {
+      // Cart add: append using mergeKeywords
+      const result = mergeKeywords(activeKeywords, [keyword], 100, "append");
+      startTransition(() => {
+        onApplyKeywords(result.mergedString);
+      });
+      if (result.isOverStockLimit) {
+        setAppliedFeedback(`Added "${keyword}" (${result.count}/50 - remove ${result.count - 50} to save)`);
+      } else {
+        setAppliedFeedback(`Added "${keyword}" (${result.count}/50)`);
+      }
+    }
+
+    setTimeout(() => setAppliedFeedback(null), 3000);
   };
 
   const handleCopyTags = async () => {
@@ -269,7 +309,7 @@ export function KeywordSuggester({
 
           <div className="flex-1 overflow-y-auto pr-1">
             {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="aspect-square rounded-lg bg-surface-hover animate-pulse" />
                 ))}
@@ -280,11 +320,9 @@ export function KeywordSuggester({
                 <p className="text-xs text-muted font-medium">No portfolio vectors found matching query</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                 {portfolioImages.map((img) => {
                   const isSelected = selectedImageIds.has(img.id);
-                  const hasDownloads = (img.totalDownloads || 0) > 0;
-                  const hasEarnings = (img.totalEarnings || 0) > 0;
                   const thumbUrl = img.filePath 
                     ? `/api/image?path=${encodeURIComponent(img.filePath)}`
                     : null;
@@ -317,35 +355,27 @@ export function KeywordSuggester({
                         </div>
                       )}
 
-                      {/* Top Checkbox Badge */}
+                      {/* Top-Left Code / ID Blue Badge */}
                       <div className="absolute top-1.5 left-1.5">
-                        <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] shadow-xs ${
-                          isSelected ? "bg-primary text-primary-foreground font-bold" : "bg-black/50 text-white/80 backdrop-blur-xs"
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 shadow-xs backdrop-blur-xs ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground ring-1 ring-white/30"
+                            : "bg-blue-600/90 text-white"
                         }`}>
-                          {isSelected && <Check size={11} strokeWidth={3} />}
+                          {isSelected && <Check size={10} strokeWidth={3} className="shrink-0" />}
+                          <span>{img.code || img.id.slice(-6)}</span>
                         </span>
                       </div>
 
-                      {/* Downloads & Earnings Metric Badge */}
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                        {hasEarnings && (
-                          <div className="bg-emerald-600/90 text-white px-1.5 py-0.5 rounded text-[9px] font-semibold flex items-center gap-0.5 backdrop-blur-xs shadow-xs">
-                            ${(img.totalEarnings || 0).toFixed(2)}
-                          </div>
-                        )}
-                        {hasDownloads && !hasEarnings && (
-                          <div className="bg-emerald-600/90 text-white px-1.5 py-0.5 rounded text-[9px] font-semibold flex items-center gap-0.5 backdrop-blur-xs shadow-xs">
-                            <Flame size={9} />
-                            {img.totalDownloads}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Bottom Code / Label Overlay */}
-                      <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-3">
-                        <p className="text-[10px] text-white font-medium truncate leading-tight">
-                          {img.code || img.title}
-                        </p>
+                      {/* Bottom Download (Left) & Earnings (Right) Overlay */}
+                      <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/90 via-black/60 to-transparent p-1.5 pt-3 flex items-center justify-between text-white text-[10px] font-medium">
+                        <div className="flex items-center gap-1 tabular-nums">
+                          <Download size={10} className="text-white/80 shrink-0" />
+                          <span>{img.totalDownloads || 0}</span>
+                        </div>
+                        <div className="font-semibold tabular-nums">
+                          ${(img.totalEarnings || 0).toFixed(2)}
+                        </div>
                       </div>
                     </div>
                   );
@@ -357,7 +387,7 @@ export function KeywordSuggester({
 
         {/* SECTION 2: Deduplicated Suggested Keywords Pool (50% of available height) */}
         <div className="flex-1 flex flex-col min-h-0 border border-border rounded-lg bg-background p-3 overflow-hidden">
-          <div className="flex items-center justify-between mb-2 shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-foreground">
                 Suggested Keywords ({selectedTagNames.size}/{keywordTokens.length})
@@ -366,7 +396,72 @@ export function KeywordSuggester({
                 <span className="text-[10px] text-muted">from {selectedImages.length} selected vector(s)</span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Segmented Sort Toggle */}
+              {keywordTokens.length > 0 && (
+                <div className="flex items-center p-0.5 bg-surface border border-border rounded-lg text-xs">
+                  <button
+                    type="button"
+                    data-testid="keyword-suggest-sort-score-btn"
+                    onClick={() => setKeywordSortBy("score")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                      keywordSortBy === "score"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort by Best Score (weighted formula)"
+                  >
+                    <Sparkles size={11} className={keywordSortBy === "score" ? "text-primary" : "text-muted"} />
+                    <span className="hidden sm:inline">Score</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="keyword-suggest-sort-downloads-btn"
+                    onClick={() => setKeywordSortBy("downloads")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                      keywordSortBy === "downloads"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort by Total Downloads (high to low)"
+                  >
+                    <Download size={11} className={keywordSortBy === "downloads" ? "text-primary" : "text-muted"} />
+                    <span className="hidden sm:inline">Downloads</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="keyword-suggest-sort-earnings-btn"
+                    onClick={() => setKeywordSortBy("earnings")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                      keywordSortBy === "earnings"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort by Total Earnings ($ high to low)"
+                  >
+                    <DollarSign size={11} className={keywordSortBy === "earnings" ? "text-primary" : "text-muted"} />
+                    <span className="hidden sm:inline">Earnings</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="keyword-suggest-sort-alpha-btn"
+                    onClick={() => setKeywordSortBy("alphabetical")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                      keywordSortBy === "alphabetical"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort Alphabetically (A to Z)"
+                  >
+                    <ArrowDownAZ size={11} className={keywordSortBy === "alphabetical" ? "text-primary" : "text-muted"} />
+                    <span className="hidden sm:inline">A-Z</span>
+                  </button>
+                </div>
+              )}
+
               {keywordTokens.length > 0 && (
                 <button
                   type="button"
@@ -413,60 +508,95 @@ export function KeywordSuggester({
                   const isHighFrequency = token.frequency > 1;
 
                   return (
-                    <button
+                    <div
                       key={token.keyword}
-                      type="button"
-                      data-testid={`keyword-suggest-tag-${token.keyword}`}
-                      onClick={() => toggleTagSelection(token.keyword)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer select-none ${
-                        isChecked
-                          ? hasEarnings || hasDownloads
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
-                            : isHighFrequency
-                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20"
-                              : "bg-surface border border-border text-foreground hover:bg-surface-hover"
-                          : "bg-background text-muted/60 border border-border/40 opacity-60 hover:opacity-100"
+                      data-testid={`keyword-suggest-tag-container-${token.keyword}`}
+                      className={`group/tag inline-flex items-center rounded-md text-xs transition-all select-none border overflow-hidden ${
+                        isAlreadyInActive
+                          ? "bg-primary/10 border-primary/40 text-foreground"
+                          : isChecked
+                          ? "bg-surface border-border text-foreground hover:bg-surface-hover shadow-xs"
+                          : "bg-background text-muted border-border/40 opacity-60 hover:opacity-100 hover:bg-surface-hover"
                       }`}
                     >
-                      {/* Selection Indicator */}
-                      {isChecked ? (
-                        <CheckSquare size={12} className={hasEarnings || hasDownloads ? "text-emerald-500" : isHighFrequency ? "text-blue-500" : "text-primary"} />
-                      ) : (
-                        <Square size={12} className="text-muted/40" />
-                      )}
+                      {/* Left Checkbox button (for batch select) */}
+                      <button
+                        type="button"
+                        data-testid={`keyword-suggest-tag-checkbox-${token.keyword}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTagSelection(token.keyword);
+                        }}
+                        className="py-1 px-1.5 hover:bg-surface-hover text-muted transition-colors cursor-pointer shrink-0 flex items-center justify-center border-r border-border/30"
+                        title={isChecked ? "Deselect for batch action" : "Select for batch action"}
+                        aria-label={`Toggle batch selection for ${token.keyword}`}
+                      >
+                        {isChecked ? (
+                          <CheckSquare size={12} className="text-primary shrink-0" />
+                        ) : (
+                          <Square size={12} className="text-muted/50 group-hover/tag:text-muted shrink-0" />
+                        )}
+                      </button>
 
-                      {/* Keyword text */}
-                      <span className="font-medium">{token.keyword}</span>
+                      {/* Right Pill Body (1-Click Cart Quick Add / Remove Toggle) */}
+                      <button
+                        type="button"
+                        data-testid={`keyword-suggest-tag-${token.keyword}`}
+                        onClick={() => handleToggleSingleKeyword(token.keyword)}
+                        className="inline-flex items-center gap-1.5 py-1 px-2 hover:bg-surface-hover/50 transition-colors cursor-pointer text-left"
+                        title={
+                          !activeAssetId
+                            ? "Select an asset from queue to add keyword"
+                            : isAlreadyInActive
+                            ? `Click to remove "${token.keyword}" from asset keywords`
+                            : `Click to add "${token.keyword}" to asset keywords`
+                        }
+                      >
+                        {/* Keyword text */}
+                        <span className="font-medium">{token.keyword}</span>
 
-                      {/* Top 5 Golden Star Indicator */}
-                      {token.isTopFive && (
-                        <span title="Top 5 Golden Keyword" className="inline-flex items-center">
-                          <Star size={10} className="fill-amber-400 text-amber-500" />
-                        </span>
-                      )}
+                        {/* Top 5 Golden Star Indicator */}
+                        {token.isTopFive && (
+                          <span title="Top 5 Golden Keyword" className="inline-flex items-center shrink-0">
+                            <Star size={10} className="fill-amber-400 text-amber-500 shrink-0" />
+                          </span>
+                        )}
 
-                      {/* Download / Earnings Metric Badge */}
-                      {hasEarnings ? (
-                        <span className="text-[10px] px-1 rounded bg-emerald-500/20 font-bold">
-                          ${token.totalEarnings.toFixed(2)}
-                        </span>
-                      ) : hasDownloads ? (
-                        <span className="text-[10px] px-1 rounded bg-emerald-500/20 font-bold">
-                          +{token.totalDownloads}
-                        </span>
-                      ) : isHighFrequency ? (
-                        <span className="text-[10px] px-1 rounded bg-blue-500/20 font-semibold">
-                          x{token.frequency}
-                        </span>
-                      ) : null}
+                        {/* Concurrent Download & Earnings Badges */}
+                        {(hasDownloads || hasEarnings) ? (
+                          <div className="inline-flex items-center gap-1 shrink-0">
+                            {hasDownloads && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-surface text-muted border border-border font-medium tabular-nums"
+                                title={`${token.totalDownloads} total downloads`}
+                              >
+                                <Download size={9} className="shrink-0 text-muted/70" />
+                                {token.totalDownloads}
+                              </span>
+                            )}
+                            {hasEarnings && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-surface text-muted border border-border font-medium tabular-nums"
+                                title={`$${token.totalEarnings.toFixed(2)} total earnings`}
+                              >
+                                ${token.totalEarnings.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        ) : isHighFrequency ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface text-muted border border-border font-medium tabular-nums shrink-0">
+                            x{token.frequency}
+                          </span>
+                        ) : null}
 
-                      {/* Already in active asset indicator */}
-                      {isAlreadyInActive && (
-                        <span className="text-[9px] text-muted italic ml-0.5" title="Already added in current asset">
-                          (in asset)
-                        </span>
-                      )}
-                    </button>
+                        {/* In Asset Status Indicator */}
+                        {isAlreadyInActive && (
+                          <span className="text-[9px] text-primary font-semibold shrink-0 ml-0.5">
+                            (in asset)
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </div>

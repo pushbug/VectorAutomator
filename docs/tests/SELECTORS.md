@@ -107,13 +107,25 @@ Always use `data-testid` for element selection in E2E tests.
 | `keyword-suggest-image-card-{id}` | Reference image card in KeywordSuggester grid |
 | `keyword-suggest-select-all-images-btn` | Select all reference images button in KeywordSuggester |
 | `keyword-suggest-clear-images-btn` | Clear selected reference images button in KeywordSuggester |
-| `keyword-suggest-tag-{keyword}` | Individual keyword tag pill button in KeywordSuggester |
+| `keyword-suggest-tag-{keyword}` | Individual keyword tag pill button in KeywordSuggester (1-click cart add/remove toggle) |
+| `keyword-suggest-tag-checkbox-{keyword}` | Checkbox button on keyword tag pill in KeywordSuggester (batch inclusion toggle) |
+| `keyword-suggest-tag-container-{keyword}` | Outer container for dual-action keyword tag pill |
+| `keyword-suggest-sort-score-btn` | Button in Suggested Keywords header to sort by Composite Score |
+| `keyword-suggest-sort-downloads-btn` | Button in Suggested Keywords header to sort by Total Downloads |
+| `keyword-suggest-sort-earnings-btn` | Button in Suggested Keywords header to sort by Total Earnings ($) |
+| `keyword-suggest-sort-alpha-btn` | Button in Suggested Keywords header to sort Alphabetically (A-Z) |
 | `keyword-suggest-select-all-tags-btn` | Select all suggested keyword tags button |
 | `keyword-suggest-clear-tags-btn` | Deselect all suggested keyword tags button |
 | `keyword-suggest-copy-tags-btn` | Button in KeywordSuggester footer to copy selected keywords to clipboard |
 | `keyword-suggest-header-copy-btn` | Button in KeywordSuggester header to copy selected keywords to clipboard |
 | `keyword-suggest-apply-btn` | Button to inject selected keywords into active asset in MetadataEditor |
 | `metadata-keyword-limit-warning` | Warning badge/text in MetadataEditor when keywords count exceeds 50 |
+| `metadata-keywords-sort-orig-btn` | Button in MetadataEditor to sort keywords by original entry order |
+| `metadata-keywords-sort-dl-btn` | Button in MetadataEditor to sort keywords by total downloads descending |
+| `metadata-keywords-sort-rev-btn` | Button in MetadataEditor to sort keywords by total earnings ($) descending |
+| `metadata-keywords-sort-alpha-btn` | Button in MetadataEditor to sort keywords alphabetically (A-Z) |
+| `metadata-keyword-row-{keyword}` | Individual numbered keyword row in MetadataEditor (#1 - #50) |
+| `metadata-keyword-remove-btn-{keyword}` | Button to remove specific keyword in MetadataEditor |
 | `metadata-title-input` | Textarea for editing vector title in MetadataEditor |
 | `metadata-title-error` | Validation error message displayed under title input when saving without title |
 | `smart-paste-date-input` | Date input / trigger for statement date in Smart Paste modal |

@@ -64,7 +64,7 @@ describe('Dashboard HomePage Component (UT-UI-DASH-01)', () => {
 
     // Wait for data load
     await waitFor(() => {
-      expect(screen.getByText('Overview Dashboard')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
     });
 
     // Check KPI cards
@@ -89,7 +89,7 @@ describe('Dashboard HomePage Component (UT-UI-DASH-01)', () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Overview Dashboard')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
     });
 
     // Monthly pace progress
@@ -151,7 +151,7 @@ describe('Dashboard HomePage Component (UT-UI-DASH-01)', () => {
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Overview Dashboard')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
     });
   });
 });

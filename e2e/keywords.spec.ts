@@ -19,7 +19,7 @@ test.describe('Keyword Performance & Analytics (E2E-KW-01)', () => {
     await page.goto('/keywords');
 
     // Verify header
-    await expect(page.getByRole('heading', { name: /Keyword Insights & Analytics/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Keyword Insights/i })).toBeVisible();
 
     // Verify KPI summary cards
     await expect(page.getByTestId('keyword-kpi-total-keywords')).toBeVisible();

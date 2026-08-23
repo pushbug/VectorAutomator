@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { formatCurrency, formatNumber, formatTableDate, formatDisplayDate } from '@/lib/formatters';
+import {
+  formatCurrency,
+  formatNumber,
+  formatTableDate,
+  formatDisplayDate,
+  calculatePlatformBreakdown,
+} from '@/lib/formatters';
 import { parseImageCode, getNextImageCode } from '@/lib/imageCode';
 import { SUPPORTED_PLATFORMS, PLATFORM_THEMES } from '@/lib/platforms';
 
@@ -61,5 +67,30 @@ describe('Formatters and Shared Utilities', () => {
     expect(SUPPORTED_PLATFORMS).toEqual(['Shutterstock', 'Adobe Stock', 'Vecteezy']);
     expect(PLATFORM_THEMES['Shutterstock'].dot).toBe('bg-red-500');
     expect(PLATFORM_THEMES['Adobe Stock'].dot).toBe('bg-blue-500');
+  });
+
+  it('UT-LIB-STATS-BREAKDOWN-01: calculatePlatformBreakdown aggregates totals and breakdowns correctly', () => {
+    const empty = calculatePlatformBreakdown(null);
+    expect(empty).toEqual({
+      totalEarnings: 0,
+      totalDownloads: 0,
+      platformBreakdown: {},
+    });
+
+    const stats = [
+      { platform: 'Shutterstock', downloads: 5, earnings: 4.5 },
+      { platform: 'Adobe Stock', downloads: 10, earnings: 12.0 },
+      { platform: 'Shutterstock', downloads: 2, earnings: 1.5 },
+      { platform: 'Vecteezy', downloads: 3, earnings: 2.0 },
+    ];
+
+    const result = calculatePlatformBreakdown(stats);
+    expect(result.totalDownloads).toBe(20);
+    expect(result.totalEarnings).toBe(20.0);
+    expect(result.platformBreakdown).toEqual({
+      Shutterstock: { downloads: 7, earnings: 6.0 },
+      'Adobe Stock': { downloads: 10, earnings: 12.0 },
+      Vecteezy: { downloads: 3, earnings: 2.0 },
+    });
   });
 });

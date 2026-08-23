@@ -57,3 +57,50 @@ export function formatDisplayDate(dateStr: string | null | undefined): string {
   }
   return dateStr;
 }
+
+export interface PlatformStatItem {
+  platform: string;
+  downloads?: number | null;
+  earnings?: number | null;
+}
+
+export interface PlatformBreakdownResult {
+  totalEarnings: number;
+  totalDownloads: number;
+  platformBreakdown: Record<string, { downloads: number; earnings: number }>;
+}
+
+/**
+ * Aggregates a list of platform statistics into accumulated total earnings,
+ * total downloads, and a per-platform breakdown dictionary.
+ */
+export function calculatePlatformBreakdown(
+  stats?: PlatformStatItem[] | null
+): PlatformBreakdownResult {
+  const result: PlatformBreakdownResult = {
+    totalEarnings: 0,
+    totalDownloads: 0,
+    platformBreakdown: {},
+  };
+
+  if (!stats || !Array.isArray(stats) || stats.length === 0) {
+    return result;
+  }
+
+  for (const s of stats) {
+    if (!s || !s.platform) continue;
+    const dl = typeof s.downloads === 'number' && !isNaN(s.downloads) ? s.downloads : 0;
+    const earn = typeof s.earnings === 'number' && !isNaN(s.earnings) ? s.earnings : 0;
+
+    result.totalDownloads += dl;
+    result.totalEarnings += earn;
+
+    if (!result.platformBreakdown[s.platform]) {
+      result.platformBreakdown[s.platform] = { downloads: 0, earnings: 0 };
+    }
+    result.platformBreakdown[s.platform].downloads += dl;
+    result.platformBreakdown[s.platform].earnings += earn;
+  }
+
+  return result;
+}

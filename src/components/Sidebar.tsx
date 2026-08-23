@@ -30,7 +30,7 @@ export default function Sidebar() {
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Upload & Process", href: "/upload", icon: UploadCloud },
+    { name: "Upload & Keywords", href: "/upload", icon: UploadCloud },
     { name: "Portfolio", href: "/portfolio", icon: ImageIcon },
     { name: "Collections", href: "/collections", icon: FolderKanban },
     { name: "Keyword Insights", href: "/keywords", icon: Tag },

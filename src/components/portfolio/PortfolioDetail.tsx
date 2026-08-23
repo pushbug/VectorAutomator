@@ -6,6 +6,7 @@ import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lu
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
 import { copyToClipboard } from '@/lib/clipboard';
+import { calculatePlatformBreakdown, formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface PortfolioImage {
   id: string;
@@ -159,18 +160,10 @@ export function PortfolioDetail({
   let computedTotalEarnings = activeImage.totalEarnings;
   let computedPlatformBreakdown = activeImage.platformBreakdown;
 
-  if (computedTotalEarnings === undefined && stats.length > 0) {
-    computedTotalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
-  }
-  if (!computedPlatformBreakdown && stats.length > 0) {
-    computedPlatformBreakdown = {};
-    for (const s of stats) {
-      if (!computedPlatformBreakdown[s.platform]) {
-        computedPlatformBreakdown[s.platform] = { downloads: 0, earnings: 0 };
-      }
-      computedPlatformBreakdown[s.platform].downloads += s.downloads;
-      computedPlatformBreakdown[s.platform].earnings += s.earnings;
-    }
+  if ((computedTotalEarnings === undefined || !computedPlatformBreakdown) && stats.length > 0) {
+    const calculated = calculatePlatformBreakdown(stats);
+    if (computedTotalEarnings === undefined) computedTotalEarnings = calculated.totalEarnings;
+    if (!computedPlatformBreakdown) computedPlatformBreakdown = calculated.platformBreakdown;
   }
 
   const totalEarnings = computedTotalEarnings || 0;

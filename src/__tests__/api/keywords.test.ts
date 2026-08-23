@@ -162,6 +162,22 @@ describe('Keywords API Route (UT-API-KW-01)', () => {
     expect(json.data[0].totalEarnings).toBe(20.0);
   });
 
+  it('UT-API-KW-03: returns key-value dictionary in mode=lookup', async () => {
+    mockFindMany.mockResolvedValueOnce(mockImages);
+
+    const req = new NextRequest('http://localhost:3000/api/keywords?mode=lookup&words=business,timeline');
+    const res = await GET(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.dictionary).toBeDefined();
+    expect(json.dictionary.business).toBeDefined();
+    expect(json.dictionary.business.totalDownloads).toBe(85);
+    expect(json.dictionary.business.totalEarnings).toBe(95.0);
+    expect(json.dictionary.timeline).toBeDefined();
+    expect(json.dictionary.timeline.totalDownloads).toBe(25);
+  });
+
   it('handles empty database and server errors gracefully', async () => {
     mockFindMany.mockResolvedValueOnce([]);
 

@@ -98,3 +98,15 @@
   6. **Unified Pagination & DRY Types:** Integrated `PaginationCapsule` with automatic Page 1 reset guards on filter/sort changes, and unified shared `CollectionSummary` types across components.
   7. **Comprehensive Test Suite:** Added unit tests (`UT-UI-COLLECTION-TABLE-01`, `UT-UI-COLLECTIONS-PAGE-01`, `UT-UI-COLLECTION-DETAIL-01`) and Playwright E2E specs (`E2E-COL-01`, `E2E-COL-02`), achieving 185/185 unit tests passing.
 - **Impact:** Provides a complete end-to-end theme management and financial analysis solution for stock creators while maintaining strict type safety, zero regressions, and full test automation.
+
+## ADR-013: Core Redundancy Elimination, Dynamic Sorting & Test Suite Hardening, and Unified Navigation Hierarchy
+- **Date:** 2026-08-23
+- **Context:** Following the implementation of Keyword Intelligence and Artwork Collections, several redundant calculations (such as manual platform revenue rollups in portfolio and sales APIs), duplicate modal implementations (`CreateCollectionModal` vs `EditCollectionModal`), raw clipboard calls without fallback, orphaned test routes (`/add-image`), and inconsistent menu/header naming were identified and refactored. Additionally, edge-case unit tests and Playwright E2E suites required expansion for keyword sorting and metric accuracy.
+- **Decision:**
+  1. **Platform Stats Aggregation Utility:** Centralized `calculatePlatformBreakdown` in `src/lib/formatters.ts` returning `{ totalEarnings, totalDownloads, platformBreakdown }` in a single pass across `/api/portfolio`, `/api/sales`, and `PortfolioDetail.tsx`.
+  2. **Consolidated Collection Modal:** Unified `CollectionModal.tsx` handling create/edit modes with dynamic `data-testid` prefixing and delegating wrappers for 100% backward compatibility.
+  3. **Fallback Clipboard & Formatting Standardization:** Unified clipboard copy triggers with `copyToClipboard` and replaced inline `toLocaleString()` with `formatNumber` and `formatCurrency`.
+  4. **Orphaned Route Deletion:** Deleted unused `/add-image` route.
+  5. **Edge-Case & E2E Test Hardening:** Added `UT-LIB-STATS-BREAKDOWN-01` and `UT-UI-METADATA-EDITOR-TIE-01` (tie-breaking, missing metrics, bidirectional sorting), and updated Playwright E2E (`E2E-UPL-02`).
+  6. **Unified Navigation & Header Hierarchy:** Synchronized Sidebar menu items (`Dashboard`, `Upload & Keywords`, `Portfolio`, `Collections`, `Keyword Insights`, `Sales & Earnings`) with all page `<h1>` headings and removed redundant subtitles.
+- **Impact:** 197/197 unit tests passing across 32 files, zero TypeScript/lint errors, and completely aligned UI/UX hierarchy.

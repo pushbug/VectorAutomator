@@ -121,10 +121,7 @@ export default function CollectionsPage() {
       <div className="mb-4 flex flex-col gap-4 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Artwork Collections</h1>
-            <p className="text-xs text-muted mt-0.5">
-              Cluster portfolios by theme, keyword experiments, or style to track group revenue and keyword ROI.
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">Collections</h1>
           </div>
           <button
             type="button"

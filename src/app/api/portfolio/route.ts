@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
 import { parseImageCode } from '@/lib/imageCode';
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
+import { calculatePlatformBreakdown } from '@/lib/formatters';
 
 
 export async function GET(request: NextRequest) {
@@ -176,18 +177,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     let enrichedImages = images.map((img: any) => {
-      const stats = img.stats || [];
-      const totalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
-      const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
-      
-      for (const stat of stats) {
-        if (!platformBreakdown[stat.platform]) {
-          platformBreakdown[stat.platform] = { downloads: 0, earnings: 0 };
-        }
-        platformBreakdown[stat.platform].downloads += stat.downloads;
-        platformBreakdown[stat.platform].earnings += stat.earnings;
-      }
-
+      const { totalEarnings, platformBreakdown } = calculatePlatformBreakdown(img.stats);
       return {
         ...img,
         totalEarnings,
@@ -441,16 +431,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const stats = (updatedImage as any).stats || [];
-    const totalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
-    const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
-    for (const stat of stats) {
-      if (!platformBreakdown[stat.platform]) {
-        platformBreakdown[stat.platform] = { downloads: 0, earnings: 0 };
-      }
-      platformBreakdown[stat.platform].downloads += stat.downloads;
-      platformBreakdown[stat.platform].earnings += stat.earnings;
-    }
+    const { totalEarnings, platformBreakdown } = calculatePlatformBreakdown((updatedImage as any).stats);
 
     return NextResponse.json({
       ...updatedImage,

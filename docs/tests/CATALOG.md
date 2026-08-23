@@ -36,7 +36,11 @@
 | `UT-UI-KEYWORD-SUGGEST-SEARCH-FIELD-01` | Verify KeywordSuggester searchField select dropdown and Top Earnings sorting | `src/__tests__/components/KeywordSuggester.test.tsx` |
 | `UT-UI-METADATA-KEYWORD-GATE-01` | Verify MetadataEditor soft cap to 100 words, red warning on >50, and Save button disabled gate | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-UI-KEYWORD-SUGGEST-COPY-01` | Verify KeywordSuggester copy selected tags to clipboard and deduplicated append merge | `src/__tests__/components/KeywordSuggester.test.tsx` |
+| `UT-UI-KEYWORD-SUGGEST-DUAL-01` | Verify KeywordSuggester concurrent download/earnings metrics, isolated checkbox selection, and 1-click cart toggle | `src/__tests__/components/KeywordSuggester.test.tsx` |
+| `UT-UI-KEYWORD-SUGGEST-SORT-01` | Verify KeywordSuggester Segmented Sort Toggle switches dynamically between Score, Downloads, Earnings, and A-Z | `src/__tests__/components/KeywordSuggester.test.tsx` |
 | `UT-UI-METADATA-TITLE-VALIDATION-01` | Verify MetadataEditor title required validation on Save, focusing input and rendering red border/error | `src/__tests__/components/MetadataEditor.test.tsx` |
+| `UT-UI-METADATA-EDITOR-SORT-01` | Verify MetadataEditor dual view modes (chips vs rows), metric badges, and dynamic sorting (Original, Downloads, Earnings, A-Z) | `src/__tests__/components/MetadataEditor.test.tsx` |
+| `UT-UI-METADATA-EDITOR-TIE-01` | Verify MetadataEditor tie-breaking fallback to alphabetical, zero/missing metrics handling, and ascending/descending toggles | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-SALES-DATE-01` | Verify SmartPasteModal statement date selection and date mode toggling | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-UNMATCHED-01` | Verify /api/sales/paste-sync persists unlinked platformStats with platformAssetId | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-RECONCILE-01` | Verify auto-reconciliation updates unlinked platformStats to imageId when platform asset IDs match | `src/__tests__/lib/salesReconciler.test.ts` |
@@ -58,6 +62,7 @@
 | `UT-CODE-SEQ-01` | Verify getNextImageCode computes next monthly sequence | `src/__tests__/lib/formatters.test.ts` |
 | `UT-API-KW-01` | Verify /api/keywords token extraction, RPI/RPD calculations, sorting, and KPI summaries | `src/__tests__/api/keywords.test.ts` |
 | `UT-API-KW-02` | Verify /api/keywords filters token earnings and downloads by timeRange (30d, 90d, 1y) | `src/__tests__/api/keywords.test.ts` |
+| `UT-API-KW-03` | Verify /api/keywords returns key-value dictionary in mode=lookup for instant global keyword metrics | `src/__tests__/api/keywords.test.ts` |
 | `UT-UI-KW-TABLE-01` | Verify KeywordTable sorting, search filtering, row selection, time range velocity, and bulk copy | `src/__tests__/components/KeywordTable.test.tsx` |
 | `UT-UI-KW-DRAWER-01` | Verify KeywordDetailDrawer fetches linked artworks and renders thumbnails/stats | `src/__tests__/components/KeywordDetailDrawer.test.tsx` |
 | `UT-UI-KW-RECIPE-01` | Verify Winning Tag Combinations recipe calculation and 1-click clipboard copy in drawer | `src/__tests__/components/KeywordDetailDrawer.test.tsx` |
@@ -71,12 +76,15 @@
 | `UT-UI-COLLECTION-TABLE-01` | Verify CollectionTable columns, sortable headers, thumbnails, and isolated action triggers | `src/__tests__/components/Collections.test.tsx` |
 | `UT-UI-COLLECTIONS-PAGE-01` | Verify CollectionsPage view mode toggle (Grid/Table), search page reset, and pagination | `src/__tests__/components/Collections.test.tsx` |
 | `UT-UI-COLLECTION-DETAIL-01` | Verify TopSharedKeywordsBar view modes (Freq/DL/Rev), badges, tag drill-down, and 1-click clipboard copy | `src/__tests__/components/Collections.test.tsx` |
+| `UT-STAGING-QUEUE-PERSIST-01` | Verify staging queue IndexedDB persistence, auto-rehydration on mount, selective metadata update, and auto-cleanup | `src/__tests__/lib/stagingQueueStorage.test.ts`, `src/__tests__/useAssetProcessor.test.ts` |
+| `UT-LIB-STATS-BREAKDOWN-01` | Verify calculatePlatformBreakdown aggregates totals and platform breakdowns | `src/__tests__/lib/formatters.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |
 |---------|-------------|--------|
 | `E2E-UPL-01` | Happy path: Upload, auto-pair, gen metadata, save EXIF | `e2e/upload.spec.ts` |
 | `E2E-UPL-02` | Keyword Suggestion: Portfolio reference search, scoping, tag selection, copy, and non-destructive injection | `e2e/upload.spec.ts` |
+| `E2E-UPL-03` | Upload Queue Persistence: Verify dropped files and edited metadata persist across page reloads | `e2e/upload.spec.ts` |
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |

@@ -1,7 +1,13 @@
 import { useAssets, Asset } from "@/context/AssetContext";
+import {
+  saveStagingAsset,
+  updateStagingMetadata,
+  deleteStagingAsset,
+  deleteMultipleStagingAssets
+} from "@/lib/stagingQueueStorage";
 
 export function useAssetProcessor() {
-  const { assets, setAssets, activeAssetId, setActiveAssetId } = useAssets();
+  const { assets, setAssets, activeAssetId, setActiveAssetId, isHydrated } = useAssets();
   const assetList = Object.values(assets);
   const activeAsset = activeAssetId ? assets[activeAssetId] : null;
 
@@ -10,6 +16,7 @@ export function useAssetProcessor() {
     
     setAssets(prev => {
       const newAssets = { ...prev };
+      const changedKeys = new Set<string>();
       
       validFiles.forEach(file => {
         const match = file.name.match(/^(.*)\.(eps|jpg|jpeg)$/i);
@@ -37,6 +44,7 @@ export function useAssetProcessor() {
             newAssets[baseName].previewUrl = URL.createObjectURL(file);
           }
         }
+        changedKeys.add(baseName);
       });
       
       if (!activeAssetId && Object.keys(newAssets).length > 0) {
@@ -51,6 +59,13 @@ export function useAssetProcessor() {
         }
       });
       
+      // Persist dropped / updated assets into IndexedDB
+      changedKeys.forEach(key => {
+        if (newAssets[key]) {
+          saveStagingAsset(newAssets[key]);
+        }
+      });
+
       if (assetsToConvert.length > 0) {
         setTimeout(() => {
           assetsToConvert.forEach(({ id, file }) => convertEpsToJpg(id, file));
@@ -82,19 +97,27 @@ export function useAssetProcessor() {
       
       setAssets(prev => {
         if (!prev[id]) return prev;
+        const updatedAsset: Asset = {
+          ...prev[id],
+          jpgFile,
+          previewUrl,
+          status: "idle"
+        };
+        // Persist full asset with converted jpgFile
+        saveStagingAsset(updatedAsset);
         return {
           ...prev,
-          [id]: {
-            ...prev[id],
-            jpgFile,
-            previewUrl,
-            status: "idle"
-          }
+          [id]: updatedAsset
         };
       });
     } catch (err: any) {
       console.error(err);
-      setAssets(prev => ({ ...prev, [id]: { ...prev[id], status: "error", errorMsg: err.message } }));
+      setAssets(prev => {
+        if (!prev[id]) return prev;
+        const errAsset: Asset = { ...prev[id], status: "error", errorMsg: err.message };
+        updateStagingMetadata(id, { status: "error", errorMsg: err.message });
+        return { ...prev, [id]: errAsset };
+      });
     }
   };
 
@@ -102,8 +125,15 @@ export function useAssetProcessor() {
     e.stopPropagation();
     setAssets(prev => {
       const newAssets = { ...prev };
+      const target = newAssets[id];
+      if (target?.previewUrl && typeof window !== "undefined" && window.URL) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
       delete newAssets[id];
       
+      // Delete from persistent IndexedDB
+      deleteStagingAsset(id);
+
       if (activeAssetId === id) {
         const remainingKeys = Object.keys(newAssets);
         setActiveAssetId(remainingKeys.length > 0 ? remainingKeys[0] : null);
@@ -117,13 +147,27 @@ export function useAssetProcessor() {
     if (!activeAssetId) return;
     setAssets(prev => {
       const currentAsset = prev[activeAssetId];
+      if (!currentAsset) return prev;
+
       const newStatus = (currentAsset.status === "done" && (updates.title !== undefined || updates.keywords !== undefined)) 
         ? "modified" 
         : (updates.status || currentAsset.status);
       
+      const updated = { ...currentAsset, ...updates, status: newStatus };
+
+      // Optimized selective metadata update (avoids re-serializing large EPS blobs on keystrokes)
+      updateStagingMetadata(activeAssetId, {
+        title: updated.title,
+        keywords: updated.keywords,
+        status: updated.status,
+        selectedForImport: updated.selectedForImport,
+        errorMsg: updated.errorMsg,
+        downloadPaths: updated.downloadPaths
+      });
+
       return {
         ...prev,
-        [activeAssetId]: { ...currentAsset, ...updates, status: newStatus }
+        [activeAssetId]: updated
       };
     });
   };
@@ -149,19 +193,25 @@ export function useAssetProcessor() {
       
       setAssets(prev => {
         if (!prev[id]) return prev;
+        const updated = {
+          ...prev[id],
+          title: data.title || "",
+          keywords: data.keywords || "",
+          status: "idle" as const
+        };
+        updateStagingMetadata(id, { title: updated.title, keywords: updated.keywords, status: "idle" });
         return {
           ...prev,
-          [id]: {
-            ...prev[id],
-            title: data.title || "",
-            keywords: data.keywords || "",
-            status: "idle"
-          }
+          [id]: updated
         };
       });
     } catch (err: any) {
       console.error(err);
-      setAssets(prev => ({ ...prev, [id]: { ...prev[id], status: "error", errorMsg: err.message } }));
+      setAssets(prev => {
+        if (!prev[id]) return prev;
+        updateStagingMetadata(id, { status: "error", errorMsg: err.message });
+        return { ...prev, [id]: { ...prev[id], status: "error", errorMsg: err.message } };
+      });
     }
   };
 
@@ -195,18 +245,24 @@ export function useAssetProcessor() {
       
       setAssets(prev => {
         if (!prev[id]) return prev;
+        const updated = { 
+          ...prev[id], 
+          status: "done" as const,
+          downloadPaths: data.archivedFiles || [] 
+        };
+        updateStagingMetadata(id, { status: "done", downloadPaths: updated.downloadPaths });
         return { 
           ...prev, 
-          [id]: { 
-            ...prev[id], 
-            status: "done",
-            downloadPaths: data.archivedFiles || [] 
-          } 
+          [id]: updated 
         };
       });
     } catch (err: any) {
       console.error(err);
-      setAssets(prev => ({ ...prev, [id]: { ...prev[id], status: "error", errorMsg: err.message } }));
+      setAssets(prev => {
+        if (!prev[id]) return prev;
+        updateStagingMetadata(id, { status: "error", errorMsg: err.message });
+        return { ...prev, [id]: { ...prev[id], status: "error", errorMsg: err.message } };
+      });
     }
   };
 
@@ -221,9 +277,11 @@ export function useAssetProcessor() {
     if (e) e.stopPropagation();
     setAssets(prev => {
       if (!prev[id]) return prev;
+      const nextSelected = !prev[id].selectedForImport;
+      updateStagingMetadata(id, { selectedForImport: nextSelected });
       return {
         ...prev,
-        [id]: { ...prev[id], selectedForImport: !prev[id].selectedForImport }
+        [id]: { ...prev[id], selectedForImport: nextSelected }
       };
     });
   };
@@ -233,6 +291,7 @@ export function useAssetProcessor() {
       const updated = { ...prev };
       Object.keys(updated).forEach(id => {
         updated[id] = { ...updated[id], selectedForImport: selected };
+        updateStagingMetadata(id, { selectedForImport: selected });
       });
       return updated;
     });
@@ -299,6 +358,17 @@ export function useAssetProcessor() {
     }
 
     if (idsToRemove.length > 0) {
+      // Memory cleanup: revoke object preview URLs for imported assets
+      idsToRemove.forEach(id => {
+        const item = assets[id];
+        if (item?.previewUrl && typeof window !== "undefined" && window.URL) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+
+      // Evict imported assets from IndexedDB
+      deleteMultipleStagingAssets(idsToRemove);
+
       setAssets(prev => {
         const updated = { ...prev };
         idsToRemove.forEach(id => {
@@ -322,6 +392,7 @@ export function useAssetProcessor() {
     activeAsset,
     activeAssetId,
     setActiveAssetId,
+    isHydrated,
     processDroppedFiles,
     removeAsset,
     updateActiveAsset,

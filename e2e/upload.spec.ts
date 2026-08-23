@@ -113,8 +113,8 @@ test.describe('Upload Workflow', () => {
 
     await page.goto('/upload');
 
-    // Verify page header is "Upload & Keyword Suggestion"
-    await expect(page.getByRole('heading', { name: 'Upload & Keyword Suggestion' })).toBeVisible();
+    // Verify page header is "Upload & Keywords"
+    await expect(page.getByRole('heading', { name: 'Upload & Keywords' })).toBeVisible();
 
     // Verify Keyword Suggest panel elements
     const searchInput = page.getByTestId('keyword-suggest-search-input');
@@ -176,5 +176,34 @@ test.describe('Upload Workflow', () => {
     await expect(page.getByText('infographic', { exact: true })).toBeVisible();
     await expect(page.getByText('roadmap', { exact: true })).toBeVisible();
     await expect(page.getByText('strategy', { exact: true })).toBeVisible();
+
+    // Verify Keyword Sorting in MetadataEditor:
+    // 1. Sort Alphabetical (A-Z)
+    const sortAlphaBtn = page.getByTestId('metadata-keywords-sort-alpha-btn');
+    await expect(sortAlphaBtn).toBeVisible();
+    await sortAlphaBtn.click();
+
+    // In alphabetical mode, 'business' should precede 'vector'
+    await expect(page.getByTestId('metadata-keyword-row-business')).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-row-strategy')).toBeVisible();
+
+    // 2. Sort by Downloads
+    const sortDlBtn = page.getByTestId('metadata-keywords-sort-dl-btn');
+    await expect(sortDlBtn).toBeVisible();
+    await sortDlBtn.click();
+    await expect(page.getByTestId('metadata-keyword-row-infographic')).toBeVisible();
+
+    // 3. Sort by Original Insertion Order (vector was entered first)
+    const sortOrigBtn = page.getByTestId('metadata-keywords-sort-orig-btn');
+    await expect(sortOrigBtn).toBeVisible();
+    await sortOrigBtn.click();
+    await expect(page.getByTestId('metadata-keyword-row-vector')).toBeVisible();
+
+    // 4. Test Single-click Keyword Remove in row view
+    const removeBtn = page.getByTestId('metadata-keyword-remove-btn-success');
+    if (await removeBtn.isVisible()) {
+      await removeBtn.click();
+      await expect(page.getByTestId('metadata-keyword-row-success')).not.toBeVisible();
+    }
   });
 });

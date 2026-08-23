@@ -310,7 +310,7 @@ describe('Collections UI Components (UT-UI-COLLECTION-CARDS-01, UT-UI-COLLECTION
     });
 
     // Verify header and summary KPIs
-    expect(screen.getByText('Artwork Collections')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Collections' })).toBeInTheDocument();
     expect(screen.getByTestId('collection-view-grid-btn')).toBeInTheDocument();
     expect(screen.getByTestId('collection-view-table-btn')).toBeInTheDocument();
 

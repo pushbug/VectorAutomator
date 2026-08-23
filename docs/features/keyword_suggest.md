@@ -41,9 +41,35 @@ The **Upload & Keyword Suggestion** workflow (`/upload`) provides paired vector 
 ### 5. Clipboard Integration
 - Dual Copy buttons in KeywordSuggester (`keyword-suggest-copy-tags-btn` in footer and `keyword-suggest-header-copy-btn` in header) copy selected tags to system clipboard with `Copied!` feedback.
 
+### 6. Dual-Action Tag Pills & Concurrent Metric Badges
+- **Concurrent Metrics Display**: Each keyword tag pill displays both download count (with `<Download />` icon) and dollar earnings (`$X.XX`) with fixed tabular numbers (`tabular-nums`). Falls back to frequency badge (`xN`) when both are zero.
+- **Dual-Action Interaction**:
+  - **Left Checkbox Button** (`keyword-suggest-tag-checkbox-{keyword}`): Toggles inclusion in the batch selection set (`selectedTagNames`) with `e.stopPropagation()` for footer batch Copy and Apply actions.
+  - **Right Pill Body Button** (`keyword-suggest-tag-{keyword}`): Instant 1-click cart toggle directly into `activeKeywords`. Clicking when absent appends the keyword to the active asset; clicking when already in asset (`(in asset)` status) removes the keyword with real-time feedback toast.
+
+### 7. Suggested Keywords Segmented Sort Controls
+- **Interactive Header Sort Toggle**: Users can dynamically rank keyword suggestions by 4 discrete criteria:
+  - `Score` (`keyword-suggest-sort-score-btn`): Multi-metric composite score factoring frequency, downloads, earnings, and Top 5 status.
+  - `Downloads` (`keyword-suggest-sort-downloads-btn`): Total downloads descending across selected reference artworks.
+  - `Earnings` (`keyword-suggest-sort-earnings-btn`): Total accumulated revenue ($) descending across selected reference artworks.
+  - `A-Z` (`keyword-suggest-sort-alpha-btn`): Pure alphabetical ascending order.
+- **Selection State Persistence**: Switching sort modes only re-orders the visible keyword tokens without resetting manual checkbox selections (`selectedTagNames`).
+
+### 8. Metadata Editor Keywords Row List View, Metrics & Sorting
+- **Real-Time Metric Badges**: Keywords in the active asset display performance history (`totalDownloads` with `<Download />` icon and `totalEarnings` in `$X.XX`) with `tabular-nums` formatting.
+- **Numbered Row List Layout**: Clean vertical numbered list (`#1 - #50`) with metric columns and single-click remove buttons (`metadata-keyword-row-{keyword}`).
+- **True Global Portfolio Metrics Lookup**:
+  - Automatically queries `/api/keywords?mode=lookup` to resolve all-time total portfolio downloads and total earnings across the entire catalog for any typed or pasted keywords in real time.
+- **Bidirectional Dynamic Sorting**:
+  - `Orig` (`metadata-keywords-sort-orig-btn`): Preserves exact stored insertion sequence.
+  - `DL` (`metadata-keywords-sort-dl-btn`): Sorts by total portfolio downloads (toggles High→Low ↓ vs Low→High ↑).
+  - `$` (`metadata-keywords-sort-rev-btn`): Sorts by total accumulated revenue (toggles High→Low ↓ vs Low→High ↑).
+  - `A-Z` (`metadata-keywords-sort-alpha-btn`): Sorts alphabetical (toggles A→Z vs Z→A).
+- **CSV Output & EXIF Contract**: Copying to clipboard and saving metadata always joins keywords using standard comma separation (`, `) respecting the active sort order.
+
 ## Key Components & Files
 - Engine: `src/lib/keywordAnalytics.ts`
 - Panel: `src/components/upload/KeywordSuggester.tsx`
 - Editor: `src/components/upload/MetadataEditor.tsx`
 - Page: `src/app/upload/page.tsx`
-- API Route: `src/app/api/portfolio/route.ts`
+- API Routes: `src/app/api/portfolio/route.ts`, `src/app/api/keywords/route.ts`

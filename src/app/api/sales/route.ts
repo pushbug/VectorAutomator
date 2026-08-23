@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { syncImageRollup } from '@/lib/salesReconciler';
+import { calculatePlatformBreakdown } from '@/lib/formatters';
 
 
 export async function GET(request: NextRequest) {
@@ -98,18 +99,12 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Calculate aggregated metrics
-    const totalEarnings = allMatchingStats.reduce((sum, s) => sum + s.earnings, 0);
-    const totalDownloads = allMatchingStats.reduce((sum, s) => sum + s.downloads, 0);
-
-    const platformTotals: Record<string, { downloads: number; earnings: number }> = {};
-    for (const stat of allMatchingStats) {
-      if (!platformTotals[stat.platform]) {
-        platformTotals[stat.platform] = { downloads: 0, earnings: 0 };
-      }
-      platformTotals[stat.platform].downloads += stat.downloads;
-      platformTotals[stat.platform].earnings += stat.earnings;
-    }
+    // Calculate aggregated metrics using centralized helper
+    const {
+      totalEarnings,
+      totalDownloads,
+      platformBreakdown: platformTotals,
+    } = calculatePlatformBreakdown(allMatchingStats);
 
     let topPlatform = '-';
     let maxEarnings = -1;
@@ -122,16 +117,7 @@ export async function GET(request: NextRequest) {
 
     const enrichedSales = sales.map((sale: any) => {
       if (!sale.image) return sale;
-      const stats = sale.image.stats || [];
-      const imgTotalEarnings = stats.reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
-      const platformBreakdown: Record<string, { downloads: number; earnings: number }> = {};
-      for (const stat of stats) {
-        if (!platformBreakdown[stat.platform]) {
-          platformBreakdown[stat.platform] = { downloads: 0, earnings: 0 };
-        }
-        platformBreakdown[stat.platform].downloads += stat.downloads;
-        platformBreakdown[stat.platform].earnings += stat.earnings;
-      }
+      const { totalEarnings: imgTotalEarnings, platformBreakdown } = calculatePlatformBreakdown(sale.image.stats);
       return {
         ...sale,
         image: {

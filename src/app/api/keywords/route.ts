@@ -80,6 +80,32 @@ export async function GET(request: NextRequest) {
       minFrequency,
     });
 
+    const mode = searchParams.get('mode');
+    const wordsParam = searchParams.get('words');
+
+    // Return key-value metrics dictionary for instant global lookup
+    if (mode === 'lookup' || wordsParam) {
+      const wordsSet = wordsParam
+        ? new Set(wordsParam.split(',').map(w => w.trim().toLowerCase()).filter(Boolean))
+        : null;
+
+      const dictionary: Record<string, { totalDownloads: number; totalEarnings: number; frequency: number; isTopFive?: boolean; tier?: string }> = {};
+      
+      for (const t of allTokens) {
+        if (!wordsSet || wordsSet.has(t.keyword.toLowerCase())) {
+          dictionary[t.keyword.toLowerCase()] = {
+            totalDownloads: t.totalDownloads,
+            totalEarnings: t.totalEarnings,
+            frequency: t.frequency,
+            isTopFive: t.isTopFive,
+            tier: t.tier,
+          };
+        }
+      }
+
+      return NextResponse.json({ dictionary });
+    }
+
     // Compute top performers from full dataset
     let topEarning = { keyword: '-', earnings: 0 };
     let topDownloaded = { keyword: '-', downloads: 0 };

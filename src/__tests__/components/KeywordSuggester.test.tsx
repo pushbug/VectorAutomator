@@ -262,4 +262,98 @@ describe('KeywordSuggester Component (UT-UI-KEYWORD-SUGGEST-01)', () => {
     expect(applied).toContain('infographic');
     expect(applied).toContain('roadmap');
   });
+
+  it('UT-UI-KEYWORD-SUGGEST-DUAL-01: renders concurrent download & earnings metrics and supports isolated checkbox vs 1-click cart toggle', async () => {
+    const onApplyMock = vi.fn();
+    render(
+      <KeywordSuggester
+        activeKeywords="business, existing"
+        activeAssetId="asset-1"
+        onApplyKeywords={onApplyMock}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('keyword-suggest-image-card-img-1')).toBeInTheDocument();
+    });
+
+    // Select img-1 (downloads=45, earnings=18.5)
+    fireEvent.click(screen.getByTestId('keyword-suggest-image-card-img-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('keyword-suggest-tag-infographic')).toBeInTheDocument();
+    });
+
+    // 1. Verify concurrent metrics rendering (download count 45 and earnings $18.50)
+    const tagPill = screen.getByTestId('keyword-suggest-tag-infographic');
+    expect(tagPill).toHaveTextContent('45');
+    expect(tagPill).toHaveTextContent('$18.50');
+
+    // 2. Verify checkbox click isolates selection without firing onApplyKeywords
+    const checkboxBtn = screen.getByTestId('keyword-suggest-tag-checkbox-infographic');
+    fireEvent.click(checkboxBtn);
+    expect(onApplyMock).not.toHaveBeenCalled();
+
+    // 3. Verify 1-click cart add: clicking tag body appends keyword directly into active asset
+    fireEvent.click(tagPill);
+    expect(onApplyMock).toHaveBeenCalledWith('business, existing, infographic');
+
+    // 4. Verify 1-click cart remove: clicking tag body for keyword already in active asset removes it
+    onApplyMock.mockClear();
+    const existingTagPill = screen.getByTestId('keyword-suggest-tag-business');
+    expect(existingTagPill).toHaveTextContent('(in asset)');
+    fireEvent.click(existingTagPill);
+    expect(onApplyMock).toHaveBeenCalledWith('existing');
+  });
+
+  it('UT-UI-KEYWORD-SUGGEST-SORT-01: renders Segmented Sort Toggle and dynamically re-orders keywords across score, downloads, earnings, and alphabetical modes', async () => {
+    render(
+      <KeywordSuggester
+        activeKeywords=""
+        activeAssetId="asset-1"
+        onApplyKeywords={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('keyword-suggest-image-card-img-1')).toBeInTheDocument();
+    });
+
+    // Select img-1 (downloads=45, earnings=18.5) and img-2 (downloads=20, earnings=8.0)
+    fireEvent.click(screen.getByTestId('keyword-suggest-image-card-img-1'));
+    fireEvent.click(screen.getByTestId('keyword-suggest-image-card-img-2'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('keyword-suggest-sort-score-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('keyword-suggest-sort-downloads-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('keyword-suggest-sort-earnings-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('keyword-suggest-sort-alpha-btn')).toBeInTheDocument();
+    });
+
+    // 1. Uncheck one tag (e.g. 'roadmap') to verify state persistence across sort switches
+    const checkboxRoadmap = screen.getByTestId('keyword-suggest-tag-checkbox-roadmap');
+    fireEvent.click(checkboxRoadmap);
+
+    // 2. Switch to Alphabetical sort
+    fireEvent.click(screen.getByTestId('keyword-suggest-sort-alpha-btn'));
+
+    // Check tags are sorted alphabetically (business should be near the start)
+    const tagContainers = screen.getAllByTestId(/keyword-suggest-tag-container-/);
+    const firstTagText = tagContainers[0].textContent;
+    expect(firstTagText).toContain('business');
+
+    // 3. Switch to Downloads sort
+    fireEvent.click(screen.getByTestId('keyword-suggest-sort-downloads-btn'));
+    expect(screen.getByTestId('keyword-suggest-tag-business')).toBeInTheDocument();
+
+    // 4. Switch to Earnings sort
+    fireEvent.click(screen.getByTestId('keyword-suggest-sort-earnings-btn'));
+    expect(screen.getByTestId('keyword-suggest-tag-business')).toBeInTheDocument();
+
+    // 5. Switch back to Score sort
+    fireEvent.click(screen.getByTestId('keyword-suggest-sort-score-btn'));
+    expect(screen.getByTestId('keyword-suggest-tag-business')).toBeInTheDocument();
+  });
 });
+
+

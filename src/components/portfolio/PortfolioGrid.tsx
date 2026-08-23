@@ -3,6 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Download } from 'lucide-react';
 import { PaginationCapsule } from '../common/PaginationCapsule';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface PortfolioImage {
   id: string;
@@ -121,10 +122,10 @@ export function PortfolioGrid({
                 <div className="flex items-center justify-between text-xs font-mono tabular-nums text-muted">
                   <span className="flex items-center gap-1 font-medium text-foreground">
                     <Download size={13} className="text-muted shrink-0" />
-                    <span>{img.totalDownloads.toLocaleString()}</span>
+                    <span>{formatNumber(img.totalDownloads)}</span>
                   </span>
                   <span className="font-bold text-foreground">
-                    ${(img.totalEarnings || 0).toFixed(2)}
+                    {formatCurrency(img.totalEarnings)}
                   </span>
                 </div>
               </div>

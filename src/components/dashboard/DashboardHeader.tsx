@@ -20,7 +20,7 @@ export function DashboardHeader({ latestCode, pendingCount }: DashboardHeaderPro
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Overview Dashboard
+            Dashboard
           </h1>
           <span className="inline-flex items-center rounded-md bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
             Auto-Pilot

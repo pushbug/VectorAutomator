@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Copy, Check, TrendingUp, Sparkles, FolderArchive, ArrowRight } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export interface DashboardAssetItem {
   id: string;
@@ -26,11 +27,11 @@ interface ActivitySplitGridProps {
 export function ActivitySplitGrid({ recentUploads, topPerformers }: ActivitySplitGridProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopyKeywords = (id: string, keywords: string, e: React.MouseEvent) => {
+  const handleCopyKeywords = async (id: string, keywords: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!keywords) return;
-    navigator.clipboard.writeText(keywords);
+    await copyToClipboard(keywords);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };

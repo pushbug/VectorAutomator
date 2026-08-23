@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useAssetProcessor } from '@/hooks/useAssetProcessor';
 import { AssetProvider } from '@/context/AssetContext';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as storage from '@/lib/stagingQueueStorage';
 
 describe('useAssetProcessor', () => {
   beforeEach(() => {
@@ -12,6 +13,9 @@ describe('useAssetProcessor', () => {
         blob: () => Promise.resolve(new Blob(['mock-blob'], { type: 'image/jpeg' }))
       })
     ));
+    global.URL.createObjectURL = vi.fn().mockReturnValue('blob:http://localhost/mock-preview');
+    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(storage, 'loadAllStagingAssets').mockResolvedValue([]);
     vi.useFakeTimers();
   });
 
@@ -21,12 +25,16 @@ describe('useAssetProcessor', () => {
   });
 
   it('processes dropped files correctly', async () => {
-    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
 
     const file1 = new File([''], 'test1.eps', { type: 'application/postscript' });
     const file2 = new File([''], 'test1.jpg', { type: 'image/jpeg' });
 
-    act(() => {
+    await act(async () => {
       result.current.processDroppedFiles([file1, file2]);
     });
 
@@ -38,44 +46,53 @@ describe('useAssetProcessor', () => {
     expect(result.current.activeAssetId).toBe('test1');
   });
 
-  it('removes asset correctly', () => {
-    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+  it('removes asset correctly and revokes object preview URL', async () => {
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
 
     const file1 = new File([''], 'test1.jpg', { type: 'image/jpeg' });
-    act(() => {
+    await act(async () => {
       result.current.processDroppedFiles([file1]);
     });
     expect(result.current.assetList.length).toBe(1);
 
-    act(() => {
+    await act(async () => {
       // Mock event
       result.current.removeAsset('test1', { stopPropagation: vi.fn() } as any);
     });
 
     expect(result.current.assetList.length).toBe(0);
     expect(result.current.activeAssetId).toBeNull();
+    expect(global.URL.revokeObjectURL).toHaveBeenCalled();
   });
 
-  it('updates status to modified when editing a done asset', () => {
-    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+  it('updates status to modified when editing a done asset', async () => {
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
 
     const file1 = new File([''], 'test1.jpg', { type: 'image/jpeg' });
-    act(() => {
+    await act(async () => {
       result.current.processDroppedFiles([file1]);
     });
     
-    act(() => {
+    await act(async () => {
       result.current.setActiveAssetId('test1');
     });
 
     // Manually force status to 'done' (simulating successful save)
-    act(() => {
+    await act(async () => {
       result.current.updateActiveAsset({ status: 'done', title: 'old title' });
     });
     expect(result.current.assetList[0].status).toBe('done');
 
     // Update title -> should change to modified
-    act(() => {
+    await act(async () => {
       result.current.updateActiveAsset({ title: 'new title' });
     });
 
@@ -84,43 +101,47 @@ describe('useAssetProcessor', () => {
   });
 
   it('UT-IMPORT-QUEUE-01: toggles selection and imports selected assets with queue clearing', async () => {
-    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
 
     const file1 = new File(['dummy-1'], 'item1.jpg', { type: 'image/jpeg' });
     const file2 = new File(['dummy-2'], 'item2.jpg', { type: 'image/jpeg' });
 
-    act(() => {
+    await act(async () => {
       result.current.processDroppedFiles([file1, file2]);
     });
 
     expect(result.current.assetList.length).toBe(2);
 
     // Toggle item1 selection
-    act(() => {
+    await act(async () => {
       result.current.toggleSelectForImport('item1');
     });
     expect(result.current.assets['item1'].selectedForImport).toBe(true);
     expect(result.current.assets['item2'].selectedForImport).toBeFalsy();
 
     // Select all
-    act(() => {
+    await act(async () => {
       result.current.selectAllForImport(true);
     });
     expect(result.current.assets['item1'].selectedForImport).toBe(true);
     expect(result.current.assets['item2'].selectedForImport).toBe(true);
 
     // Give both valid metadata
-    act(() => {
+    await act(async () => {
       result.current.setActiveAssetId('item1');
     });
-    act(() => {
+    await act(async () => {
       result.current.updateActiveAsset({ title: 'Item 1 Title', keywords: 'vector, icon' });
     });
 
-    act(() => {
+    await act(async () => {
       result.current.setActiveAssetId('item2');
     });
-    act(() => {
+    await act(async () => {
       result.current.updateActiveAsset({ title: 'Item 2 Title', keywords: 'banner, design' });
     });
 
@@ -145,15 +166,19 @@ describe('useAssetProcessor', () => {
   });
 
   it('UT-IMPORT-QUEUE-01: retains assets in queue with error status when metadata is missing or upload fails', async () => {
-    const { result } = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
 
     const file1 = new File(['dummy-1'], 'missing_meta.jpg', { type: 'image/jpeg' });
 
-    act(() => {
+    await act(async () => {
       result.current.processDroppedFiles([file1]);
     });
 
-    act(() => {
+    await act(async () => {
       result.current.toggleSelectForImport('missing_meta');
     });
 
@@ -169,5 +194,28 @@ describe('useAssetProcessor', () => {
     expect(result.current.assets['missing_meta'].status).toBe('error');
     expect(result.current.assets['missing_meta'].errorMsg).toBe('Title and Keywords are required');
   });
-});
 
+  it('UT-STAGING-QUEUE-PERSIST-01: auto-rehydrates existing queue assets from IndexedDB on initial mount', async () => {
+    vi.spyOn(storage, 'loadAllStagingAssets').mockResolvedValueOnce([
+      {
+        id: 'persisted-vector',
+        baseName: 'persisted-vector',
+        title: 'Restored Title from Storage',
+        keywords: 'restored, vector, tag',
+        status: 'idle',
+        previewUrl: 'blob:http://localhost/mock-preview'
+      }
+    ]);
+
+    let result: any;
+    await act(async () => {
+      const hook = renderHook(() => useAssetProcessor(), { wrapper: AssetProvider });
+      result = hook.result;
+    });
+
+    expect(result.current.isHydrated).toBe(true);
+    expect(result.current.assetList.length).toBe(1);
+    expect(result.current.assets['persisted-vector']?.title).toBe('Restored Title from Storage');
+    expect(result.current.activeAssetId).toBe('persisted-vector');
+  });
+});

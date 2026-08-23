@@ -177,7 +177,7 @@ export default function PortfolioPage() {
     <div className="h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6" data-testid="portfolio-layout">
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-foreground">Portfolio Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Portfolio</h1>
           <button
             type="button"
             data-testid="portfolio-add-btn"
@@ -229,7 +229,7 @@ export default function PortfolioPage() {
             <div className="flex items-center gap-1.5">
               <span className="text-muted">Artworks:</span>
               <strong data-testid="portfolio-summary-count" className="text-foreground font-bold font-sans">
-                {summary.totalImages.toLocaleString()}
+                {formatNumber(summary.totalImages)}
               </strong>
             </div>
 

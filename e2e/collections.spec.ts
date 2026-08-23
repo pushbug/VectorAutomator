@@ -49,7 +49,7 @@ test.describe('Artwork Collections Flow (E2E-COL-01)', () => {
 
       // 2. Navigate to /collections
       await page.goto('/collections');
-      await expect(page.getByRole('heading', { name: /Artwork Collections/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Collections/i })).toBeVisible();
 
       // Verify the new collection card exists
       const collectionCardTitle = page.getByText(testColName);
@@ -82,7 +82,7 @@ test.describe('Artwork Collections Flow (E2E-COL-01)', () => {
     } else {
       // If portfolio is empty, navigate to /collections directly
       await page.goto('/collections');
-      await expect(page.getByRole('heading', { name: /Artwork Collections/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Collections/i })).toBeVisible();
 
       // Open new collection modal from button
       await page.getByTestId('collection-add-btn').click();
@@ -109,7 +109,7 @@ test.describe('Artwork Collections Flow (E2E-COL-01)', () => {
   test('E2E-COL-02: switches between Table and Grid view, sorts columns, drills down by keyword, and edits metadata', async ({ page }) => {
     // 1. Navigate to /collections
     await page.goto('/collections');
-    await expect(page.getByRole('heading', { name: /Artwork Collections/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Collections/i })).toBeVisible();
 
     // 2. Test View Mode Toggle to Table View
     const tableBtn = page.getByTestId('collection-view-table-btn');
