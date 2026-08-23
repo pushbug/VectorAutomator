@@ -78,6 +78,10 @@
 | `UT-UI-COLLECTION-DETAIL-01` | Verify TopSharedKeywordsBar view modes (Freq/DL/Rev), badges, tag drill-down, and 1-click clipboard copy | `src/__tests__/components/Collections.test.tsx` |
 | `UT-STAGING-QUEUE-PERSIST-01` | Verify staging queue IndexedDB persistence, auto-rehydration on mount, selective metadata update, and auto-cleanup | `src/__tests__/lib/stagingQueueStorage.test.ts`, `src/__tests__/useAssetProcessor.test.ts` |
 | `UT-LIB-STATS-BREAKDOWN-01` | Verify calculatePlatformBreakdown aggregates totals and platform breakdowns | `src/__tests__/lib/formatters.test.ts` |
+| `UT-LIB-PAYOUT-01` | Verify normalizeDateToUTC, calculatePayoutDerivedFields, bundled proportional split, and Google Sheet TSV parser | `src/__tests__/lib/payouts.test.ts` |
+| `UT-API-PAYOUT-01` | Verify /api/payouts GET with rollups, POST create, PATCH update with recalculations, and DELETE | `src/__tests__/api/payouts.test.ts` |
+| `UT-API-PAYOUT-BATCH-02` | Verify /api/payouts/batch create_many, delete, and bundle_withdraw operations | `src/__tests__/api/payouts.test.ts` |
+| `UT-UI-PAYOUT-01` | Verify PayoutSummaryCards KPIs, PayoutTable filters/sorting/selection, PayoutEntryModal, and PayoutPasteModal | `src/__tests__/components/Payouts.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -94,4 +98,6 @@
 | `E2E-KW-01` | Keyword Insights: Page navigation, KPI summary cards, table sorting, tier filtering, bulk copy, and artwork inspection drawer | `e2e/keywords.spec.ts` |
 | `E2E-COL-01` | Artwork Collections: Create from portfolio multi-select, view card rollups, inspect Top-15 shared keywords, copy keywords, and delete collection | `e2e/collections.spec.ts` |
 | `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, tag drill-down filter & clear, and in-place pencil edit modal | `e2e/collections.spec.ts` |
+| `E2E-PAYOUT-01` | Payouts & Withdrawals: Page navigation, summary KPI cards, table filters, open log payout modal, and Smart Paste importer | `e2e/payouts.spec.ts` |
+| `E2E-PAYOUT-02` | Payout Creation & Table Reflection: Form input validation, create transaction, DB commit, and table row render | `e2e/payouts.spec.ts` |
 

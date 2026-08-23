@@ -14,6 +14,21 @@ export function formatCurrency(
 }
 
 /**
+ * Formats a numeric value as Thai Baht currency string (e.g. "฿1,234.56" or "1,234.56").
+ */
+export function formatBaht(
+  val: number | null | undefined,
+  includeSymbol: boolean = true
+): string {
+  const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+  const formatted = num.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return includeSymbol ? `฿${formatted}` : formatted;
+}
+
+/**
  * Formats a numeric value with standard thousands separators (e.g. "1,234").
  */
 export function formatNumber(val: number | null | undefined): string {

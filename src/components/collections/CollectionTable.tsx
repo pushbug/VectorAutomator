@@ -77,7 +77,7 @@ export function CollectionTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-border bg-surface-hover/40 text-muted select-none">
+            <tr className="border-b border-border bg-muted/10 text-xs font-semibold text-muted uppercase tracking-wider select-none">
               {/* Collection Name & Cover Header */}
               <th 
                 className="py-3 px-4 font-semibold hover:text-foreground cursor-pointer group transition-colors"

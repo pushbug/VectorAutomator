@@ -110,3 +110,15 @@
   5. **Edge-Case & E2E Test Hardening:** Added `UT-LIB-STATS-BREAKDOWN-01` and `UT-UI-METADATA-EDITOR-TIE-01` (tie-breaking, missing metrics, bidirectional sorting), and updated Playwright E2E (`E2E-UPL-02`).
   6. **Unified Navigation & Header Hierarchy:** Synchronized Sidebar menu items (`Dashboard`, `Upload & Keywords`, `Portfolio`, `Collections`, `Keyword Insights`, `Sales & Earnings`) with all page `<h1>` headings and removed redundant subtitles.
 - **Impact:** 197/197 unit tests passing across 32 files, zero TypeScript/lint errors, and completely aligned UI/UX hierarchy.
+
+## ADR-014: Microstock Payouts & Currency Lifecycle Tracking, Bundled Withdrawals, and Multi-Platform Ingestion
+- **Date:** 2026-08-23
+- **Context:** Microstock contributors receive USD payments from multiple stock agencies (Adobe Stock, Shutterstock, Vecteezy, 123RF) into intermediate wallets (Payoneer / PayPal) and later bundle multiple earnings into a single consolidated withdrawal to Thai bank accounts (Bangkok Bank BBL). Contributors required complete tracking of fees, 2-way currency conversions, proportional THB distributions for bundled transfers, 1-click Google Sheet TSV Smart Paste, and tax-year aggregation.
+- **Decision:**
+  1. **Prisma Payout Schema (`PayoutTransaction`):** Implemented dedicated model supporting 3-stage lifecycle (`pending`, `in_platform`, `completed`), optional bank deposit fields, tax year indexing, and Prisma client HMR caching guards.
+  2. **Proportional Bundled Withdrawal Engine (`calculateBundledSplit`):** Created pure algorithm calculating exact proportional THB distributions based on each stock's USD contribution to a bundled transfer, with zero rounding drift.
+  3. **Robust TSV & Multi-Space Importer (`parseGoogleSheetPayoutsTSV`):** Tokenizer supporting both tab (`\t`) and multi-space (`\s{2,}`) delimiters, currency symbols, and date normalization.
+  4. **Refined UI & 2K Responsive Hierarchy:** Implemented 4 KPI summary cards (Realized THB, Holding USD, Total Fees, Total Transactions count), 2-line stacked table headers with dark header surface (`bg-muted/10`), 3-dots action dropdown menus (`MoreVertical`), canonical `max-w-370` container scaling, and default `Bangkok Bank (BBL)`.
+  5. **Centralized Constants & Helpers:** Exported `STOCK_AGENCIES`, `THAI_BANKS`, `PAYMENT_PLATFORMS`, and `getStockBadgeColor` from `payoutCalculations.ts` as single sources of truth.
+  6. **Comprehensive Automated Verification:** Added 22 new unit tests (219/219 passing across 35 files) and Playwright E2E suite `e2e/payouts.spec.ts` (`E2E-PAYOUT-01`, `E2E-PAYOUT-02`), achieving 100% test passing rate with zero regressions.
+- **Impact:** Delivers an enterprise-grade financial tracking and tax preparation module tailored specifically for microstock creators.

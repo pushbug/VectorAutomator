@@ -236,7 +236,7 @@ export function SalesTable({
       {/* Table Content */}
       <div className={`overflow-x-auto ${totalPages > 1 && onPageChange ? '' : 'rounded-b-xl'}`}>
         <table data-testid="sales-table" className="w-full text-left text-sm">
-          <thead className="bg-background/50 border-b border-border text-xs uppercase tracking-wider text-muted">
+          <thead className="border-b border-border bg-muted/10 text-xs font-semibold text-muted uppercase tracking-wider select-none">
             <tr>
               <th className="px-4 py-3 font-semibold w-10 text-center">
                 <input

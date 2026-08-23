@@ -243,6 +243,24 @@ Always use `data-testid` for element selection in E2E tests.
 | `add-to-collection-modal` | Modal dialog for adding selected artworks to an existing collection |
 | `add-to-collection-select` | Destination collection select dropdown in Add to Collection modal |
 | `add-to-collection-submit-btn` | Submit button inside Add to Collection modal |
+| `payout-kpi-realized-thb` | The KPI card display for total realized net income (THB) in Payouts |
+| `payout-kpi-holding-usd` | The KPI card display for total USD holding in payment platforms in Payouts |
+| `payout-kpi-total-fees` | The KPI card display for total platform fees in Payouts |
+| `payout-kpi-total-transactions` | The KPI card display for total recorded payout withdrawals count in Payouts |
+| `payout-table` | The table container for payout transactions |
+| `payout-year-filter` | The year segmented pills container for filtering payouts by tax year |
+| `payout-stock-filter` | The stock agency dropdown select in Payouts table |
+| `payout-add-btn` | The button in Payouts header to open Log Payout modal |
+| `payout-paste-btn` | The button in Payouts header to open Smart Paste from Google Sheet modal |
+| `payout-batch-withdraw-btn` | The button in multi-selection action bar to open Bundled Bank Withdrawal modal |
+| `payout-entry-modal` | The modal dialog for logging or editing a single payout transaction |
+| `payout-paste-modal` | The modal dialog for smart TSV pasting from Google Sheet |
+| `payout-batch-modal` | The modal dialog for bundled bank withdrawal with proportional THB split |
+| `payout-submit-btn` | The primary submit button inside payout modals |
+| `payout-input-stock-name` | Stock Agency dropdown select inside PayoutEntryModal |
+| `payout-input-withdraw-date` | Withdraw Date input inside PayoutEntryModal |
+| `payout-input-stock-amount` | Stock USD Amount input inside PayoutEntryModal |
+| `payout-input-notes` | Notes / Remarks input inside PayoutEntryModal |
 
 
 

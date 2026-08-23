@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Tag,
   DollarSign,
+  Landmark,
   FolderKanban,
   Menu,
   Moon,
@@ -35,6 +36,7 @@ export default function Sidebar() {
     { name: "Collections", href: "/collections", icon: FolderKanban },
     { name: "Keyword Insights", href: "/keywords", icon: Tag },
     { name: "Sales & Earnings", href: "/sales", icon: DollarSign },
+    { name: "Payouts & Withdrawals", href: "/payouts", icon: Landmark },
   ];
 
   return (

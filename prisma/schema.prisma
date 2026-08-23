@@ -76,3 +76,30 @@ model CollectionItem {
   @@index([imageId])
 }
 
+model PayoutTransaction {
+  id                String    @id @default(cuid())
+  stockWithdrawDate DateTime
+  stockName         String    // "Shutterstock", "Adobe Stock", "Vecteezy", "123RF", etc.
+  stockAmountUsd    Float
+  platformDate      DateTime?
+  platformName      String    @default("Payoneer") // "Payoneer", "PayPal", etc.
+  platformAmountUsd Float?
+  feeUsd            Float?
+  bankReceivedDate  DateTime?
+  bankName          String?   // "Kasikornbank", "SCB", "Bangkok Bank", etc.
+  exchangeRate      Float?
+  netIncomeThb      Float?
+  status            String    @default("pending") // "pending", "in_platform", "completed"
+  taxYear           Int?
+  leadTimeDays      Int?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([stockName])
+  @@index([platformName])
+  @@index([status])
+  @@index([taxYear])
+  @@index([stockWithdrawDate])
+}
+
