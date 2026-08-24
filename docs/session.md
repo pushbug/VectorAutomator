@@ -1,30 +1,27 @@
-### Goal: Complete Asset Rankings & SERP Telemetry, Two-Way Data Auto-Reconciliation, Full 100 Ranking Modal, and Smart Debounced Auto-Backup Engine.
+### Goal: Smart Adobe Contributor ID Bulk Ingestion, System-Wide Native SQLite Online Backup Engine, and Instant Batch Ingestion Durability.
 
 ### Status: COMPLETE
 
 ### Done:
-- Developed interactive Asset Rankings & SERP Telemetry Dashboard (`/serp`) with 4 KPI summary cards, date range filtering, and searchable keyword combobox popover.
-- Standardized download metrics layout across SERP Table and Artwork History Drawer using Lucide `<Download size={13} />` icon format.
-- Added responsive backdrop overlay (`bg-black/60 backdrop-blur-xs`) with click-outside dismissal across Artwork SERP Drawer, Full SERP Modal, and Smart Paste Modal.
-- Redesigned Full SERP 100 Ranking Modal (`FullSerpModal.tsx`) with an unfragmented header, `✨ My Artwork` filter toggle, and accurate mutually exclusive `Unknown Author` counts.
-- Implemented bidirectional two-way data auto-reconciliation across `asId`, `ssId`, and `vzId` across `GET /api/serp`, `POST /api/serp/paste-sync`, `PATCH /api/portfolio`, and `POST /api/upload`.
-- Built Smart Debounced Auto-Backup engine (`src/lib/dbBackup.ts`) with a 3-minute coalescing window, dirty-flag mutation trigger, zero read I/O overhead, SHA-256 change detection, SQLite WAL flush, gzip compression, and 10-file retention limit.
-- Created Playwright E2E test suite (`e2e/serp.spec.ts` - `E2E-SERP-01`) and Vitest unit/integration tests (`UT-UI-FULL-SERP-MODAL-01`, `UT-SERP-RECONCILE-02`, `UT-LIB-BACKUP-01`).
-- Logged ADR-017 and ADR-018 in `docs/decisions.md` and registered all test IDs in `docs/tests/CATALOG.md`.
-- Verified 100% test pass rate with 262/262 unit tests passing across 43 test files with zero TypeScript diagnostics.
+- Developed Smart ID Bulk Matcher (`SmartIdPasteModal.tsx`) for 1-click clipboard paste sync from Adobe Contributor dashboard with exact/fuzzy/ambiguous classification and live DB search.
+- Modularized text processing, suffix cleaning, and title similarity calculation into pure utility `src/lib/contributorParser.ts`.
+- Refactored `src/lib/dbBackup.ts` using native SQLite Online Backup (`better-sqlite3 db.backup()`) to capture all active `.wal` journal pages atomically into standalone snapshots.
+- Attached database backup coordinator to `globalThis.__dbBackupCoordinator` with concurrency mutex and standardized 30s debounce for micro-edits.
+- Implemented immediate post-commit snapshot persistence (`await createDbBackup()`) across batch ingestion routes (`/api/portfolio/paste-sync`, `/api/sales/paste-sync`, `/api/serp/paste-sync`, `/api/payouts/batch`).
+- Added Playwright test `E2E-PF-03` and unit test suites `UT-API-PORTFOLIO-SYNC-ID-01`, `UT-API-PORTFOLIO-FUZZY-SYNC-01`, `UT-LIB-BACKUP-01` (274/274 tests passing across 46 test files).
+- Logged ADR-019 in `docs/decisions.md` and updated `docs/tests/CATALOG.md`.
 
 ### Next:
-- 1. Explore cross-keyword market overlap and competitor saturation analytics in SERP dashboard.
-- 2. Implement automated periodic SERP background crawl orchestrator with Chrome extension integration.
+- 1. Monitor live usage of Smart ID Bulk Matcher and instant auto-backup during daily contributor operations.
+- 2. Explore automated cross-keyword market overlap and competitor saturation analytics in SERP dashboard.
 
 ### Decisions:
-- Two-Way Ingestion Invariant: System automatically cross-references and matches `isMine` and `matchedImageId` regardless of whether assets are uploaded before or after SERP snapshots are crawled.
-- 3-Minute Debounce Coalescing: Database mutations are coalesced into a single consolidated snapshot 3 minutes after the last write to eliminate file spam while guaranteeing data durability.
-- Read-Only Zero Overhead: Browsing, searching, and filtering operations never trigger backup routines.
+- Online SQLite Backup Standard: Use `better-sqlite3 db.backup()` instead of raw file copy to guarantee full consolidation of WAL transactions before hash comparison and Gzip compression.
+- Dual Execution Strategy: Batch ingestion operations trigger immediate snapshots before HTTP response return; micro-edits coalesce across a 30-second quiet window on `globalThis`.
+- Zero-Risk Contributor Parsing: All parsing and string normalization execute strictly on local machine without external web scrapers or cloud dependencies.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and TDD-Lite specification.
-- [`coding`](.agents/skills/coding/SKILL.md) — UI components, auto-reconciliation hooks, backup scheduler, and test suites.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Security audit, WAL integrity verification, and E2E gatekeeping.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning, root-cause forensics, and TDD-Lite specification.
+- [`coding`](.agents/skills/coding/SKILL.md) — Parser modularization, SQLite backup engine, API routes, and test suites.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Rigorous WAL verification, timer lifecycle audit, and code duplication analysis.
 - [`handoff`](.agents/skills/handoff/SKILL.md) — Documentation synchronization, ADR logging, session wrap-up, and git push.
-

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adobe Contributor Portfolio Extractor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="glass-container">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="brand-group">
+        <span class="live-dot" title="Connected to Active Tab"></span>
+        <h1 class="brand-title">Portfolio Extractor</h1>
+      </div>
+      <div class="platform-capsule">Contributor</div>
+    </header>
+
+    <!-- Query Info & Metric Capsule Card -->
+    <section class="glass-card query-card">
+      <div class="card-header-row">
+        <span class="micro-label">PORTFOLIO GRID</span>
+        <span class="badge-pill badge-emerald" id="count-pill">Scanning...</span>
+      </div>
+      <div class="query-display" id="query-display">Adobe Contributor</div>
+    </section>
+
+    <!-- Main CTA Actions Grid -->
+    <section class="actions-section">
+      <button id="copy-tsv-btn" class="btn btn-primary" data-testid="contributor-copy-tsv-btn">
+        <span class="btn-icon">📋</span>
+        <div class="btn-body">
+          <div class="btn-title">Copy Table (TSV)</div>
+          <div class="btn-subtitle">Ready to paste into VectorAutomator</div>
+        </div>
+      </button>
+
+      <div class="secondary-btn-row">
+        <button id="download-csv-btn" class="btn btn-secondary" data-testid="contributor-download-csv-btn">
+          <span class="btn-icon">📥</span>
+          <span>Download CSV</span>
+        </button>
+        <button id="copy-json-btn" class="btn btn-outline" data-testid="contributor-copy-json-btn">
+          <span class="btn-icon">📦</span>
+          <span>Copy JSON</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast" class="modern-toast">Copied to clipboard!</div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>100% Client-Side • Zero Network Overhead</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

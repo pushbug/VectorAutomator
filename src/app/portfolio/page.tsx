@@ -8,7 +8,8 @@ import { SaleEntryDrawer } from '@/components/sales/SaleEntryDrawer';
 import { PortfolioFloatingToolbar } from '@/components/portfolio/PortfolioFloatingToolbar';
 import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
-import { Plus, Calendar, Layers, Download } from 'lucide-react';
+import { SmartIdPasteModal } from '@/components/portfolio/SmartIdPasteModal';
+import { Plus, Calendar, Layers, Download, Sparkles } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 export default function PortfolioPage() {
@@ -21,6 +22,7 @@ export default function PortfolioPage() {
   const [isLogSaleDrawerOpen, setIsLogSaleDrawerOpen] = useState(false);
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   
   // Summary metrics state
   const [summary, setSummary] = useState({
@@ -187,15 +189,26 @@ export default function PortfolioPage() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-foreground">Portfolio</h1>
-          <button
-            type="button"
-            data-testid="portfolio-add-btn"
-            onClick={() => setIsAddDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-sm transition-colors cursor-pointer"
-          >
-            <Plus size={16} />
-            <span>Add Image</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="portfolio-sync-ids-btn"
+              onClick={() => setIsSyncModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface hover:bg-surface-hover text-foreground border border-border text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
+            >
+              <Sparkles size={16} className="text-primary" />
+              <span>Sync Adobe IDs</span>
+            </button>
+            <button
+              type="button"
+              data-testid="portfolio-add-btn"
+              onClick={() => setIsAddDrawerOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Add Image</span>
+            </button>
+          </div>
         </div>
         <PortfolioFilter onFilterChange={handleFilterChange} />
 
@@ -344,6 +357,12 @@ export default function PortfolioPage() {
         onClose={() => setIsLogSaleDrawerOpen(false)}
         onSuccess={fetchPortfolio}
         preselectedImage={selectedImage}
+      />
+
+      <SmartIdPasteModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onSuccess={fetchPortfolio}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import {
   normalizePlatformName,
   normalizeDateToUTC,
 } from '@/lib/payoutCalculations';
-import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { scheduleAutoBackup, createDbBackup } from '@/lib/dbBackup';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,8 +64,12 @@ export async function POST(request: NextRequest) {
         return count;
       });
 
-      // Schedule debounced auto-backup after batch create
-      scheduleAutoBackup();
+      // Immediate auto-backup after batch create
+      try {
+        await createDbBackup();
+      } catch (err) {
+        console.warn('Post-batch payout backup warning:', err);
+      }
 
       return NextResponse.json({
         success: true,
@@ -85,8 +89,12 @@ export async function POST(request: NextRequest) {
         where: { id: { in: ids } },
       });
 
-      // Schedule debounced auto-backup after batch delete
-      scheduleAutoBackup();
+      // Immediate auto-backup after batch delete
+      try {
+        await createDbBackup();
+      } catch (err) {
+        console.warn('Post-batch payout delete backup warning:', err);
+      }
 
       return NextResponse.json({
         success: true,
@@ -158,8 +166,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Schedule debounced auto-backup after bundled withdrawal
-      scheduleAutoBackup();
+      // Immediate auto-backup after bundled withdrawal
+      try {
+        await createDbBackup();
+      } catch (err) {
+        console.warn('Post-bundle payout backup warning:', err);
+      }
 
       return NextResponse.json({
         success: true,

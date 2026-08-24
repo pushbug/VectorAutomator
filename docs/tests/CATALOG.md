@@ -96,6 +96,11 @@
 | `UT-UI-FULL-SERP-MODAL-01` | Verify FullSerpModal rendering, My Artwork filter toggle, accurate Unknown Author count, and backdrop click dismissal | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-SERP-RECONCILE-02` | Verify two-way auto-reconciliation across multi-platform asset IDs (asId, ssId, vzId) on paste-sync and proactive GET query triggers | `src/__tests__/api/serp.test.ts` |
 | `UT-LIB-BACKUP-01` | Verify debounced auto-backup scheduler, dirty-flag state, timer coalescing, and clean cancellation | `src/__tests__/lib/dbBackup.test.ts` |
+| `UT-EXT-CONTRIBUTOR-DOM-01` | Verify Adobe Contributor DOM parsing: extracting title, asId from thumbnail URL, and downloads count | `src/__tests__/extension/contributorDomParser.test.ts` |
+| `UT-API-PORTFOLIO-SYNC-ID-01` | Verify /api/portfolio/paste-sync title matching (exact + normalized), asId assignment, downloads sync, and backup trigger | `src/__tests__/api/portfolio_paste_sync.test.ts` |
+| `UT-API-PORTFOLIO-FUZZY-SYNC-01` | Verify /api/portfolio/paste-sync 3-tier matching: exact auto-match, fuzzy candidate suggestion (>= 70%), and manual link confirmation | `src/__tests__/api/portfolio_paste_sync.test.ts` |
+| `UT-UI-PORTFOLIO-SYNC-MODAL-01` | Verify SmartIdPasteModal rendering, live clipboard parsing, match preview table, and bulk submission | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
+| `UT-UI-PORTFOLIO-MANUAL-LINK-01` | Verify SmartIdPasteModal review confirmation and manual DB artwork search and 1-click binding | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
 
 
 ## E2E Tests
@@ -106,6 +111,7 @@
 | `E2E-UPL-03` | Upload Queue Persistence: Verify dropped files and edited metadata persist across page reloads | `e2e/upload.spec.ts` |
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
+| `E2E-PF-03` | Verify Sync Adobe IDs button opens SmartIdPasteModal, accepts clipboard TSV, and validates modal controls | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |
 | `E2E-SALES-02` | Verify opening Smart Paste modal, real-time live stats, preview header, and submission | `e2e/sales.spec.ts` |
 | `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |

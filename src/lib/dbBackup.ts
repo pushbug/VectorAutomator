@@ -5,21 +5,32 @@ import crypto from 'crypto';
 import Database from 'better-sqlite3';
 
 /**
- * Default debounced quiet period: 3 minutes (180,000 ms).
+ * Default debounced quiet period: 30 seconds (30,000 ms).
+ * Coalesces micro-edits while ensuring timely durability.
  */
-export const DEFAULT_BACKUP_DEBOUNCE_MS = 3 * 60 * 1000;
+export const DEFAULT_BACKUP_DEBOUNCE_MS = 30 * 1000;
 
-let isDbDirty = false;
-let backupTimer: NodeJS.Timeout | null = null;
-let lastMutationTimestamp = 0;
-
-/**
- * Computes SHA-256 hash of a file for change detection.
- */
-function getFileHash(filePath: string): string {
-  const buffer = fs.readFileSync(filePath);
-  return crypto.createHash('sha256').update(buffer).digest('hex');
+interface DbBackupCoordinator {
+  isDbDirty: boolean;
+  backupTimer: NodeJS.Timeout | null;
+  lastMutationTimestamp: number;
+  isLock: boolean;
 }
+
+const globalForBackup = globalThis as unknown as {
+  __dbBackupCoordinator?: DbBackupCoordinator;
+};
+
+if (!globalForBackup.__dbBackupCoordinator) {
+  globalForBackup.__dbBackupCoordinator = {
+    isDbDirty: false,
+    backupTimer: null,
+    lastMutationTimestamp: 0,
+    isLock: false,
+  };
+}
+
+const coordinator = globalForBackup.__dbBackupCoordinator;
 
 /**
  * Formats a Date object into local system timestamp YYYYMMDD_HHmmss.
@@ -35,63 +46,58 @@ function formatLocalTimestamp(date = new Date()): string {
 }
 
 /**
- * Schedules an automated database backup after a 3-minute debounced quiet window.
+ * Schedules an automated database backup after a debounced quiet window.
  * Coalesces rapid sequential mutations into a single consolidated snapshot.
- * Triggered strictly by mutation endpoints (PATCH, POST, DELETE).
  */
 export function scheduleAutoBackup(debounceMs = DEFAULT_BACKUP_DEBOUNCE_MS): void {
-  isDbDirty = true;
-  lastMutationTimestamp = Date.now();
+  coordinator.isDbDirty = true;
+  coordinator.lastMutationTimestamp = Date.now();
 
-  if (backupTimer) {
-    clearTimeout(backupTimer);
+  if (coordinator.backupTimer) {
+    clearTimeout(coordinator.backupTimer);
   }
 
-  backupTimer = setTimeout(() => {
-    if (isDbDirty) {
-      try {
-        createDbBackup();
-      } catch (err) {
-        console.error('Debounced auto backup failed:', err);
-      } finally {
-        isDbDirty = false;
-        backupTimer = null;
-      }
-    }
+  coordinator.backupTimer = setTimeout(() => {
+    coordinator.isDbDirty = false;
+    coordinator.backupTimer = null;
+    createDbBackup().catch((err) => {
+      console.error('Debounced auto backup failed:', err);
+    });
   }, debounceMs);
-
-  if (typeof backupTimer?.unref === 'function') {
-    backupTimer.unref();
-  }
 }
 
 /**
  * Checks if the database currently has pending unsaved mutations.
  */
 export function getIsDbDirty(): boolean {
-  return isDbDirty;
+  return coordinator.isDbDirty;
 }
 
 /**
  * Cancels pending scheduled auto backup timer (useful for testing & resets).
  */
 export function cancelScheduledBackup(): void {
-  if (backupTimer) {
-    clearTimeout(backupTimer);
-    backupTimer = null;
+  if (coordinator.backupTimer) {
+    clearTimeout(coordinator.backupTimer);
+    coordinator.backupTimer = null;
   }
-  isDbDirty = false;
+  coordinator.isDbDirty = false;
 }
 
 /**
- * Automated SQLite database backup utility with:
- * 1. Strict retention cap (default maxRetained = 10).
- * 2. Smart change detection (skips snapshot if DB is unchanged).
+ * Automated SQLite database backup utility using native SQLite Online Backup:
+ * 1. Safely merges dev.db + dev.db-wal + dev.db-shm into a consolidated standalone DB snapshot.
+ * 2. Smart SHA-256 change detection (skips saving duplicate snapshot if data is unchanged).
  * 3. Lossless Gzip compression (.db.gz saving ~80% disk space).
  * 4. Local system timestamping (matching Mac clock exactly).
- * 5. WAL checkpoint flush ensuring 100% fresh database bytes.
+ * 5. Strict rolling retention cap (retaining strictly the latest maxRetained = 10 files).
  */
-export function createDbBackup(maxRetained = 10): string | null {
+export async function createDbBackup(maxRetained = 10): Promise<string | null> {
+  if (coordinator.isLock) {
+    return null;
+  }
+  coordinator.isLock = true;
+
   try {
     const dbPath = path.resolve(process.cwd(), 'dev.db');
     if (!fs.existsSync(dbPath)) {
@@ -103,20 +109,30 @@ export function createDbBackup(maxRetained = 10): string | null {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
 
-    // 1. Flush SQLite WAL journal into dev.db for 100% fresh data
-    try {
-      const db = new Database(dbPath);
-      db.pragma('wal_checkpoint(TRUNCATE)');
-      db.close();
-    } catch (_) {}
+    const tempSnapshotPath = path.join(backupsDir, `temp_snapshot_${Date.now()}.db`);
 
-    // 2. Smart Change Detection: Check if database changed since latest backup
+    // 1. Native SQLite Online Backup: safely consolidates dev.db and dev.db-wal into temp file
+    try {
+      const srcDb = new Database(dbPath, { readonly: true });
+      await srcDb.backup(tempSnapshotPath);
+      srcDb.close();
+    } catch (onlineBackupErr) {
+      // Fallback: copy file if native backup fails
+      fs.copyFileSync(dbPath, tempSnapshotPath);
+    }
+
+    if (!fs.existsSync(tempSnapshotPath)) {
+      return null;
+    }
+
+    const tempDbBuffer = fs.readFileSync(tempSnapshotPath);
+    const currentHash = crypto.createHash('sha256').update(tempDbBuffer).digest('hex');
+
+    // 2. Smart Change Detection against latest existing backup
     const existingBackups = fs
       .readdirSync(backupsDir)
       .filter((f) => f.startsWith('dev_') && (f.endsWith('.db') || f.endsWith('.db.gz')))
       .sort();
-
-    const currentHash = getFileHash(dbPath);
 
     if (existingBackups.length > 0) {
       const latestBackupFile = path.join(backupsDir, existingBackups[existingBackups.length - 1]);
@@ -130,11 +146,14 @@ export function createDbBackup(maxRetained = 10): string | null {
         const latestHash = crypto.createHash('sha256').update(latestBuffer).digest('hex');
 
         if (currentHash === latestHash) {
-          // Database content is identical to latest backup; skip duplicate snapshot
+          // Database content is identical to latest backup; clean up temp and return
+          try {
+            fs.unlinkSync(tempSnapshotPath);
+          } catch (_) {}
           return latestBackupFile;
         }
       } catch (_) {
-        // Fallback: proceed with backup if hash comparison errors
+        // Proceed with backup if unzipping / comparing errors
       }
     }
 
@@ -143,9 +162,13 @@ export function createDbBackup(maxRetained = 10): string | null {
     const backupFilename = `dev_${timestamp}.db.gz`;
     const targetPath = path.join(backupsDir, backupFilename);
 
-    const dbBuffer = fs.readFileSync(dbPath);
-    const compressed = zlib.gzipSync(dbBuffer, { level: 9 });
+    const compressed = zlib.gzipSync(tempDbBuffer, { level: 9 });
     fs.writeFileSync(targetPath, compressed);
+
+    // Clean up temporary uncompressed snapshot
+    try {
+      fs.unlinkSync(tempSnapshotPath);
+    } catch (_) {}
 
     // 4. Auto-Pruning: Retain strictly the latest `maxRetained` files
     const allBackups = fs
@@ -166,6 +189,8 @@ export function createDbBackup(maxRetained = 10): string | null {
   } catch (error) {
     console.error('Failed to create automated database backup:', error);
     return null;
+  } finally {
+    coordinator.isLock = false;
   }
 }
 

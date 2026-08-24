@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseStockPaste, ParsedStockRow } from '@/lib/stockPasteParser';
 import { syncImageRollup } from '@/lib/salesReconciler';
-import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { scheduleAutoBackup, createDbBackup } from '@/lib/dbBackup';
 
 export async function POST(request: NextRequest) {
   try {
@@ -243,8 +243,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Schedule debounced auto-backup after paste sync
-      scheduleAutoBackup();
+      // Immediate auto-backup after batch sales sync
+      try {
+        await createDbBackup();
+      } catch (err) {
+        console.warn('Post-sync auto-backup warning:', err);
+      }
 
       return NextResponse.json({ success: true, syncedCount: items.length });
     }

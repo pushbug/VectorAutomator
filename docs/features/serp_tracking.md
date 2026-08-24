@@ -5,7 +5,7 @@ The Stock SERP Copier module enables microstock creators to capture, analyze, an
 
 ## Architecture
 
-### 1. Chrome Extension (`extension/`)
+### 1. Chrome Extension (`extension/extension-serp/`)
 - **Manifest V3:** Completely client-side, runs in active user tabs without server-side headless browsers or external proxy dependencies.
 - **Glassmorphic UI:** Modern dark Obsidian theme (`#080c14`), frosted glass cards (`backdrop-filter: blur(12px)`), segmented pill depth selector, and live tab connection indicator.
 - **Instant Extraction Mode (0.1s):** Scrapes 100 search result grid cells (`.search-result-cell[data-content-id]`, titles, thumbnails, rank offsets) directly from the active tab's rendered DOM in zero network overhead.

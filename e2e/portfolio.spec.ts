@@ -128,5 +128,31 @@ test.describe('Portfolio Dashboard', () => {
       await expect(confirmDialog).not.toBeVisible();
     }
   });
+
+  test('E2E-PF-03: opens Smart ID Matcher modal, enters paste data, and verifies modal controls', async ({ page }) => {
+    await page.goto('/portfolio');
+    await expect(page.getByTestId('portfolio-layout')).toBeVisible();
+
+    // Verify Sync Adobe IDs button exists
+    const syncBtn = page.getByTestId('portfolio-sync-ids-btn');
+    await expect(syncBtn).toBeVisible();
+    await syncBtn.click();
+
+    // Verify Modal opens
+    const modal = page.getByTestId('smart-id-sync-modal');
+    await expect(modal).toBeVisible();
+
+    // Verify Textarea and controls exist
+    const textarea = page.getByTestId('sync-paste-textarea');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('569029521\t10 Important historical event timeline infographic brochure.\t1410');
+
+    // Test Cancel button dismisses modal
+    const cancelBtn = page.getByTestId('cancel-sync-btn');
+    await expect(cancelBtn).toBeVisible();
+    await cancelBtn.click();
+
+    await expect(modal).not.toBeVisible();
+  });
 });
 

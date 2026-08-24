@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseSerpClipboardText, ParsedSerpItem } from '@/lib/serpPasteParser';
-import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { scheduleAutoBackup, createDbBackup } from '@/lib/dbBackup';
 
 export function OPTIONS() {
   return new NextResponse(null, {
@@ -163,8 +163,12 @@ export async function POST(request: NextRequest) {
       return queryRecord;
     });
 
-    // Schedule debounced auto-backup after ranking snapshot sync
-    scheduleAutoBackup();
+    // Immediate auto-backup after ranking snapshot sync
+    try {
+      await createDbBackup();
+    } catch (err) {
+      console.warn('Post-sync SERP backup warning:', err);
+    }
 
     return NextResponse.json(
       {
