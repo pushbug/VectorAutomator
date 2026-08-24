@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function POST(
   request: NextRequest,
@@ -51,6 +52,9 @@ export async function POST(
           imageId,
         })),
       });
+
+      // Schedule debounced auto-backup after adding items
+      scheduleAutoBackup();
     }
 
     return NextResponse.json({
@@ -96,6 +100,9 @@ export async function DELETE(
     if (deleted.count === 0) {
       return NextResponse.json({ error: 'Item not found in collection' }, { status: 404 });
     }
+
+    // Schedule debounced auto-backup after removing items
+    scheduleAutoBackup();
 
     return NextResponse.json({
       success: true,

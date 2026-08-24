@@ -7,6 +7,7 @@ import {
   normalizePlatformName,
   normalizeDateToUTC,
 } from '@/lib/payoutCalculations';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +64,9 @@ export async function POST(request: NextRequest) {
         return count;
       });
 
+      // Schedule debounced auto-backup after batch create
+      scheduleAutoBackup();
+
       return NextResponse.json({
         success: true,
         message: `Successfully created ${createdCount} payout transactions`,
@@ -80,6 +84,9 @@ export async function POST(request: NextRequest) {
       const result = await prisma.payoutTransaction.deleteMany({
         where: { id: { in: ids } },
       });
+
+      // Schedule debounced auto-backup after batch delete
+      scheduleAutoBackup();
 
       return NextResponse.json({
         success: true,
@@ -150,6 +157,9 @@ export async function POST(request: NextRequest) {
           });
         }
       });
+
+      // Schedule debounced auto-backup after bundled withdrawal
+      scheduleAutoBackup();
 
       return NextResponse.json({
         success: true,

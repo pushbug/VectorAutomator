@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { syncImageRollup } from '@/lib/salesReconciler';
 import { calculatePlatformBreakdown } from '@/lib/formatters';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 
 export async function GET(request: NextRequest) {
@@ -216,6 +217,9 @@ export async function POST(request: NextRequest) {
     // Sync rollup fields on Image entity
     await syncImageRollup(prisma, imageId);
 
+    // Schedule debounced auto-backup after sales mutation
+    scheduleAutoBackup();
+
     return NextResponse.json({
       success: true,
       data: savedStat,
@@ -253,6 +257,9 @@ export async function DELETE(request: NextRequest) {
     if (imageId) {
       await syncImageRollup(prisma, imageId);
     }
+
+    // Schedule debounced auto-backup after sales deletion
+    scheduleAutoBackup();
 
     return NextResponse.json({ success: true, deletedId: id });
 

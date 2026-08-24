@@ -34,7 +34,7 @@ Flow: `.think` → [`.consult`]_ → `.plan` → `.dev` → [`.debug`]_ → `.sc
 
 - No browser_subagent unless requested.
 - `.dev` must not edit `docs/session.md` or delete `docs/current_plan.md`.
-- Code or doc file nearing 300 lines → review trigger only, NOT an auto-split rule. Evaluate, then ASK the user before splitting. Split only if responsibilities are genuinely mixed/coupled; keep it if a split would worsen maintainability.
+- **PRODUCTION DATABASE SAFETY:** Automated test runners (`vitest`) are strictly hard-isolated to in-memory/mock storage and must NEVER touch or truncate `dev.db`. All tests with database interactions must mock Prisma delegates. Any batch data migration/mutation script must invoke `createDbBackup()` first.
 - **SKILL SYNC:** If any file under `.agents/skills/` or `.agents/AGENTS.md` is modified, remind the user to mirror the change in `.cursor/skills/` or `.cursor/rules/` — and vice versa. Both tool configs must stay in logical parity. (Paths that intentionally differ: internal cross-refs only.)
 - **TEST FILES & SCRATCHPAD:** Do NOT create temporary test scripts, scratchpads, or logs in the root directory. Always reuse, modify, or create files within the `playground/` directory for API experiments and isolated testing.
 

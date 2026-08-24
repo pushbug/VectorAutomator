@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
 import { getNextImageCode, parseImageCode } from '@/lib/imageCode';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function GET(request: NextRequest) {
   try {
@@ -151,8 +152,23 @@ export async function POST(request: NextRequest) {
 
     if (newImage.asId || newImage.ssId || newImage.vzId) {
       await reconcileImageSales(prisma, newImage);
+
+      // Auto-reconcile SERP rankings if rankings were crawled prior to upload
+      try {
+        const platformIds = [newImage.asId, newImage.ssId, newImage.vzId].filter(Boolean) as string[];
+        if (platformIds.length > 0) {
+          await prisma.serpItem.updateMany({
+            where: { assetId: { in: platformIds } },
+            data: { isMine: true, matchedImageId: newImage.id },
+          });
+        }
+      } catch (_) {}
+
       newImage = (await prisma.image.findUnique({ where: { id: newImage.id } })) || newImage;
     }
+
+    // Schedule debounced auto-backup after image creation
+    scheduleAutoBackup();
 
     return NextResponse.json(newImage, { status: 201 });
 

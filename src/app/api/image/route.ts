@@ -16,7 +16,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const absolutePath = path.resolve(filePath);
+    let absolutePath = path.isAbsolute(filePath) && !filePath.startsWith('/uploads')
+      ? filePath
+      : path.resolve(process.cwd(), 'public', filePath.replace(/^\//, ''));
+
+    if (!fs.existsSync(absolutePath)) {
+      // Fallback try direct resolve
+      absolutePath = path.resolve(filePath);
+    }
 
     // Ensure the file exists and is a file
     const stat = await fs.promises.stat(absolutePath);

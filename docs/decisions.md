@@ -141,7 +141,26 @@
   2. **Instant DOM Scrape Mode (0.1s):** Made Instant mode the primary production workflow, scraping Rank 1–100 directly from rendered DOM in 0.1s with zero network requests or CAPTCHA risks.
   3. **Configurable Clean Column Export (URLs OFF by default):** Standardized default TSV/CSV format to `[Keyword, Page, Rank, Asset ID, Author, Title]` with an optional toggle `[ ] Include URLs (Thumbnail & Link)` persisted in `chrome.storage.local`.
   4. **Optional Native Virtual Navigator:** Implemented in-page keyboard `ArrowRight` dispatch, MutationObserver ready checks, and human jitter (500–1200ms) for exploratory author enrichment.
-  5. **Universal SERP Parser & Sync Engine (`src/lib/serpPasteParser.ts`):** Created flexible delimited TSV/CSV/JSON parser handling multi-page rank offsets (`(page - 1) * 100 + rank`) and atomic portfolio asset matching against `Image.asId` via `POST /api/serp/paste-sync`.
-  6. **Comprehensive Automated Testing:** Added test suites `UT-SERP-PARSE-01`, `UT-API-SERP-01`, `UT-EXT-DOM-PARSER-01`, `UT-EXT-AUTHOR-ENRICH-01`, and `UT-EXT-STEALTH-NAV-01`, bringing total test suite to 248/248 unit tests passing across 41 files with zero regressions.
-- **Impact:** Delivers a 100% anonymous, fast, and safe SERP ranking extraction and portfolio ranking verification tool for microstock creators.
+## ADR-017: Comprehensive SERP Ranking Intelligence Dashboard, Two-Way Portfolio Auto-Reconciliation, and Full Ranking Telemetry Modal
+- **Date:** 2026-08-24
+- **Context:** Following the launch of the Stock SERP Copier Chrome extension, VectorAutomator required an interactive analytics dashboard (`/serp`) to visualize ranking telemetry, track rank movements over time, inspect artwork keyword progression, and explore complete Top-100 ranking snapshots. Additionally, users required a bidirectional reconciliation pipeline ensuring that whether image IDs are assigned before or after SERP snapshots are crawled, assets are linked automatically without manual re-imports.
+- **Decision:**
+  1. **Full SERP Dashboard & KPI Cards (`/serp`):** Created 4 summary KPI cards (Total Tracked Keywords, Page 1 Dominance, Top 10 Dominance, Best Ranking with Keyword name), integrated date range filtering, and searchable keyword combobox dropdown.
+  2. **Two-Way Database Auto-Reconciliation:** Implemented dual-direction ID cross-referencing across `asId`, `ssId`, and `vzId`. Embedded reconciliation hooks into `PATCH /api/portfolio`, `POST /api/upload`, `POST /api/serp/paste-sync`, and proactive raw SQL execution at the top of `GET /api/serp`.
+  3. **Full Ranking Snapshot Modal (`FullSerpModal.tsx`):** Designed an unfragmented header toolbar with dedicated `✨ My Artwork` filter toggle, mutually exclusive `Unknown Author` calculation, and backdrop click-outside dismissal.
+  4. **Unified Download Metrics Layout:** Standardized download counts across SERP Table and Artwork History Drawer using Lucide `<Download size={13} />` icon format, matching Sales and Portfolio views.
+  5. **Playwright E2E & Integration Tests:** Added `e2e/serp.spec.ts` (`E2E-SERP-01`) and integration tests `UT-UI-FULL-SERP-MODAL-01`, `UT-SERP-RECONCILE-02`.
+- **Impact:** Provides a unified search engine rank intelligence interface with 100% automated data reconciliation and responsive analytics.
+
+## ADR-018: Smart Debounced Auto-Backup Engine (3-Minute Window with SHA-256 and Retention Cap)
+- **Date:** 2026-08-24
+- **Context:** To ensure database safety without incurring excessive I/O overhead or disk clutter from frequent single-ID updates, the system required an intelligent background backup mechanism. The solution needed to coalesce rapid sequential mutations, skip read-only operations, detect data changes, compress snapshots, and prune older backups automatically.
+- **Decision:**
+  1. **Dirty-Flag Coalescing Scheduler (`scheduleAutoBackup`):** Implemented a 3-minute (`180,000ms`) debounced timer with `unref()` lifecycle cleanup. Multiple rapid mutations (e.g. editing 50 asset IDs) coalesce into a single snapshot created 3 minutes after the final edit.
+  2. **Read-Only Safety Invariant:** Browsing, searching, and filtering (`GET` requests) never trigger the backup scheduler, guaranteeing zero I/O overhead during read operations.
+  3. **WAL Checkpoint Flush & Gzip Compression:** Invokes `wal_checkpoint(TRUNCATE)` prior to gzip compression (`.db.gz`, ~80% size reduction) to ensure 100% fresh, consistent data.
+  4. **SHA-256 Change Detection & Pruning:** Compares database hashes against previous snapshots to skip duplicate backups and automatically retains strictly the latest 10 snapshots (~30MB total).
+  5. **Automated Mutation Wiring & Testing:** Connected `scheduleAutoBackup()` to all mutation routes (Portfolio, Upload, Sales, SERP, Payouts, Collections) and added unit tests (`UT-LIB-BACKUP-01`).
+- **Impact:** Delivers automated, zero-overhead database protection with strict storage boundaries and zero user intervention required.
+
 

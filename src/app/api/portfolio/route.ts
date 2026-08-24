@@ -6,6 +6,7 @@ import { reconcileImageSales } from '@/lib/salesReconciler';
 import { parseImageCode } from '@/lib/imageCode';
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
 import { calculatePlatformBreakdown } from '@/lib/formatters';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 
 export async function GET(request: NextRequest) {
@@ -417,6 +418,23 @@ export async function PATCH(request: NextRequest) {
     // Auto-reconcile unlinked sales if platform IDs exist/changed
     if (updatedImage.asId || updatedImage.ssId || updatedImage.vzId) {
       await reconcileImageSales(prisma, updatedImage);
+
+      // Auto-reconcile SERP rankings if platform IDs exist/changed
+      try {
+        const platformIds = [updatedImage.asId, updatedImage.ssId, updatedImage.vzId].filter(Boolean) as string[];
+        if (platformIds.length > 0) {
+          await prisma.serpItem.updateMany({
+            where: {
+              assetId: { in: platformIds },
+            },
+            data: {
+              isMine: true,
+              matchedImageId: updatedImage.id,
+            },
+          });
+        }
+      } catch (_) {}
+
       // Re-fetch to get updated rollups & stats if reconcile modified records
       const reFetched = await prisma.image.findUnique({
         where: { id },
@@ -433,13 +451,14 @@ export async function PATCH(request: NextRequest) {
 
     const { totalEarnings, platformBreakdown } = calculatePlatformBreakdown((updatedImage as any).stats);
 
+    // Schedule debounced auto-backup after mutation
+    scheduleAutoBackup();
+
     return NextResponse.json({
       ...updatedImage,
       totalEarnings,
       platformBreakdown,
     });
-
-
 
   } catch (error: any) {
     console.error('Failed to update portfolio data:', error);
@@ -483,6 +502,9 @@ export async function DELETE(request: NextRequest) {
     await prisma.image.delete({
       where: { id },
     });
+
+    // Schedule debounced auto-backup after mutation
+    scheduleAutoBackup();
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (error) {

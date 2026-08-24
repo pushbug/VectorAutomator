@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
@@ -15,13 +16,274 @@ export function OPTIONS() {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const queryId = searchParams.get('queryId');
+    const view = searchParams.get('view') || 'artworks'; // 'artworks' | 'queries'
     const keyword = searchParams.get('keyword') || undefined;
     const platform = searchParams.get('platform') || undefined;
+    const search = searchParams.get('search') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '20', 10)));
     const skip = (page - 1) * limit;
 
-    const where = {
+    // Auto-reconcile SerpItems with newly populated Image IDs (asId, ssId, vzId)
+    try {
+      if (prisma.$executeRawUnsafe) {
+        await prisma.$executeRawUnsafe(`
+          UPDATE SerpItem
+          SET isMine = 1,
+              matchedImageId = (
+                SELECT Image.id FROM Image 
+                WHERE Image.asId = SerpItem.assetId 
+                   OR Image.ssId = SerpItem.assetId 
+                   OR Image.vzId = SerpItem.assetId
+                LIMIT 1
+              )
+          WHERE assetId IN (
+            SELECT asId FROM Image WHERE asId IS NOT NULL AND asId != ''
+            UNION
+            SELECT ssId FROM Image WHERE ssId IS NOT NULL AND ssId != ''
+            UNION
+            SELECT vzId FROM Image WHERE vzId IS NOT NULL AND vzId != ''
+          ) AND (isMine = 0 OR isMine IS NULL OR matchedImageId IS NULL);
+        `);
+      }
+    } catch (_) {}
+
+    // 1. Single Query Detail (for FullSerpModal / Competitor View)
+    if (queryId) {
+      const query = await prisma.serpQuery.findUnique({
+        where: { id: queryId },
+        include: {
+          items: {
+            orderBy: { rank: 'asc' },
+            include: {
+              matchedImage: {
+                select: { id: true, code: true, title: true, filePath: true, asDownloads: true, totalDownloads: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!query) {
+        return NextResponse.json({ error: 'SERP query not found' }, { status: 404 });
+      }
+
+      // Compute author distribution / leaderboard
+      const authorMap = new Map<string, number>();
+      for (const item of query.items) {
+        const authorName = item.author || 'Unknown Author';
+        authorMap.set(authorName, (authorMap.get(authorName) || 0) + 1);
+      }
+
+      const topAuthors = Array.from(authorMap.entries())
+        .map(([author, count]) => ({ author, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      return NextResponse.json({ query, topAuthors }, { headers: { 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
+
+    // 2. View: Ranked Artworks (Default Main Dashboard Table)
+    if (view === 'artworks') {
+      // Find all SerpItems where isMine is true
+      const itemWhere: Record<string, unknown> = {
+        isMine: true,
+      };
+
+      const queryWhere: Record<string, unknown> = {};
+      if (keyword) {
+        queryWhere.keyword = { contains: keyword };
+      }
+      if (startDate || endDate) {
+        queryWhere.searchedAt = {
+          ...(startDate ? { gte: new Date(`${startDate}T00:00:00.000Z`) } : {}),
+          ...(endDate ? { lte: new Date(`${endDate}T23:59:59.999Z`) } : {}),
+        };
+      }
+
+      if (Object.keys(queryWhere).length > 0) {
+        itemWhere.serpQuery = queryWhere;
+      }
+
+      if (search) {
+        itemWhere.OR = [
+          { title: { contains: search } },
+          { assetId: { contains: search } },
+          { matchedImage: { code: { contains: search } } },
+          { matchedImage: { title: { contains: search } } },
+        ];
+      }
+
+      const [totalCount, serpItems, allQueries] = await Promise.all([
+        prisma.serpItem.count({ where: itemWhere }),
+        prisma.serpItem.findMany({
+          where: itemWhere,
+          orderBy: { serpQuery: { searchedAt: 'desc' } },
+          skip,
+          take: limit,
+          include: {
+            serpQuery: true,
+            matchedImage: {
+              include: {
+                stats: {
+                  select: { downloads: true, earnings: true, platform: true },
+                },
+              },
+            },
+          },
+        }),
+        prisma.serpQuery.findMany({
+          orderBy: { searchedAt: 'desc' },
+          select: { keyword: true },
+          distinct: ['keyword'],
+        }),
+      ]);
+
+      // Deduplicate: Keep only the latest snapshot per (assetId, keyword) for the main table view
+      const latestItemsMap = new Map<string, typeof serpItems[0]>();
+      for (const item of serpItems) {
+        const key = `${item.assetId}_${item.serpQuery.keyword}`;
+        if (!latestItemsMap.has(key)) {
+          latestItemsMap.set(key, item);
+        }
+      }
+      const uniqueSerpItems = Array.from(latestItemsMap.values());
+
+      // Calculate Rank Deltas and Sales aggregations for each item
+      const enrichedItems = await Promise.all(
+        uniqueSerpItems.map(async (item) => {
+          // Find previous ranking for this image/asset under the same keyword
+          const prevItem = await prisma.serpItem.findFirst({
+            where: {
+              assetId: item.assetId,
+              serpQuery: {
+                keyword: item.serpQuery.keyword,
+                searchedAt: { lt: item.serpQuery.searchedAt },
+              },
+            },
+            orderBy: {
+              serpQuery: { searchedAt: 'desc' },
+            },
+            select: {
+              rank: true,
+              serpQuery: { select: { searchedAt: true } },
+            },
+          });
+
+          const previousRank = prevItem ? prevItem.rank : null;
+          // Delta: positive means improved (e.g. was 10, now 2 -> +8)
+          const rankDelta = previousRank !== null ? previousRank - item.rank : null;
+          const isNew = previousRank === null;
+
+          // Earnings and downloads rollup
+          const statsEarnings = (item.matchedImage?.stats || []).reduce(
+            (sum, s) => sum + s.earnings,
+            0
+          );
+          const statsDownloads = (item.matchedImage?.stats || []).reduce(
+            (sum, s) => sum + s.downloads,
+            0
+          );
+          let totalEarnings = statsEarnings;
+          const asDownloads = item.matchedImage?.asDownloads ?? 0;
+          let totalDownloads = Math.max(
+            statsDownloads,
+            item.matchedImage?.totalDownloads ?? 0,
+            asDownloads
+          );
+
+          // Check if unlinked PlatformStats exist directly with matching assetId
+          if (item.assetId && prisma.platformStats) {
+            const directStats = await prisma.platformStats.findMany({
+              where: { platformAssetId: item.assetId },
+              select: { downloads: true, earnings: true },
+            });
+            if (directStats.length > 0) {
+              const directDl = directStats.reduce((sum, s) => sum + s.downloads, 0);
+              const directEarn = directStats.reduce((sum, s) => sum + s.earnings, 0);
+              totalDownloads = Math.max(totalDownloads, directDl);
+              totalEarnings = Math.max(totalEarnings, directEarn);
+            }
+          }
+
+          return {
+            id: item.id,
+            rank: item.rank,
+            assetId: item.assetId,
+            title: item.title,
+            author: item.author,
+            thumbnailUrl: item.thumbnailUrl,
+            detailUrl: item.detailUrl,
+            keyword: item.serpQuery.keyword,
+            platform: item.serpQuery.platform,
+            pageNumber: item.serpQuery.pageNumber,
+            searchedAt: item.serpQuery.searchedAt,
+            serpQueryId: item.serpQueryId,
+            matchedImageId: item.matchedImageId,
+            imageCode: item.matchedImage?.code || null,
+            imageTitle: item.matchedImage?.title || item.title,
+            imageFilePath: item.matchedImage?.filePath || null,
+            previousRank,
+            rankDelta,
+            isNew,
+            asDownloads,
+            totalDownloads,
+            totalEarnings,
+          };
+        })
+      );
+
+      // KPI Summary calculations (Unique assets currently ranking)
+      const [uniqueKeywordsCount, page1Count, top10Count, bestRankItem] = await Promise.all([
+        prisma.serpQuery.groupBy({
+          by: ['keyword'],
+        }).then((res) => res.length),
+        prisma.serpItem.groupBy({
+          by: ['assetId'],
+          where: { isMine: true, rank: { lte: 100 } },
+        }).then((res) => res.length),
+        prisma.serpItem.groupBy({
+          by: ['assetId'],
+          where: { isMine: true, rank: { lte: 10 } },
+        }).then((res) => res.length),
+        prisma.serpItem.findFirst({
+          where: { isMine: true },
+          orderBy: { rank: 'asc' },
+          include: { serpQuery: { select: { keyword: true } } },
+        }),
+      ]);
+
+      const summary = {
+        totalKeywords: uniqueKeywordsCount,
+        page1Artworks: page1Count,
+        top10Artworks: top10Count,
+        bestRank: bestRankItem ? `#${bestRankItem.rank} ${bestRankItem.serpQuery.keyword}` : '-',
+      };
+
+      const trackedKeywordsList = allQueries.map((q) => q.keyword);
+
+      return NextResponse.json(
+        {
+          items: enrichedItems,
+          summary,
+          trackedKeywords: trackedKeywordsList,
+          pagination: {
+            page,
+            limit,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit) || 1,
+          },
+        },
+        { headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    // 3. View: Queries
+    const where: Record<string, unknown> = {
       ...(keyword ? { keyword: { contains: keyword } } : {}),
       ...(platform ? { platform } : {}),
     };
@@ -54,22 +316,54 @@ export async function GET(request: NextRequest) {
           totalPages,
         },
       },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
+      { headers: { 'Access-Control-Allow-Origin': '*' } }
     );
-  } catch (error) {
-    console.error('Error fetching SERP queries:', error);
+  } catch (error: any) {
+    console.error('Error fetching SERP data:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch SERP queries' },
-      {
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
+      { error: error?.message || 'Failed to fetch SERP data', details: error?.stack },
+      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
     );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const idsParam = searchParams.get('ids');
+
+    const targetIds: string[] = [];
+    if (id) targetIds.push(id);
+    if (idsParam) targetIds.push(...idsParam.split(',').map((s) => s.trim()).filter(Boolean));
+
+    if (targetIds.length === 0) {
+      try {
+        const body = await request.json();
+        if (body.id) targetIds.push(body.id);
+        if (Array.isArray(body.ids)) targetIds.push(...body.ids);
+      } catch (_) {}
+    }
+
+    if (targetIds.length === 0) {
+      return NextResponse.json({ error: 'Query ID(s) required' }, { status: 400 });
+    }
+
+    await prisma.$transaction([
+      prisma.serpItem.deleteMany({
+        where: { serpQueryId: { in: targetIds } },
+      }),
+      prisma.serpQuery.deleteMany({
+        where: { id: { in: targetIds } },
+      }),
+    ]);
+
+    // Schedule debounced auto-backup after ranking deletion
+    scheduleAutoBackup();
+
+    return NextResponse.json({ success: true, deletedIds: targetIds });
+  } catch (error) {
+    console.error('Error deleting SERP query:', error);
+    return NextResponse.json({ error: 'Failed to delete SERP query' }, { status: 500 });
   }
 }

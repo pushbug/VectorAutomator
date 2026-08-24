@@ -5,6 +5,7 @@ import {
   normalizeStockName,
   normalizePlatformName,
 } from '@/lib/payoutCalculations';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function GET(
   _request: NextRequest,
@@ -88,6 +89,9 @@ export async function PATCH(
       },
     });
 
+    // Schedule debounced auto-backup after payout update
+    scheduleAutoBackup();
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Error updating payout:', error);
@@ -104,6 +108,9 @@ export async function DELETE(
     await prisma.payoutTransaction.delete({
       where: { id },
     });
+
+    // Schedule debounced auto-backup after payout deletion
+    scheduleAutoBackup();
 
     return NextResponse.json({ success: true, message: 'Payout transaction deleted successfully' });
   } catch (error: any) {

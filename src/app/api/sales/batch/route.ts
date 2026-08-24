@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { syncImageRollup } from '@/lib/salesReconciler';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 /**
  * DELETE /api/sales/batch
@@ -44,6 +45,9 @@ export async function DELETE(request: NextRequest) {
         await syncImageRollup(tx, imageId);
       }
     });
+
+    // Schedule debounced auto-backup after bulk deletion
+    scheduleAutoBackup();
 
     return NextResponse.json({
       success: true,
@@ -176,6 +180,9 @@ export async function PATCH(request: NextRequest) {
         await syncImageRollup(tx, imageId);
       }
     });
+
+    // Schedule debounced auto-backup after bulk date update
+    scheduleAutoBackup();
 
     return NextResponse.json({
       success: true,

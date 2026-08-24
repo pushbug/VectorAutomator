@@ -50,11 +50,18 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# database
+# database & local backups
 *.db
-dev.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.gz
+*.bak*
+dev.db*
+/backups/
+/data/
 
-# user assets
+# user assets & private files
 portfolio_archive/
 /public/uploads/*
 !/public/uploads/.gitkeep

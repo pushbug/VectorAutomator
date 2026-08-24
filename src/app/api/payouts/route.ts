@@ -6,6 +6,7 @@ import {
   normalizeStockName,
   normalizePlatformName,
 } from '@/lib/payoutCalculations';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function GET(request: NextRequest) {
   try {
@@ -221,6 +222,9 @@ export async function POST(request: NextRequest) {
         notes: body.notes ? body.notes.trim() : null,
       },
     });
+
+    // Schedule debounced auto-backup after payout creation
+    scheduleAutoBackup();
 
     return NextResponse.json({ success: true, data: transaction }, { status: 201 });
   } catch (error: any) {

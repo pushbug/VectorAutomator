@@ -90,6 +90,13 @@ console.log('\nStarting file copy and database transaction...');
 const startTime = Date.now();
 
 const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
+
+// 1. Purge corrupted tables (PayoutTransaction is explicitly excluded and preserved)
+db.prepare('DELETE FROM CollectionItem').run();
+db.prepare('DELETE FROM PlatformStats').run();
+db.prepare('DELETE FROM Image').run();
+
 let copiedFiles = 0;
 let skippedCopies = 0;
 
@@ -131,7 +138,7 @@ const executeMigration = db.transaction((artworks: ProcessedKeepArtwork[]) => {
       tags: item.tags || null,
       notes: item.notes || null,
       status: 'uploaded',
-      filePath: destImg,
+      filePath: `/uploads/${destFilename}`,
       createdAt: createdIso,
       updatedAt: nowIso,
     });

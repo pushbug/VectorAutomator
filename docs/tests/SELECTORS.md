@@ -273,6 +273,18 @@ Always use `data-testid` for element selection in E2E tests.
 | `extension-cancel-btn` | Stop/cancel button for author fetching queue |
 | `extension-progress-bar` | Live progress bar container during author fetching |
 | `extension-toggle-urls` | Checkbox toggle to include/exclude URL columns in TSV/CSV export |
+| `serp-paste-btn` | Button in SERP page header to open Smart Paste SERP modal |
+| `serp-smart-paste-modal` | Modal dialog for pasting and previewing SERP search ranking results |
+| `serp-smart-paste-textarea` | Textarea for pasting TSV/CSV SERP clipboard data |
+| `serp-smart-paste-date-picker` | Date picker trigger inside Smart Paste SERP modal |
+| `serp-smart-paste-submit-btn` | Confirm button inside Smart Paste SERP modal |
+| `serp-table` | Table container displaying ranked portfolio artworks |
+| `serp-kpi-keywords` | KPI card display for total tracked keywords count |
+| `serp-kpi-page1-artworks` | KPI card display for total portfolio artworks on Page 1 |
+| `serp-kpi-top10` | KPI card display for total portfolio artworks in Top 10 |
+| `serp-kpi-best-rank` | KPI card display for highest ranking position |
+| `artwork-serp-drawer` | Slide-over inspector drawer for artwork keyword & sales correlation |
+| `full-serp-modal` | Modal dialog displaying full 100-item SERP search results & competitor author leaderboard |
 
 
 

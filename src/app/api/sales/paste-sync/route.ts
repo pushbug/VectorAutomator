@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseStockPaste, ParsedStockRow } from '@/lib/stockPasteParser';
 import { syncImageRollup } from '@/lib/salesReconciler';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function POST(request: NextRequest) {
   try {
@@ -241,6 +242,9 @@ export async function POST(request: NextRequest) {
 
         }
       });
+
+      // Schedule debounced auto-backup after paste sync
+      scheduleAutoBackup();
 
       return NextResponse.json({ success: true, syncedCount: items.length });
     }

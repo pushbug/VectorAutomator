@@ -6,11 +6,16 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const dbPath = path.resolve(process.cwd(), 'dev.db');
+// Hard isolation: During tests (Vitest), redirect unmocked queries to in-memory SQLite to protect live dev.db
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+const dbPath = isTestEnv ? ':memory:' : path.resolve(process.cwd(), 'dev.db');
 const adapter = new PrismaBetterSqlite3({ url: dbPath });
 
 export const prisma =
-  globalForPrisma.prisma && 'payoutTransaction' in globalForPrisma.prisma
+  globalForPrisma.prisma &&
+  'payoutTransaction' in globalForPrisma.prisma &&
+  'serpQuery' in globalForPrisma.prisma &&
+  'serpItem' in globalForPrisma.prisma
     ? globalForPrisma.prisma
     : new PrismaClient({
         adapter,
@@ -19,4 +24,3 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
-

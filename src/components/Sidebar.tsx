@@ -12,6 +12,7 @@ import {
   DollarSign,
   Landmark,
   FolderKanban,
+  TrendingUp,
   Menu,
   Moon,
   Sun
@@ -35,6 +36,7 @@ export default function Sidebar() {
     { name: "Portfolio", href: "/portfolio", icon: ImageIcon },
     { name: "Collections", href: "/collections", icon: FolderKanban },
     { name: "Keyword Insights", href: "/keywords", icon: Tag },
+    { name: "Asset Rankings", href: "/serp", icon: TrendingUp },
     { name: "Sales & Earnings", href: "/sales", icon: DollarSign },
     { name: "Payouts & Withdrawals", href: "/payouts", icon: Landmark },
   ];

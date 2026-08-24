@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function GET(
   request: NextRequest,
@@ -164,6 +165,9 @@ export async function PATCH(
       data: dataToUpdate,
     });
 
+    // Schedule debounced auto-backup after collection update
+    scheduleAutoBackup();
+
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error('Failed to update collection:', error);
@@ -193,6 +197,9 @@ export async function DELETE(
     await prisma.collection.delete({
       where: { id },
     });
+
+    // Schedule debounced auto-backup after collection deletion
+    scheduleAutoBackup();
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (error) {

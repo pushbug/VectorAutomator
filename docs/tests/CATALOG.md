@@ -88,6 +88,15 @@
 | `UT-EXT-DOM-PARSER-01` | Verify Adobe Stock DOM selector extraction logic, lazy-load attributes, and multi-page global ranks on real HTML | `src/__tests__/extension/domParser.test.ts` |
 | `UT-EXT-AUTHOR-ENRICH-01` | Verify Adobe Stock author detail regex extractor, human-mimicking jitter range bounds, and depth slices | `src/__tests__/extension/authorFetcher.test.ts` |
 | `UT-EXT-STEALTH-NAV-01` | Verify stealth timing engine: watchdog constant, entry delay bounds, base jitter range, and smart linger detection | `src/__tests__/extension/stealthNavigator.test.ts` |
+| `UT-SERP-DELTA-01` | Verify rank delta calculation against previous SerpQuery snapshots for same keyword & artwork | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-ARTWORK-01` | Verify /api/serp/artwork/[id] returns chronological keyword ranks and correlated platform stats | `src/__tests__/api/serp.test.ts` |
+| `UT-UI-SERP-TABLE-01` | Verify SerpTable rendering, keyword filter, delta badge colors, and drawer trigger | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-SERP-PASTE-MODAL-01` | Verify SmartSerpPasteModal date selection, keyword auto-detect, and live matched preview | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-SERP-ARTWORK-DRAWER-01` | Verify ArtworkSerpDrawer keyword pills, timeline points, backdrop dismissal, and snapshot delta table | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-FULL-SERP-MODAL-01` | Verify FullSerpModal rendering, My Artwork filter toggle, accurate Unknown Author count, and backdrop click dismissal | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-SERP-RECONCILE-02` | Verify two-way auto-reconciliation across multi-platform asset IDs (asId, ssId, vzId) on paste-sync and proactive GET query triggers | `src/__tests__/api/serp.test.ts` |
+| `UT-LIB-BACKUP-01` | Verify debounced auto-backup scheduler, dirty-flag state, timer coalescing, and clean cancellation | `src/__tests__/lib/dbBackup.test.ts` |
+
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -106,5 +115,7 @@
 | `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, tag drill-down filter & clear, and in-place pencil edit modal | `e2e/collections.spec.ts` |
 | `E2E-PAYOUT-01` | Payouts & Withdrawals: Page navigation, summary KPI cards, table filters, open log payout modal, and Smart Paste importer | `e2e/payouts.spec.ts` |
 | `E2E-PAYOUT-02` | Payout Creation & Table Reflection: Form input validation, create transaction, DB commit, and table row render | `e2e/payouts.spec.ts` |
+| `E2E-SERP-01` | Asset Rankings & SERP Telemetry: Page navigation, summary KPI cards, searchable keyword combobox, FullSerpModal with My Artwork filter, and ArtworkSerpDrawer backdrop dismissal | `e2e/serp.spec.ts` |
+
 
 
