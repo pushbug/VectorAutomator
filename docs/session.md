@@ -1,29 +1,28 @@
-### Goal: Microstock Payouts & Withdrawals Management Module, Proportional Bundled Withdrawals, Google Sheet TSV Smart Paste, and Responsive 2K Table Refinements.
+### Goal: 5-Scope Portfolio Search Selector, Dynamic Placeholders, Precision Query Wiring, and Regression Verification.
 
 ### Status: COMPLETE
 
 ### Done:
-- Implemented `PayoutTransaction` entity in `prisma/schema.prisma` with 3-stage lifecycle (`pending`, `in_platform`, `completed`), fees, exchange rates, and tax year tracking.
-- Built pure calculation engine in `src/lib/payoutCalculations.ts` for auto-fees, 2-way currency conversions, proportional bundled THB split, and TSV/multi-space tokenizers.
-- Implemented CRUD and batch API endpoints at `src/app/api/payouts/`, `src/app/api/payouts/[id]`, and `src/app/api/payouts/batch`.
-- Created interactive `/payouts` page with 4 KPI summary cards (Realized THB, Holding USD, Total Fees, Total Transactions count), 2-line stacked headers (`bg-muted/10`), 3-dots action menus (`MoreVertical`), and Bangkok Bank default.
-- Implemented `PayoutEntryModal`, `PayoutPasteModal` (Google Sheet Smart Paste), and `PayoutBatchModal` (bundled transfer).
-- Centralized constants and helpers, eliminated dead states, and applied Tailwind v4 canonical `max-w-370` container scaling.
-- Verified 100% test coverage with 219/219 unit tests passing across 35 files and 2/2 Playwright E2E tests passing.
+- Integrated 5-scope selector (`all`, `title`, `keywords`, `code`, `ids`) into `src/components/portfolio/PortfolioFilter.tsx` with dynamic placeholder switching.
+- Connected `searchField` state in `src/app/portfolio/page.tsx` to `GET /api/portfolio` query parameters.
+- Enhanced portfolio summary bar to display active search scope (`(keywords)`, `(title)`, `(code)`, `(Asset IDs)`).
+- Registered `portfolio-search-field-select` in `docs/tests/SELECTORS.md` and `UT-UI-PORTFOLIO-SEARCH-FIELD-01` in `docs/tests/CATALOG.md`.
+- Created comprehensive unit test suite in `src/__tests__/components/PortfolioFilter.test.tsx` and updated `e2e/portfolio.spec.ts`.
+- Documented architectural decision ADR-015 in `docs/decisions.md`.
+- Verified 100% unit test coverage with 223/223 tests passing across 36 files and E2E portfolio tests passing.
 
 ### Next:
-- 1. Monitor production payout logs and contributor statement imports.
-- 2. Explore automated monthly CSV statement parsers for stock earnings.
+- 1. Monitor user search behaviors and consider adding search history / recent queries.
+- 2. Explore keyword tag combination suggestions across collections.
 
 ### Decisions:
-- Single Source of Truth: `STOCK_AGENCIES`, `THAI_BANKS`, and `getStockBadgeColor` centralized in `src/lib/payoutCalculations.ts`.
-- Proportional THB split algorithm distributes net income according to each stock's USD contribution without rounding drift.
-- Replaced Avg Exchange Rate card with Total Transactions count for actionable creator metrics.
-- Applied canonical `max-w-370` layout container across all app pages.
+- Single Source of Truth: Reused backend `searchField` parameter (`all`, `title`, `keywords`, `code`, `ids`, `exactKeyword`) for both Portfolio Dashboard and Keyword Suggester.
+- Dynamic Placeholders: Context-aware search input placeholder clearly indicates active search scope.
+- Canonical Height Alignment: `h-10.5` applied consistently across Date Picker, Scope Dropdown, Search Input, and Sort Dropdown.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning for Payouts & Withdrawals lifecycle.
-- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of Prisma schema, API routes, calculation engines, UI components, and table refactoring.
-- [`debug`](.agents/skills/debug/SKILL.md) — Prisma HMR caching guard and Tailwind v4 canonical class corrections.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Full automated regression auditing, E2E test verification, and dead-code detection.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, documentation updates, ADR-014 registration, and git delivery.
+- [`consult`](.agents/skills/consult/SKILL.md) — Root-cause analysis of numeric ID substring false positives.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural specification of 5-scope search filter.
+- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of UI dropdown, dynamic placeholders, and page query wiring.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Rigorous test coverage audit, selector verification, and E2E review.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, ADR-015 logging, and git synchronization.

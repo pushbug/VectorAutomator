@@ -82,6 +82,7 @@
 | `UT-API-PAYOUT-01` | Verify /api/payouts GET with rollups, POST create, PATCH update with recalculations, and DELETE | `src/__tests__/api/payouts.test.ts` |
 | `UT-API-PAYOUT-BATCH-02` | Verify /api/payouts/batch create_many, delete, and bundle_withdraw operations | `src/__tests__/api/payouts.test.ts` |
 | `UT-UI-PAYOUT-01` | Verify PayoutSummaryCards KPIs, PayoutTable filters/sorting/selection, PayoutEntryModal, and PayoutPasteModal | `src/__tests__/components/Payouts.test.tsx` |
+| `UT-UI-PORTFOLIO-SEARCH-FIELD-01` | Verify PortfolioFilter searchField select dropdown, dynamic placeholder changes, and filter propagation | `src/__tests__/components/PortfolioFilter.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -100,4 +101,5 @@
 | `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, tag drill-down filter & clear, and in-place pencil edit modal | `e2e/collections.spec.ts` |
 | `E2E-PAYOUT-01` | Payouts & Withdrawals: Page navigation, summary KPI cards, table filters, open log payout modal, and Smart Paste importer | `e2e/payouts.spec.ts` |
 | `E2E-PAYOUT-02` | Payout Creation & Table Reflection: Form input validation, create transaction, DB commit, and table row render | `e2e/payouts.spec.ts` |
+
 

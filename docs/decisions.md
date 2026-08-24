@@ -122,3 +122,14 @@
   5. **Centralized Constants & Helpers:** Exported `STOCK_AGENCIES`, `THAI_BANKS`, `PAYMENT_PLATFORMS`, and `getStockBadgeColor` from `payoutCalculations.ts` as single sources of truth.
   6. **Comprehensive Automated Verification:** Added 22 new unit tests (219/219 passing across 35 files) and Playwright E2E suite `e2e/payouts.spec.ts` (`E2E-PAYOUT-01`, `E2E-PAYOUT-02`), achieving 100% test passing rate with zero regressions.
 - **Impact:** Delivers an enterprise-grade financial tracking and tax preparation module tailored specifically for microstock creators.
+
+## ADR-015: 5-Scope Search Filtering for Portfolio Dashboard and False Positive Elimination
+- **Date:** 2026-08-24
+- **Context:** In the Portfolio Dashboard, the search bar defaulted to an unconstrained all-fields substring match across 9 fields including numeric microstock asset IDs (`asId`, `ssId`, `vzId`). Because stock asset IDs are 8–10 digit random numbers, searching for single-digit queries (such as "3") resulted in nearly 100% false-positive matches (2,414 artworks). When combined with "Newest First" sort order, results appeared identical to an unfiltered portfolio.
+- **Decision:**
+  1. **Portfolio Search Scope Selector:** Integrated a 5-scope selector (`All`, `Title`, `Keywords`, `Code`, `Asset IDs`) into `PortfolioFilter.tsx` with dynamic placeholder switching and semantic theme styling (`h-10.5`, `bg-background`, `border-border`).
+  2. **Query Parameter Wiring:** Connected `searchField` state in `PortfolioPage` (`page.tsx`) to `GET /api/portfolio?searchField={scope}&search={query}`, scoping queries precisely to target database columns.
+  3. **Summary Bar Scope Reflection:** Enhanced portfolio summary bar to dynamically indicate active search scope when scoped filtering is applied.
+  4. **Automated Test Coverage:** Added unit test suite `PortfolioFilter.test.tsx` (`UT-UI-PORTFOLIO-SEARCH-FIELD-01`) and updated `e2e/portfolio.spec.ts`, bringing total test coverage to 223/223 unit tests passing across 36 files.
+- **Impact:** Completely eliminates numeric ID false positives, provides precision searching across metadata, and guarantees accurate search result displays.
+

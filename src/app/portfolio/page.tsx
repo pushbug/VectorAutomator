@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { PortfolioFilter } from '@/components/portfolio/PortfolioFilter';
+import { PortfolioFilter, PortfolioFilterValues } from '@/components/portfolio/PortfolioFilter';
 import { PortfolioGrid } from '@/components/portfolio/PortfolioGrid';
 import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { AddImageDrawer } from '@/components/portfolio/AddImageDrawer';
@@ -32,7 +32,14 @@ export default function PortfolioPage() {
   // Pagination and filtering state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ search: '', sortBy: 'createdAt', sortOrder: 'desc', startDate: '', endDate: '' });
+  const [filters, setFilters] = useState<PortfolioFilterValues>({
+    search: '',
+    searchField: 'all',
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+    startDate: '',
+    endDate: '',
+  });
 
   const fetchPortfolio = useCallback(async () => {
     setIsLoading(true);
@@ -42,7 +49,8 @@ export default function PortfolioPage() {
         limit: '100', // As per spec
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder,
-        search: filters.search
+        search: filters.search,
+        searchField: filters.searchField,
       });
 
       if (filters.startDate) {
@@ -82,10 +90,11 @@ export default function PortfolioPage() {
     fetchPortfolio();
   }, [fetchPortfolio]);
 
-  const handleFilterChange = useCallback((newFilters: { search: string; sortBy: string; sortOrder: string; startDate: string; endDate: string }) => {
+  const handleFilterChange = useCallback((newFilters: PortfolioFilterValues) => {
     setFilters(prev => {
       if (
         prev.search === newFilters.search &&
+        prev.searchField === newFilters.searchField &&
         prev.sortBy === newFilters.sortBy &&
         prev.sortOrder === newFilters.sortOrder &&
         prev.startDate === newFilters.startDate &&
@@ -215,7 +224,11 @@ export default function PortfolioPage() {
                 <span>
                   {filters.search ? (
                     <>
-                      Search results for <strong className="text-foreground">&quot;{filters.search}&quot;</strong>:
+                      Search results for <strong className="text-foreground">&quot;{filters.search}&quot;</strong>
+                      {filters.searchField !== 'all' && (
+                        <span className="text-muted text-xs font-normal capitalize"> ({filters.searchField === 'ids' ? 'Asset IDs' : filters.searchField})</span>
+                      )}
+                      :
                     </>
                   ) : (
                     'All Portfolio Artworks:'

@@ -12,6 +12,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `download-eps-btn` | The button to download processed EPS |
 | `download-jpg-btn` | The button to download processed JPG |
 | `portfolio-search-input` | The search input field in the portfolio dashboard |
+| `portfolio-search-field-select` | The dropdown select to scope search (all, title, keywords, code, ids) in portfolio dashboard |
 | `portfolio-search-clear-btn` | The clear button to reset the search input in portfolio dashboard |
 | `portfolio-sort-select` | The dropdown to select sort order in the portfolio dashboard |
 | `portfolio-grid-item` | An individual image card in the portfolio grid |

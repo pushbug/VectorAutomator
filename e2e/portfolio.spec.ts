@@ -27,6 +27,7 @@ test.describe('Portfolio Dashboard', () => {
     // Verify filter components are visible
     const searchInput = page.getByTestId('portfolio-search-input');
     await expect(searchInput).toBeVisible();
+    await expect(page.getByTestId('portfolio-search-field-select')).toBeVisible();
     await expect(page.getByTestId('portfolio-sort-select')).toBeVisible();
     await expect(page.getByTestId('portfolio-date-picker-trigger')).toBeVisible();
 
