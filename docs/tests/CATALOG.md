@@ -83,6 +83,11 @@
 | `UT-API-PAYOUT-BATCH-02` | Verify /api/payouts/batch create_many, delete, and bundle_withdraw operations | `src/__tests__/api/payouts.test.ts` |
 | `UT-UI-PAYOUT-01` | Verify PayoutSummaryCards KPIs, PayoutTable filters/sorting/selection, PayoutEntryModal, and PayoutPasteModal | `src/__tests__/components/Payouts.test.tsx` |
 | `UT-UI-PORTFOLIO-SEARCH-FIELD-01` | Verify PortfolioFilter searchField select dropdown, dynamic placeholder changes, and filter propagation | `src/__tests__/components/PortfolioFilter.test.tsx` |
+| `UT-SERP-PARSE-01` | Verify universal TSV/CSV/JSON SERP clipboard parser with rank offset calculations | `src/__tests__/lib/serpPasteParser.test.ts` |
+| `UT-API-SERP-01` | Verify /api/serp GET list and /api/serp/paste-sync portfolio asset matching and atomic SQLite persistence | `src/__tests__/api/serp.test.ts` |
+| `UT-EXT-DOM-PARSER-01` | Verify Adobe Stock DOM selector extraction logic, lazy-load attributes, and multi-page global ranks on real HTML | `src/__tests__/extension/domParser.test.ts` |
+| `UT-EXT-AUTHOR-ENRICH-01` | Verify Adobe Stock author detail regex extractor, human-mimicking jitter range bounds, and depth slices | `src/__tests__/extension/authorFetcher.test.ts` |
+| `UT-EXT-STEALTH-NAV-01` | Verify stealth timing engine: watchdog constant, entry delay bounds, base jitter range, and smart linger detection | `src/__tests__/extension/stealthNavigator.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |

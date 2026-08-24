@@ -132,4 +132,16 @@
   3. **Summary Bar Scope Reflection:** Enhanced portfolio summary bar to dynamically indicate active search scope when scoped filtering is applied.
   4. **Automated Test Coverage:** Added unit test suite `PortfolioFilter.test.tsx` (`UT-UI-PORTFOLIO-SEARCH-FIELD-01`) and updated `e2e/portfolio.spec.ts`, bringing total test coverage to 223/223 unit tests passing across 36 files.
 - **Impact:** Completely eliminates numeric ID false positives, provides precision searching across metadata, and guarantees accurate search result displays.
+ 
+## ADR-016: Stock SERP Copier Chrome Extension, Anonymous Microstock SERP Clipboard Extraction, and Universal Rank Matching Engine
+- **Date:** 2026-08-24
+- **Context:** Microstock creators need to track their rank and market presence across search engine results pages (SERPs) for target keywords on Adobe Stock. Direct server scraping of Adobe Stock URLs is blocked by anti-bot/Datadome CDN (HTTP 403 Forbidden). Contributors needed an anonymous, standalone Chrome Extension that operates in 0.1s directly on active browser tabs without hardcoded credentials, copying clean rankings (Keyword, Page, Rank, Asset ID, Author, Title), and matching portfolio assets atomically into SQLite.
+- **Decision:**
+  1. **Standalone Chrome Extension (`extension/`):** Built as an unbranded Manifest V3 extension with an Arc/Linear-inspired dark glassmorphic design system (`#080c14`, frosted glass cards, segmented pills, micro-animations).
+  2. **Instant DOM Scrape Mode (0.1s):** Made Instant mode the primary production workflow, scraping Rank 1–100 directly from rendered DOM in 0.1s with zero network requests or CAPTCHA risks.
+  3. **Configurable Clean Column Export (URLs OFF by default):** Standardized default TSV/CSV format to `[Keyword, Page, Rank, Asset ID, Author, Title]` with an optional toggle `[ ] Include URLs (Thumbnail & Link)` persisted in `chrome.storage.local`.
+  4. **Optional Native Virtual Navigator:** Implemented in-page keyboard `ArrowRight` dispatch, MutationObserver ready checks, and human jitter (500–1200ms) for exploratory author enrichment.
+  5. **Universal SERP Parser & Sync Engine (`src/lib/serpPasteParser.ts`):** Created flexible delimited TSV/CSV/JSON parser handling multi-page rank offsets (`(page - 1) * 100 + rank`) and atomic portfolio asset matching against `Image.asId` via `POST /api/serp/paste-sync`.
+  6. **Comprehensive Automated Testing:** Added test suites `UT-SERP-PARSE-01`, `UT-API-SERP-01`, `UT-EXT-DOM-PARSER-01`, `UT-EXT-AUTHOR-ENRICH-01`, and `UT-EXT-STEALTH-NAV-01`, bringing total test suite to 248/248 unit tests passing across 41 files with zero regressions.
+- **Impact:** Delivers a 100% anonymous, fast, and safe SERP ranking extraction and portfolio ranking verification tool for microstock creators.
 

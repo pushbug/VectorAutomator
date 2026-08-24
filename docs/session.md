@@ -1,28 +1,27 @@
-### Goal: 5-Scope Portfolio Search Selector, Dynamic Placeholders, Precision Query Wiring, and Regression Verification.
+### Goal: Stock SERP Copier Chrome Extension, Anonymous Rank Extraction, Clean Clipboard Formatter, and Universal Matching Engine.
 
 ### Status: COMPLETE
 
 ### Done:
-- Integrated 5-scope selector (`all`, `title`, `keywords`, `code`, `ids`) into `src/components/portfolio/PortfolioFilter.tsx` with dynamic placeholder switching.
-- Connected `searchField` state in `src/app/portfolio/page.tsx` to `GET /api/portfolio` query parameters.
-- Enhanced portfolio summary bar to display active search scope (`(keywords)`, `(title)`, `(code)`, `(Asset IDs)`).
-- Registered `portfolio-search-field-select` in `docs/tests/SELECTORS.md` and `UT-UI-PORTFOLIO-SEARCH-FIELD-01` in `docs/tests/CATALOG.md`.
-- Created comprehensive unit test suite in `src/__tests__/components/PortfolioFilter.test.tsx` and updated `e2e/portfolio.spec.ts`.
-- Documented architectural decision ADR-015 in `docs/decisions.md`.
-- Verified 100% unit test coverage with 223/223 tests passing across 36 files and E2E portfolio tests passing.
+- Developed standalone Manifest V3 Chrome Extension (`extension/`) with modern Obsidian glassmorphic design (`#080c14`), segmented pills, and live tab indicator.
+- Implemented Instant DOM Extraction mode (0.1s) scraping 100 search result cells (`.search-result-cell`) with zero extra network overhead and zero CAPTCHA risks.
+- Added clean configurable column exporter (`Keyword`, `Page`, `Rank`, `Asset ID`, `Author`, `Title`) with toggle `[ ] Include URLs` persisted in `chrome.storage.local`.
+- Created universal clipboard parser (`src/lib/serpPasteParser.ts`) supporting TSV, CSV, and JSON with multi-page rank offsets.
+- Added database schema (`SerpQuery`, `SerpItem`) and backend endpoints (`/api/serp`, `/api/serp/paste-sync`) for atomic portfolio matching.
+- Documented feature specification in `docs/features/serp_tracking.md`, updated `docs/INDEX.md`, and logged ADR-016 in `docs/decisions.md`.
+- Verified 100% unit test coverage with 248/248 tests passing across 41 files with zero type errors.
 
 ### Next:
-- 1. Monitor user search behaviors and consider adding search history / recent queries.
-- 2. Explore keyword tag combination suggestions across collections.
+- 1. Build SERP Rank Tracking & Analytics Dashboard in VectorAutomator to visualize ranking positions.
+- 2. Implement Month-over-Month Rank Delta Engine (e.g. `Rank 12` ➔ `Rank 1` (+11 🚀)) to track ranking trends over time.
 
 ### Decisions:
-- Single Source of Truth: Reused backend `searchField` parameter (`all`, `title`, `keywords`, `code`, `ids`, `exactKeyword`) for both Portfolio Dashboard and Keyword Suggester.
-- Dynamic Placeholders: Context-aware search input placeholder clearly indicates active search scope.
-- Canonical Height Alignment: `h-10.5` applied consistently across Date Picker, Scope Dropdown, Search Input, and Sort Dropdown.
+- Standalone & 100% Anonymous: Chrome extension contains zero hardcoded credentials, runs client-side only, and works for any user on any stock search page.
+- Instant Mode as Primary: 0.1s DOM scrape is promoted as the primary workflow for maximum speed and zero anti-bot detection risk.
+- Clean Column Defaults: URLs are excluded by default to produce readable tables in Google Sheets and Excel, with optional toggle when needed.
 
 ### Skills:
-- [`consult`](.agents/skills/consult/SKILL.md) — Root-cause analysis of numeric ID substring false positives.
-- [`plan`](.agents/skills/plan/SKILL.md) — Architectural specification of 5-scope search filter.
-- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of UI dropdown, dynamic placeholders, and page query wiring.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Rigorous test coverage audit, selector verification, and E2E review.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, ADR-015 logging, and git synchronization.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and TDD-Lite specification.
+- [`coding`](.agents/skills/coding/SKILL.md) — Extension development, parser engine, database schema, and test suites.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Live DOM audit, anti-bot evaluation, and test verification.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Documentation updates, ADR-016 logging, session wrap-up, and git push.

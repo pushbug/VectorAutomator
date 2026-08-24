@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock SERP Copier</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="glass-container">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="brand-group">
+        <span class="live-dot" title="Connected to Active Tab"></span>
+        <h1 class="brand-title">Stock SERP Copier</h1>
+      </div>
+      <div class="platform-capsule" id="platform-badge">Adobe Stock</div>
+    </header>
+
+    <!-- Query Info & Metric Capsule Card -->
+    <section class="glass-card query-card">
+      <div class="card-header-row">
+        <span class="micro-label">SEARCH QUERY</span>
+        <div class="pill-group">
+          <span class="badge-pill badge-neutral" id="page-pill">Page 1</span>
+          <span class="badge-pill badge-cyan" id="count-pill">100 Assets</span>
+        </div>
+      </div>
+      <div class="query-display" id="query-display">Loading...</div>
+    </section>
+
+    <!-- Author Depth Selector -->
+    <section class="glass-card depth-card">
+      <div class="card-header-row">
+        <span class="micro-label">AUTHOR METADATA DEPTH</span>
+        <span class="author-count-badge" id="author-status-pill">0/100 Authors</span>
+      </div>
+
+      <div class="segmented-control" role="radiogroup">
+        <button class="depth-btn active" data-depth="none" id="depth-none" data-testid="extension-depth-none">
+          <span class="depth-name">Instant</span>
+          <span class="depth-time">0s</span>
+        </button>
+        <button class="depth-btn" data-depth="top10" id="depth-top10" data-testid="extension-depth-top10">
+          <span class="depth-name">Top 10</span>
+          <span class="depth-time">~7s</span>
+        </button>
+        <button class="depth-btn" data-depth="top20" id="depth-top20" data-testid="extension-depth-top20">
+          <span class="depth-name">Top 20</span>
+          <span class="depth-time">~15s</span>
+        </button>
+        <button class="depth-btn" data-depth="all" id="depth-all" data-testid="extension-depth-all">
+          <span class="depth-name">All 100</span>
+          <span class="depth-time">~60s</span>
+        </button>
+      </div>
+
+      <!-- Action to trigger fetch if depth selected -->
+      <div class="fetch-action-row hidden" id="fetch-action-row">
+        <button class="btn btn-fetch" id="fetch-authors-btn" data-testid="extension-fetch-btn">
+          <span class="btn-icon">⚡</span>
+          <span id="fetch-btn-label">Fetch Top 10 Authors (Random Jitter)</span>
+        </button>
+      </div>
+
+      <!-- Live Fetch Progress Bar -->
+      <div class="progress-container hidden" id="progress-container" data-testid="extension-progress-bar">
+        <div class="progress-info-row">
+          <span class="progress-status" id="progress-status-text">Fetching authors...</span>
+          <button class="btn-cancel" id="cancel-fetch-btn" data-testid="extension-cancel-btn">⏹ Stop</button>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main CTA Actions Grid -->
+    <section class="actions-section">
+      <button id="copy-tsv-btn" class="btn btn-primary" data-testid="extension-copy-tsv-btn">
+        <span class="btn-icon">📋</span>
+        <div class="btn-body">
+          <div class="btn-title">Copy Table (TSV)</div>
+          <div class="btn-subtitle">Ready for Excel, Sheets & VectorAutomator</div>
+        </div>
+      </button>
+
+      <div class="secondary-btn-row">
+        <button id="download-csv-btn" class="btn btn-secondary" data-testid="extension-download-csv-btn">
+          <span class="btn-icon">📥</span>
+          <span>Download CSV</span>
+        </button>
+        <button id="copy-json-btn" class="btn btn-outline" data-testid="extension-copy-json-btn">
+          <span class="btn-icon">📦</span>
+          <span>Copy JSON</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Export & Highlight Settings -->
+    <section class="glass-card highlight-card">
+      <div class="toggle-row">
+        <label class="toggle-label" for="toggle-urls">
+          <input type="checkbox" id="toggle-urls" data-testid="extension-toggle-urls" />
+          <span>Include URLs (Thumbnail & Link)</span>
+        </label>
+      </div>
+      <div class="highlight-row">
+        <input type="text" id="contributor-input" class="modern-input" placeholder="Highlight Contributor (e.g. MyStudio)" />
+        <button id="save-highlight-btn" class="btn btn-sm-action">Save</button>
+      </div>
+    </section>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast" class="modern-toast">Copied to clipboard!</div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>100% Anonymous & Local • Human-Jitter Engine</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

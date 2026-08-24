@@ -262,6 +262,17 @@ Always use `data-testid` for element selection in E2E tests.
 | `payout-input-withdraw-date` | Withdraw Date input inside PayoutEntryModal |
 | `payout-input-stock-amount` | Stock USD Amount input inside PayoutEntryModal |
 | `payout-input-notes` | Notes / Remarks input inside PayoutEntryModal |
+| `extension-copy-tsv-btn` | Button in Stock SERP Copier popup to copy TSV table to clipboard |
+| `extension-download-csv-btn` | Button in Stock SERP Copier popup to download CSV file |
+| `extension-copy-json-btn` | Button in Stock SERP Copier popup to copy JSON data to clipboard |
+| `extension-depth-none` | Segmented button in extension popup for Instant depth (no author) |
+| `extension-depth-top10` | Segmented button in extension popup for Top 10 author depth |
+| `extension-depth-top20` | Segmented button in extension popup for Top 20 author depth |
+| `extension-depth-all` | Segmented button in extension popup for All 100 author depth |
+| `extension-fetch-btn` | Trigger button to start sequential author fetching |
+| `extension-cancel-btn` | Stop/cancel button for author fetching queue |
+| `extension-progress-bar` | Live progress bar container during author fetching |
+| `extension-toggle-urls` | Checkbox toggle to include/exclude URL columns in TSV/CSV export |
 
 
 

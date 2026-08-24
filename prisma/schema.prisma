@@ -35,6 +35,7 @@ model Image {
   updatedAt      DateTime @updatedAt
   stats          PlatformStats[]
   collections    CollectionItem[]
+  serpItems      SerpItem[]
 }
 
 model PlatformStats {
@@ -101,5 +102,43 @@ model PayoutTransaction {
   @@index([status])
   @@index([taxYear])
   @@index([stockWithdrawDate])
+}
+
+model SerpQuery {
+  id           String     @id @default(cuid())
+  keyword      String
+  platform     String     @default("Adobe Stock")
+  pageNumber   Int        @default(1)
+  totalItems   Int        @default(0)
+  myItemsCount Int        @default(0)
+  searchedAt   DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  items        SerpItem[]
+
+  @@index([keyword])
+  @@index([platform])
+  @@index([searchedAt])
+}
+
+model SerpItem {
+  id             String    @id @default(cuid())
+  serpQueryId    String
+  serpQuery      SerpQuery @relation(fields: [serpQueryId], references: [id], onDelete: Cascade)
+  rank           Int
+  assetId        String
+  title          String
+  author         String?
+  thumbnailUrl   String?
+  detailUrl      String?
+  isMine         Boolean   @default(false)
+  matchedImageId String?
+  matchedImage   Image?    @relation(fields: [matchedImageId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+
+  @@index([serpQueryId])
+  @@index([assetId])
+  @@index([matchedImageId])
+  @@index([isMine])
 }
 
