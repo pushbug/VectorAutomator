@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, Check } from 'lucide-react';
+import { X, ChevronDown, Check, RefreshCw } from 'lucide-react';
 import { DateRangePicker } from './DateRangePicker';
 
 export type SearchScope = 'all' | 'title' | 'keywords' | 'code' | 'ids';
@@ -37,9 +37,11 @@ export interface PortfolioFilterValues {
 
 interface PortfolioFilterProps {
   onFilterChange: (filters: PortfolioFilterValues) => void;
+  onSyncFiles?: () => void;
+  isSyncingFiles?: boolean;
 }
 
-export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
+export function PortfolioFilter({ onFilterChange, onSyncFiles, isSyncingFiles = false }: PortfolioFilterProps) {
   const [search, setSearch] = useState('');
   const [searchField, setSearchField] = useState<SearchScope>('all');
   const [idStatus, setIdStatus] = useState<IdStatusFilter>('all');
@@ -245,6 +247,22 @@ export function PortfolioFilter({ onFilterChange }: PortfolioFilterProps) {
           <option value="totalDownloads-asc">Downloads (Lowest)</option>
         </select>
       </div>
+
+      {onSyncFiles && (
+        <div className="shrink-0 flex items-end">
+          <button
+            type="button"
+            data-testid="portfolio-sync-files-btn"
+            onClick={onSyncFiles}
+            disabled={isSyncingFiles}
+            className="flex items-center gap-1.5 px-3 py-2 bg-background hover:bg-surface-hover border border-border text-foreground text-sm font-medium rounded-md h-10.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Scan public/uploads to link matching images"
+          >
+            <RefreshCw size={14} className={isSyncingFiles ? 'animate-spin text-primary' : 'text-primary'} />
+            <span>{isSyncingFiles ? 'Syncing...' : 'Sync Disk Files'}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

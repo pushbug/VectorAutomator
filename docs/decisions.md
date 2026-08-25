@@ -163,6 +163,13 @@
   5. **Automated Verification:** Added unit tests `UT-API-IMG-CACHE-01`, `UT-LIB-FORMATTERS-02`, and `UT-LIB-STORAGE-01`. All 48 test suites and 304 tests pass.
 - **Impact:** Eliminates stale browser image caching, secures file storage operations, removes redundant code across routes, and streamlines creator portfolio workflow.
 
-
-
-
+## ADR-021: System-Wide Automatic Sales Reconciliation, 100% ADR-020 Image URL Standardization, and Modular SERP Reconciler Infrastructure
+- **Date:** 2026-08-26
+- **Context:** (1) Sales records logged before an artwork was created or before IDs were assigned remained unlinked with `N/A` thumbnails in `/sales` even when a matching artwork existed in `/portfolio`. (2) 4 legacy call sites in Dashboard (`ActivitySplitGrid`) and SERP (`ArtworkSerpDrawer`, `FullSerpModal`) passed raw `filePath` strings into `src` instead of using `getImageUrl()`. (3) SERP reconciliation logic was tightly coupled as inline raw SQL inside `/api/serp/route.ts`. (4) Next.js LCP warnings were emitted on grid views.
+- **Decision:**
+  1. **Proactive Sales Auto-Reconciliation (`src/lib/salesReconciler.ts`):** Implemented `reconcileAllUnlinkedSales(prismaClient)` which scans unlinked `PlatformStats` (`imageId: null`) and automatically binds them to matching `Image` records (`asId`, `ssId`, `vzId`), integrated directly into `GET /api/sales`.
+  2. **100% Universal ADR-020 Image URLs:** Refactored `ActivitySplitGrid.tsx`, `ArtworkSerpDrawer.tsx`, and `FullSerpModal.tsx` to uniformly invoke `getImageUrl()` and use Next.js `unoptimized` flag.
+  3. **Modular SERP Reconciler (`src/lib/serpReconciler.ts`):** Extracted `reconcileImageSerp` and `autoReconcileSerpItems` into a standalone, testable library module with safe fallback handling.
+  4. **LCP Image Eager Loading:** Added `priority={index < 4}` to top 4 cards across `PortfolioGrid`, `CollectionCard`, and `/collections/[id]` views.
+  5. **Automated Verification:** Added unit test suites `UT-UI-PF-LCP-01`, `UT-SALES-RECONCILE-03`, and `UT-SERP-RECONCILE-03` (316/316 tests pass across 50 test files with 0 TypeScript errors).
+- **Impact:** Guarantees zero unlinked sales records when matching artworks exist, achieves 100% universal image URL handling across the entire application, eliminates Next.js LCP warnings, and modularizes background reconciliation pipelines.

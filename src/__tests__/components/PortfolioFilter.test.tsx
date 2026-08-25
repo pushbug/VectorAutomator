@@ -161,5 +161,18 @@ describe('PortfolioFilter Component (UT-UI-PORTFOLIO-SEARCH-FIELD-01)', () => {
     );
     expect(triggerBtn).toHaveTextContent('Missing Adobe ID');
   });
+
+  it('renders sync files button when onSyncFiles is provided and triggers callback', () => {
+    const handleSync = vi.fn();
+    render(<PortfolioFilter onFilterChange={vi.fn()} onSyncFiles={handleSync} isSyncingFiles={false} />);
+
+    const syncBtn = screen.getByTestId('portfolio-sync-files-btn');
+    expect(syncBtn).toBeInTheDocument();
+    expect(syncBtn).toHaveTextContent('Sync Disk Files');
+
+    fireEvent.click(syncBtn);
+    expect(handleSync).toHaveBeenCalledTimes(1);
+  });
 });
+
 

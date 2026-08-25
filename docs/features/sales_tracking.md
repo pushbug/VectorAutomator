@@ -41,4 +41,6 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
 - **Bulk Delete:** Atomic deletion of selected `PlatformStats` IDs with safe re-synchronization of `totalDownloads`, `ssDownloads`, and `asDownloads` rollups on all affected parent images.
 - **Collision-Safe Bulk Date Update:** Shifts dates for selected records to a target UTC midnight date (`YYYY-MM-DDT00:00:00.000Z`). If a record already exists on the target date for `(imageId, platform, targetDate)`, values (`downloads`, `earnings`) are accumulated into the target record and the source duplicate is removed without unique constraint violations. Unlinked records (`imageId = null`) are handled safely without throwing null errors.
 
-
+## 7. Proactive Automatic Reconciliation (`src/lib/salesReconciler.ts`)
+- **Unlinked Sales Scan (`reconcileAllUnlinkedSales`):** Queries unlinked `PlatformStats` (`imageId: null`) on `GET /api/sales` and automatically correlates `platformAssetId` with `Image` records matching `asId`, `ssId`, or `vzId`.
+- **Collision-Safe Binding:** Binds `imageId` and updates rollup counters on parent artworks, ensuring that sales logged prior to artwork entry or ID synchronization automatically display their thumbnails and metadata without manual intervention.

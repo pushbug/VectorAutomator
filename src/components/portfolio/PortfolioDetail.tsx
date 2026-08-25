@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lucide-react';
+import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check, ImageOff } from 'lucide-react';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -61,6 +61,7 @@ export function PortfolioDetail({
   const [isSavingId, setIsSavingId] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [enrichedData, setEnrichedData] = useState<PortfolioImage | null>(null);
+  const [hasImageError, setHasImageError] = useState(false);
 
   const handleCopy = async (text: string, field: string) => {
     if (!text) return;
@@ -74,6 +75,7 @@ export function PortfolioDetail({
 
   React.useEffect(() => {
     setEnrichedData(null);
+    setHasImageError(false);
     if (!image?.id) return;
 
     if (image.totalEarnings !== undefined && image.platformBreakdown !== undefined) {
@@ -225,15 +227,39 @@ export function PortfolioDetail({
           </div>
         </div>
 
-        <div className="relative w-full aspect-video bg-muted rounded-md mb-4 overflow-hidden shrink-0">
-          <Image
-            src={imageUrl}
-            alt={activeImage.title}
-            fill
-            className="object-cover"
-            unoptimized // Avoid CPU spike from aggressive local resizing
-          />
-        </div>
+        {!imageUrl || hasImageError ? (
+          <div 
+            data-testid="portfolio-detail-image-placeholder"
+            className="relative w-full aspect-video bg-muted/40 rounded-md mb-4 overflow-hidden shrink-0 border border-border flex flex-col items-center justify-center gap-2 p-4 text-center"
+          >
+            <ImageOff size={32} className="text-muted/60" />
+            <div>
+              <p className="text-xs font-semibold text-foreground">No Image File Linked</p>
+              <p className="text-[11px] text-muted mt-0.5">Click Edit to upload or sync from public/uploads</p>
+            </div>
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(activeImage)}
+                className="mt-1 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-md hover:bg-primary/90 transition-colors cursor-pointer"
+              >
+                Upload Image
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="relative w-full aspect-video bg-muted rounded-md mb-4 overflow-hidden shrink-0">
+            <Image
+              src={imageUrl}
+              alt={activeImage.title}
+              fill
+              priority
+              className="object-cover"
+              unoptimized // Avoid CPU spike from aggressive local resizing
+              onError={() => setHasImageError(true)}
+            />
+          </div>
+        )}
 
         <div className="flex flex-col gap-4 text-sm text-foreground">
           <div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { autoReconcileSerpItems } from '@/lib/serpReconciler';
 
 export function OPTIONS() {
   return new NextResponse(null, {
@@ -26,28 +27,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Auto-reconcile SerpItems with newly populated Image IDs (asId, ssId, vzId)
-    try {
-      if (prisma.$executeRawUnsafe) {
-        await prisma.$executeRawUnsafe(`
-          UPDATE SerpItem
-          SET isMine = 1,
-              matchedImageId = (
-                SELECT Image.id FROM Image 
-                WHERE Image.asId = SerpItem.assetId 
-                   OR Image.ssId = SerpItem.assetId 
-                   OR Image.vzId = SerpItem.assetId
-                LIMIT 1
-              )
-          WHERE assetId IN (
-            SELECT asId FROM Image WHERE asId IS NOT NULL AND asId != ''
-            UNION
-            SELECT ssId FROM Image WHERE ssId IS NOT NULL AND ssId != ''
-            UNION
-            SELECT vzId FROM Image WHERE vzId IS NOT NULL AND vzId != ''
-          ) AND (isMine = 0 OR isMine IS NULL OR matchedImageId IS NULL);
-        `);
-      }
-    } catch (_) {}
+    await autoReconcileSerpItems(prisma);
 
     // 1. Single Query Detail (for FullSerpModal / Competitor View)
     if (queryId) {

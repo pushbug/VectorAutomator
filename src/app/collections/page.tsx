@@ -316,10 +316,11 @@ export default function CollectionsPage() {
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {paginatedCollections.map((col) => (
+            {paginatedCollections.map((col, idx) => (
               <CollectionCard
                 key={col.id}
                 collection={col}
+                index={idx}
                 onEdit={(c) => setEditingCollection(c)}
                 onDelete={(id, name) => setDeletingTarget({ id, name })}
               />

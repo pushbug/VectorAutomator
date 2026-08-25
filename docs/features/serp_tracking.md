@@ -26,9 +26,15 @@ The Stock SERP Copier module enables microstock creators to capture, analyze, an
 - **`POST /api/serp/paste-sync`:** Atomically parses pasted SERP text, queries `Image.asId` in SQLite database, marks matching portfolio items with `isMine = true` and `matchedImageId`, and creates records within a database transaction.
 - **`GET /api/serp`:** Paginated endpoint returning historical queries with matching image counts and rank highlights.
 
+### 4. Modular SERP Reconciler (`src/lib/serpReconciler.ts`)
+- **Single Artwork Reconciliation (`reconcileImageSerp`):** Updates `SerpItem` records when an artwork is uploaded or edited with `asId`, `ssId`, or `vzId`.
+- **Proactive Batch Reconciliation (`autoReconcileSerpItems`):** Executes on `GET /api/serp` to ensure newly added artworks immediately match historical SERP snapshots.
+
 ## Testing Strategy
 - `UT-SERP-PARSE-01`: Universal TSV/CSV/JSON clipboard parser test suite.
 - `UT-API-SERP-01`: SERP API routes and portfolio matching test suite.
+- `UT-SERP-RECONCILE-03`: Modular SERP reconciliation unit tests (`reconcileImageSerp`, `autoReconcileSerpItems`).
 - `UT-EXT-DOM-PARSER-01`: DOM selector extraction and multi-page rank offset tests.
 - `UT-EXT-AUTHOR-ENRICH-01`: Author detail extraction and jitter bounds tests.
 - `UT-EXT-STEALTH-NAV-01`: Stealth sequence delay and smart linger tests.
+

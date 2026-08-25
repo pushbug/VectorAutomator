@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { syncImageRollup } from '@/lib/salesReconciler';
+import { syncImageRollup, reconcileAllUnlinkedSales } from '@/lib/salesReconciler';
 import { calculatePlatformBreakdown } from '@/lib/formatters';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 
 export async function GET(request: NextRequest) {
   try {
+    // Proactively auto-reconcile any unlinked sales matching existing artworks
+    try {
+      await reconcileAllUnlinkedSales(prisma);
+    } catch (reconcileErr) {
+      console.warn('Auto-reconcile sales warning:', reconcileErr);
+    }
+
     const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);

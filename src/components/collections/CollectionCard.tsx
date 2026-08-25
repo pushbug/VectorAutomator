@@ -8,11 +8,12 @@ import { CollectionSummary } from './CollectionTable';
 
 interface CollectionCardProps {
   collection: CollectionSummary;
+  index?: number;
   onEdit?: (col: CollectionSummary) => void;
   onDelete?: (id: string, name: string) => void;
 }
 
-export function CollectionCard({ collection, onEdit, onDelete }: CollectionCardProps) {
+export function CollectionCard({ collection, index, onEdit, onDelete }: CollectionCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +45,7 @@ export function CollectionCard({ collection, onEdit, onDelete }: CollectionCardP
             src={getImageUrl(collection.coverImage.filePath)}
             alt={collection.name}
             fill
+            priority={index !== undefined ? index < 4 : false}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
             unoptimized

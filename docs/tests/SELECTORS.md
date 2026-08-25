@@ -296,6 +296,9 @@ Always use `data-testid` for element selection in E2E tests.
 | `confirm-quick-import-btn` | Confirm and import button inside Quick Import dialog |
 | `cancel-quick-import-btn` | Cancel button inside Quick Import dialog |
 | `portfolio-id-status-select` | The dropdown select to filter by platform ID status and image file status in portfolio dashboard |
+| `portfolio-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio grid |
+| `portfolio-detail-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio detail |
+| `portfolio-sync-files-btn` | Button in Portfolio to trigger scanning and linking of physical upload files to database |
 
 
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Copy, Check, TrendingUp, Sparkles, FolderArchive, ArrowRight } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
+import { getImageUrl } from '@/lib/formatters';
 
 export interface DashboardAssetItem {
   id: string;
@@ -78,9 +79,10 @@ export function ActivitySplitGrid({ recentUploads, topPerformers }: ActivitySpli
                     <div className="w-10 h-10 rounded-lg bg-surface-hover border border-border/80 relative shrink-0 overflow-hidden flex items-center justify-center">
                       {item.filePath ? (
                         <Image
-                          src={item.filePath}
+                          src={getImageUrl(item.filePath)}
                           alt={item.title}
                           fill
+                          unoptimized
                           className="object-cover"
                           sizes="40px"
                         />
@@ -164,9 +166,10 @@ export function ActivitySplitGrid({ recentUploads, topPerformers }: ActivitySpli
                     <div className="w-10 h-10 rounded-lg bg-surface-hover border border-border/80 relative shrink-0 overflow-hidden flex items-center justify-center">
                       {item.filePath ? (
                         <Image
-                          src={item.filePath}
+                          src={getImageUrl(item.filePath)}
                           alt={item.title}
                           fill
+                          unoptimized
                           className="object-cover"
                           sizes="40px"
                         />

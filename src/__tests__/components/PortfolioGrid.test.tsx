@@ -200,5 +200,84 @@ describe('PortfolioGrid Component', () => {
     fireEvent.click(gridItem);
     expect(handleSelect).toHaveBeenCalledWith(mockImages[0]);
   });
+
+  it('UT-UI-PF-FALLBACK-01: renders graceful placeholder when filePath is empty or on error', () => {
+    const imagesWithMissingFile = [
+      {
+        id: 'img-empty',
+        code: '1604-01',
+        title: 'Company History',
+        keywords: 'history, company',
+        status: 'pending',
+        filePath: '',
+        ssId: null,
+        asId: '108367742',
+        ssDownloads: 0,
+        asDownloads: 0,
+        totalDownloads: 0,
+        totalEarnings: 0,
+        createdAt: '2026-08-01T00:00:00.000Z',
+      },
+    ];
+
+    render(
+      <PortfolioGrid
+        images={imagesWithMissingFile}
+        selectedId={null}
+        onSelect={vi.fn()}
+        isLoading={false}
+        page={1}
+        totalPages={1}
+        onPageChange={vi.fn()}
+      />
+    );
+
+    const placeholder = screen.getByTestId('portfolio-image-placeholder');
+    expect(placeholder).toBeInTheDocument();
+    expect(screen.getByText('No Image')).toBeInTheDocument();
+  });
+
+  it('UT-UI-PF-LCP-01: applies priority eager-loading to top 4 cards and lazy loading to subsequent cards', () => {
+    const fiveImages = Array.from({ length: 5 }, (_, i) => ({
+      id: `img-${i}`,
+      code: `2608-0${i + 1}`,
+      title: `Artwork ${i + 1}`,
+      keywords: `kw${i + 1}`,
+      status: 'uploaded',
+      filePath: `/uploads/2608-0${i + 1}.jpg`,
+      ssId: null,
+      asId: null,
+      ssDownloads: 0,
+      asDownloads: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      createdAt: '2026-08-01T00:00:00.000Z',
+    }));
+
+    const { container } = render(
+      <PortfolioGrid
+        images={fiveImages}
+        selectedId={null}
+        onSelect={vi.fn()}
+        isLoading={false}
+        page={1}
+        totalPages={1}
+        onPageChange={vi.fn()}
+      />
+    );
+
+    const imgElements = container.querySelectorAll('img');
+    expect(imgElements).toHaveLength(5);
+
+    // First 4 images (index 0, 1, 2, 3) must have priority (eager / no loading="lazy")
+    for (let i = 0; i < 4; i++) {
+      expect(imgElements[i].getAttribute('loading')).not.toBe('lazy');
+    }
+
+    // 5th image (index 4) must NOT have priority (loading="lazy")
+    expect(imgElements[4].getAttribute('loading')).toBe('lazy');
+  });
 });
+
+
 

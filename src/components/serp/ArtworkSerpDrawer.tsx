@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, DollarSign, Download, Sparkles, Calendar, Search, Loader2, Image as ImageIcon, Award } from 'lucide-react';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
 
 interface ActiveKeyword {
   keyword: string;
@@ -158,7 +158,7 @@ export function ArtworkSerpDrawer({ imageId, onClose }: ArtworkSerpDrawerProps) 
               <div className="w-16 h-16 rounded-xl bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
                 {data.artwork.filePath ? (
                   <img
-                    src={data.artwork.filePath}
+                    src={getImageUrl(data.artwork.filePath)}
                     alt={data.artwork.title}
                     className="w-full h-full object-cover"
                   />

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { inferImageExtension, saveImageFile, deleteOldImageFile } from '@/lib/fileStorage';
+import { inferImageExtension, saveImageFile, deleteOldImageFile, syncPhysicalUploadFiles } from '@/lib/fileStorage';
 import fs from 'fs/promises';
 
 vi.mock('fs/promises', () => ({
@@ -8,11 +8,17 @@ vi.mock('fs/promises', () => ({
     mkdir: vi.fn(),
     writeFile: vi.fn(),
     unlink: vi.fn(),
+    readdir: vi.fn(),
   },
   access: vi.fn(),
   mkdir: vi.fn(),
   writeFile: vi.fn(),
   unlink: vi.fn(),
+  readdir: vi.fn(),
+}));
+
+vi.mock('@/lib/dbBackup', () => ({
+  scheduleAutoBackup: vi.fn(),
 }));
 
 describe('File Storage Utilities (UT-LIB-STORAGE-01)', () => {
@@ -101,3 +107,73 @@ describe('File Storage Utilities (UT-LIB-STORAGE-01)', () => {
     });
   });
 });
+
+describe('Physical Upload File Synchronization (UT-LIB-STORAGE-02)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('scans uploads directory and links matched files with case-insensitive extensions', async () => {
+    vi.mocked(fs.readdir).mockResolvedValueOnce([
+      '.gitkeep',
+      '1604-01.jpg',
+      '2002-01.JPG',
+      '2005-02.png',
+      '2005-03.PNG',
+      'unknown.txt',
+    ] as any);
+
+    const mockPrisma = {
+      image: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'img-1', code: '1604-01', status: 'pending' },
+          { id: 'img-2', code: '2002-01', status: 'pending' },
+          { id: 'img-3', code: '2005-02', status: 'uploaded' },
+          { id: 'img-4', code: '2005-03', status: 'pending' },
+          { id: 'img-5', code: '2006-01', status: 'pending' },
+        ]),
+        update: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    const result = await syncPhysicalUploadFiles(mockPrisma, '/app');
+
+    expect(result.syncedCount).toBe(4);
+    expect(result.syncedCodes).toEqual(['1604-01', '2002-01', '2005-02', '2005-03']);
+
+    expect(mockPrisma.image.update).toHaveBeenCalledWith({
+      where: { id: 'img-1' },
+      data: { filePath: '/uploads/1604-01.jpg', status: 'uploaded' },
+    });
+
+    expect(mockPrisma.image.update).toHaveBeenCalledWith({
+      where: { id: 'img-2' },
+      data: { filePath: '/uploads/2002-01.JPG', status: 'uploaded' },
+    });
+
+    expect(mockPrisma.image.update).toHaveBeenCalledWith({
+      where: { id: 'img-3' },
+      data: { filePath: '/uploads/2005-02.png', status: 'uploaded' },
+    });
+
+    expect(mockPrisma.image.update).toHaveBeenCalledWith({
+      where: { id: 'img-4' },
+      data: { filePath: '/uploads/2005-03.PNG', status: 'uploaded' },
+    });
+  });
+
+  it('returns zero synced when uploads folder cannot be read', async () => {
+    vi.mocked(fs.readdir).mockRejectedValueOnce(new Error('ENOENT'));
+    const mockPrisma = {
+      image: {
+        findMany: vi.fn(),
+        update: vi.fn(),
+      },
+    };
+
+    const result = await syncPhysicalUploadFiles(mockPrisma, '/app');
+    expect(result).toEqual({ syncedCount: 0, syncedCodes: [] });
+    expect(mockPrisma.image.findMany).not.toHaveBeenCalled();
+  });
+});
+

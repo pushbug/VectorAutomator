@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, ExternalLink, Loader2, Users, Image as ImageIcon, Sparkles, Calendar } from 'lucide-react';
+import { getImageUrl } from '@/lib/formatters';
 
 interface SerpItemDetail {
   id: string;
@@ -325,7 +326,7 @@ export function FullSerpModal({ queryId, onClose }: FullSerpModalProps) {
                                 />
                               ) : item.matchedImage?.filePath ? (
                                 <img
-                                  src={item.matchedImage.filePath}
+                                  src={getImageUrl(item.matchedImage.filePath)}
                                   alt={item.title}
                                   className="w-10 h-10 rounded-lg object-cover bg-surface border border-border shrink-0"
                                   loading="lazy"

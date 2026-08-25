@@ -9,6 +9,7 @@ const {
   mockStatsCreate,
   mockStatsUpdate,
   mockStatsDelete,
+  mockImageFindMany,
   mockImageFindUnique,
   mockImageUpdate,
 } = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const {
   mockStatsCreate: vi.fn(),
   mockStatsUpdate: vi.fn(),
   mockStatsDelete: vi.fn(),
+  mockImageFindMany: vi.fn(),
   mockImageFindUnique: vi.fn(),
   mockImageUpdate: vi.fn(),
 }));
@@ -34,6 +36,7 @@ vi.mock('@/generated/prisma/client', () => {
         delete: mockStatsDelete,
       };
       image = {
+        findMany: mockImageFindMany,
         findUnique: mockImageFindUnique,
         update: mockImageUpdate,
       };
@@ -44,6 +47,7 @@ vi.mock('@/generated/prisma/client', () => {
 describe('Sales API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockImageFindMany.mockResolvedValue([]);
   });
 
   describe('GET', () => {
@@ -69,12 +73,18 @@ describe('Sales API Route', () => {
         },
       ];
 
-      mockStatsFindMany
-        .mockResolvedValueOnce(mockSales) // For paginated items
-        .mockResolvedValueOnce([ // For summary calculations
-          { platform: 'Adobe Stock', downloads: 10, earnings: 25.5 },
-          { platform: 'Shutterstock', downloads: 5, earnings: 5.0 },
-        ]);
+      mockStatsFindMany.mockImplementation((query) => {
+        if (query?.where?.imageId === null && query?.where?.platformAssetId?.not === null) {
+          return Promise.resolve([]);
+        }
+        if (query?.select) {
+          return Promise.resolve([
+            { platform: 'Adobe Stock', downloads: 10, earnings: 25.5 },
+            { platform: 'Shutterstock', downloads: 5, earnings: 5.0 },
+          ]);
+        }
+        return Promise.resolve(mockSales);
+      });
       mockStatsCount.mockResolvedValue(2);
 
       const request = new NextRequest('http://localhost:3000/api/sales?page=1&limit=50');
@@ -90,9 +100,10 @@ describe('Sales API Route', () => {
     });
 
     it('filters sales by platform=unlinked (imageId=null)', async () => {
-      mockStatsFindMany.mockResolvedValueOnce([]);
-      mockStatsCount.mockResolvedValueOnce(0);
-      mockStatsFindMany.mockResolvedValueOnce([]);
+      mockStatsFindMany.mockImplementation((query) => {
+        return Promise.resolve([]);
+      });
+      mockStatsCount.mockResolvedValue(0);
 
       const request = new NextRequest('http://localhost:3000/api/sales?platform=unlinked');
       const response = await GET(request);

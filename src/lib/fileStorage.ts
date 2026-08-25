@@ -1,9 +1,15 @@
 import path from 'path';
 import fs from 'fs/promises';
+import { scheduleAutoBackup } from './dbBackup';
 
 export interface SaveImageFileResult {
   dbFilePath: string;
   physicalPath: string;
+}
+
+export interface SyncPhysicalUploadResult {
+  syncedCount: number;
+  syncedCodes: string[];
 }
 
 /**
@@ -72,3 +78,83 @@ export async function deleteOldImageFile(
     // Gracefully ignore missing or inaccessible file unlinks
   }
 }
+
+/**
+ * Scans public/uploads for physical files matching image codes and links them to database records where filePath is missing.
+ */
+export async function syncPhysicalUploadFiles(
+  prismaClient: any,
+  baseDir: string = process.cwd()
+): Promise<SyncPhysicalUploadResult> {
+  const uploadsDir = path.resolve(baseDir, 'public', 'uploads');
+  let files: string[] = [];
+  try {
+    files = await fs.readdir(uploadsDir);
+  } catch {
+    return { syncedCount: 0, syncedCodes: [] };
+  }
+
+  const validExts = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif']);
+  const diskCodeMap = new Map<string, string>();
+
+  for (const filename of files) {
+    if (filename.startsWith('.')) continue;
+    const ext = path.extname(filename).toLowerCase();
+    if (!validExts.has(ext)) continue;
+    const nameWithoutExt = path.basename(filename, path.extname(filename));
+    const normalizedKey = nameWithoutExt.trim().toLowerCase();
+    if (!diskCodeMap.has(normalizedKey)) {
+      diskCodeMap.set(normalizedKey, filename);
+    }
+  }
+
+  if (diskCodeMap.size === 0) {
+    return { syncedCount: 0, syncedCodes: [] };
+  }
+
+  const targetImages = await prismaClient.image.findMany({
+    where: {
+      filePath: '',
+      code: { not: null },
+    },
+    select: {
+      id: true,
+      code: true,
+      status: true,
+    },
+  });
+
+  const syncedCodes: string[] = [];
+
+  for (const img of targetImages) {
+    if (!img.code) continue;
+    const codeKey = img.code.trim().toLowerCase();
+    const sanitizedKey = img.code.trim().replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+
+    const matchedFilename = diskCodeMap.get(codeKey) || diskCodeMap.get(sanitizedKey);
+    if (matchedFilename) {
+      const newFilePath = `/uploads/${matchedFilename}`;
+      const newStatus = img.status === 'pending' ? 'uploaded' : img.status;
+
+      await prismaClient.image.update({
+        where: { id: img.id },
+        data: {
+          filePath: newFilePath,
+          status: newStatus,
+        },
+      });
+
+      syncedCodes.push(img.code);
+    }
+  }
+
+  if (syncedCodes.length > 0) {
+    scheduleAutoBackup();
+  }
+
+  return {
+    syncedCount: syncedCodes.length,
+    syncedCodes,
+  };
+}
+

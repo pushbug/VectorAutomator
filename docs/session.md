@@ -1,27 +1,27 @@
-### Goal: Image Caching & Dynamic ETag Revalidation, Universal Image URL & File Storage Refactoring, and Action-Oriented Portfolio Filters.
+### Goal: Proactive Sales Auto-Reconciliation, 100% ADR-020 Universal Image URLs, Modular SERP Reconciler, and LCP Grid Optimization.
 
 ### Status: COMPLETE
 
 ### Done:
-- Implemented dynamic ETag and HTTP 304 conditional revalidation with `Cache-Control: no-cache, must-revalidate` in `/api/image`.
-- Streamlined Portfolio ID Filter down to 5 action-oriented options (`all`, `missing_asId`, `missing_ssId`, `missing_all_ids`, `missing_image_file`).
-- Consolidated `getImageUrl()` and `getTodayDateString()` into `src/lib/formatters.ts`, updating 12 UI components to eliminate manual `/api/image` concatenations.
-- Centralized image saving and unlinking into `src/lib/fileStorage.ts` (`saveImageFile`, `deleteOldImageFile`, `inferImageExtension`), refactoring `/api/upload` and `/api/portfolio`.
-- Added unit test suites `UT-API-IMG-CACHE-01`, `UT-LIB-FORMATTERS-02`, and `UT-LIB-STORAGE-01` (304/304 tests passing across 48 test files with 0 type errors).
-- Documented ADR-020 in `docs/decisions.md` and registered tests in `docs/tests/CATALOG.md`.
+- Implemented proactive automatic sales reconciliation (`reconcileAllUnlinkedSales` in `src/lib/salesReconciler.ts`) integrated into `GET /api/sales` to automatically bind unlinked `PlatformStats` to matching artworks.
+- Achieved 100% ADR-020 compliance across Dashboard (`ActivitySplitGrid`) and SERP (`ArtworkSerpDrawer`, `FullSerpModal`) by wrapping all thumbnail paths with `getImageUrl()` and `unoptimized`.
+- Modularized SERP auto-reconciliation into `src/lib/serpReconciler.ts` (`reconcileImageSerp`, `autoReconcileSerpItems`), decoupling raw SQL from `/api/serp/route.ts`.
+- Optimized Next.js Largest Contentful Paint (LCP) across all grid views (`PortfolioGrid`, `CollectionCard`, Collection Detail) with `priority={index < 4}` on above-the-fold image cards.
+- Added and registered unit tests `UT-UI-PF-LCP-01`, `UT-SALES-RECONCILE-03`, and `UT-SERP-RECONCILE-03` (316/316 tests passing across 50 test files with 0 TypeScript errors).
+- Documented ADR-021 in `docs/decisions.md` and updated scoped feature docs.
 
 ### Next:
-- 1. Monitor live image replacement workflow and file upload stability in daily operations.
-- 2. Expand keyword performance analytics and cross-platform sync capabilities.
+- 1. Monitor live microstock sales statements and SERP crawler imports in daily contributor operations.
+- 2. Expand keyword performance intelligence and cross-platform sync capabilities.
 
 ### Decisions:
-- Centralized Image URL: Always use `getImageUrl(filePath, updatedAt)` from `@/lib/formatters` for automatic URI encoding and versioned cache-busting.
-- Shared Storage Logic: Always use `saveImageFile` and `deleteOldImageFile` from `@/lib/fileStorage` for disk mutations.
-- ETag Revalidation: Images are served with dynamic ETags derived from file size and mtimeMs, enabling instant browser refresh on overwrite without sacrificing bandwidth.
+- Proactive Sales Reconciler: Always run `reconcileAllUnlinkedSales(prisma)` on `GET /api/sales` to ensure zero orphaned sales records when matching artworks exist.
+- 100% Universal Image URL: Never pass raw `filePath` to `src` — always use `getImageUrl(filePath, updatedAt)` from `@/lib/formatters`.
+- Modular Reconcilers: All database cross-referencing and rollup syncing live in pure library modules under `src/lib/`.
+- Safe Test Mocking: Automated tests mock Prisma delegates in memory and never touch `dev.db`.
 
 ### Skills:
 - [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and TDD-Lite specification.
-- [`coding`](.agents/skills/coding/SKILL.md) — File storage consolidation, image URL formatting, and route refactoring.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — System-wide verification, zero-regression audit, and test coverage validation.
+- [`coding`](.agents/skills/coding/SKILL.md) — Reconciler implementation, image URL standardization, and LCP optimization.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Full diff audits, persistence safety checks, and zero-regression testing.
 - [`handoff`](.agents/skills/handoff/SKILL.md) — Documentation synchronization, ADR logging, session wrap-up, and git push.
-

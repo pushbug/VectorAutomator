@@ -9,7 +9,7 @@ import { PortfolioFloatingToolbar } from '@/components/portfolio/PortfolioFloati
 import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
 import { SmartIdPasteModal } from '@/components/portfolio/SmartIdPasteModal';
-import { Plus, Calendar, Layers, Download, Sparkles } from 'lucide-react';
+import { Plus, Calendar, Layers, Download, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 export default function PortfolioPage() {
@@ -23,6 +23,8 @@ export default function PortfolioPage() {
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isSyncingFiles, setIsSyncingFiles] = useState(false);
+  const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
   
   // Summary metrics state
   const [summary, setSummary] = useState({
@@ -136,6 +138,30 @@ export default function PortfolioPage() {
     setSelectedImageIds([]);
   }, []);
 
+  const handleSyncFiles = async () => {
+    setIsSyncingFiles(true);
+    try {
+      const res = await fetch('/api/portfolio/sync-files', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncToastMessage(
+          data.syncedCount > 0
+            ? `Successfully linked ${data.syncedCount} image ${data.syncedCount === 1 ? 'file' : 'files'}!`
+            : 'All image files in uploads are already up to date.'
+        );
+        await fetchPortfolio();
+        setTimeout(() => setSyncToastMessage(null), 4000);
+      } else {
+        alert(data.error || 'Failed to sync files');
+      }
+    } catch (err) {
+      console.error('Failed to sync files:', err);
+      alert('Error syncing files from uploads folder');
+    } finally {
+      setIsSyncingFiles(false);
+    }
+  };
+
   const handleUpdateDownloads = async (id: string, ssDownloads: number, asDownloads: number) => {
     try {
       const res = await fetch('/api/portfolio', {
@@ -232,7 +258,28 @@ export default function PortfolioPage() {
             </button>
           </div>
         </div>
-        <PortfolioFilter onFilterChange={handleFilterChange} />
+
+        {syncToastMessage && (
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium rounded-lg flex items-center justify-between animate-in fade-in duration-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
+              <span>{syncToastMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSyncToastMessage(null)}
+              className="text-muted hover:text-foreground text-xs p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <PortfolioFilter
+          onFilterChange={handleFilterChange}
+          onSyncFiles={handleSyncFiles}
+          isSyncingFiles={isSyncingFiles}
+        />
 
         {/* Portfolio Summary Stats Bar */}
         <div

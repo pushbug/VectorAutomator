@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { reconcileImageSales, syncImageRollup } from '@/lib/salesReconciler';
+import { reconcileImageSales, syncImageRollup, reconcileAllUnlinkedSales } from '@/lib/salesReconciler';
 
 describe('Sales Reconciler Suite', () => {
   beforeEach(() => {
@@ -166,6 +166,83 @@ describe('Sales Reconciler Suite', () => {
         totalDownloads: 25,
         ssDownloads: 8,
         asDownloads: 12,
+      },
+    });
+  });
+
+  it('UT-SALES-RECONCILE-03: reconcileAllUnlinkedSales scans unlinked records and binds to matching artworks', async () => {
+    const unlinkedRecords = [
+      {
+        id: 'stat-unlinked-1',
+        imageId: null,
+        platform: 'Adobe Stock',
+        platformAssetId: '583485973',
+        earnings: 1.1,
+        downloads: 1,
+        date: new Date('2026-08-01T00:00:00.000Z'),
+      },
+    ];
+
+    const matchingImages = [
+      {
+        id: 'img-matched-1',
+        asId: '583485973',
+        ssId: null,
+        vzId: null,
+      },
+    ];
+
+    const mockStatsFindMany = vi.fn().mockImplementation((query) => {
+      if (query.where?.imageId === null && query.where?.platformAssetId?.not === null) {
+        return Promise.resolve(unlinkedRecords);
+      }
+      if (query.where?.imageId === null && query.where?.platformAssetId === '583485973') {
+        return Promise.resolve(unlinkedRecords);
+      }
+      if (query.where?.imageId === 'img-matched-1') {
+        return Promise.resolve([
+          {
+            id: 'stat-unlinked-1',
+            imageId: 'img-matched-1',
+            platform: 'Adobe Stock',
+            earnings: 1.1,
+            downloads: 1,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const mockImageFindMany = vi.fn().mockResolvedValue(matchingImages);
+    const mockFindFirst = vi.fn().mockResolvedValue(null);
+    const mockUpdate = vi.fn().mockResolvedValue({});
+    const mockImageUpdate = vi.fn().mockResolvedValue({});
+
+    const mockPrisma = {
+      platformStats: {
+        findMany: mockStatsFindMany,
+        findFirst: mockFindFirst,
+        update: mockUpdate,
+        delete: vi.fn(),
+      },
+      image: {
+        findMany: mockImageFindMany,
+        update: mockImageUpdate,
+      },
+    };
+
+    const result = await reconcileAllUnlinkedSales(mockPrisma);
+    expect(result.reconciledCount).toBe(1);
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'stat-unlinked-1' },
+      data: { imageId: 'img-matched-1' },
+    });
+    expect(mockImageUpdate).toHaveBeenCalledWith({
+      where: { id: 'img-matched-1' },
+      data: {
+        totalDownloads: 1,
+        ssDownloads: 0,
+        asDownloads: 1,
       },
     });
   });

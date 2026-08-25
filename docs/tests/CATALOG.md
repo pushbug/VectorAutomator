@@ -106,10 +106,12 @@
 | `UT-API-IMG-CACHE-01` | Verify /api/image dynamic ETag generation, conditional 304 Not Modified, and no-cache revalidation headers | `src/__tests__/api/image.test.ts` |
 | `UT-LIB-FORMATTERS-02` | Verify getImageUrl URI encoding, fallback handling, timestamp cache-busting, and getTodayDateString | `src/__tests__/lib/formatters.test.ts` |
 | `UT-LIB-STORAGE-01` | Verify inferImageExtension, saveImageFile sanitization/directory creation, and deleteOldImageFile safe unlinking | `src/__tests__/lib/fileStorage.test.ts` |
-
-
-
-
+| `UT-LIB-STORAGE-02` | Verify syncPhysicalUploadFiles directory scanning, case-insensitive extension matching, and DB batch linking | `src/__tests__/lib/fileStorage.test.ts` |
+| `UT-API-PF-SYNC-FILES-01` | Verify /api/portfolio/sync-files triggers upload file reconciliation and returns synced count | `src/__tests__/api/portfolio_sync_files.test.ts` |
+| `UT-UI-PF-FALLBACK-01` | Verify PortfolioGrid and PortfolioDetail render graceful placeholder and handle image load errors | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-UI-PF-LCP-01` | Verify PortfolioGrid applies eager loading priority to top 4 cards and lazy loading to subsequent cards | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-SALES-RECONCILE-03` | Verify reconcileAllUnlinkedSales scans unlinked records and binds to matching artworks | `src/__tests__/lib/salesReconciler.test.ts` |
+| `UT-SERP-RECONCILE-03` | Verify reconcileImageSerp and autoReconcileSerpItems batch reconciliation | `src/__tests__/lib/serpReconciler.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |

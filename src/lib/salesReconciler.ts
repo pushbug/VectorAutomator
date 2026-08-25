@@ -117,3 +117,56 @@ export async function syncImageRollup(
     },
   });
 }
+
+/**
+ * Scans all unlinked PlatformStats (where imageId is null) and reconciles them
+ * with existing Image records whose asId, ssId, or vzId match platformAssetId.
+ */
+export async function reconcileAllUnlinkedSales(
+  prismaClient: any
+): Promise<{ reconciledCount: number }> {
+  if (!prismaClient?.platformStats || !prismaClient?.image) return { reconciledCount: 0 };
+
+  const unlinkedStats = await prismaClient.platformStats.findMany({
+    where: {
+      imageId: null,
+      platformAssetId: { not: null },
+    },
+  });
+
+  if (!unlinkedStats || unlinkedStats.length === 0) return { reconciledCount: 0 };
+
+  const assetIds = Array.from(
+    new Set(unlinkedStats.map((s: any) => s.platformAssetId).filter(Boolean))
+  );
+
+  if (assetIds.length === 0) return { reconciledCount: 0 };
+
+  const matchingImages = await prismaClient.image.findMany({
+    where: {
+      OR: [
+        { asId: { in: assetIds } },
+        { ssId: { in: assetIds } },
+        { vzId: { in: assetIds } },
+      ],
+    },
+    select: {
+      id: true,
+      asId: true,
+      ssId: true,
+      vzId: true,
+    },
+  });
+
+  if (!matchingImages || matchingImages.length === 0) return { reconciledCount: 0 };
+
+  let totalReconciled = 0;
+
+  for (const img of matchingImages) {
+    const result = await reconcileImageSales(prismaClient, img);
+    totalReconciled += result.reconciledCount;
+  }
+
+  return { reconciledCount: totalReconciled };
+}
+

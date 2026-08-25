@@ -423,11 +423,11 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
                         src={getImageUrl(img.filePath)}
                         alt={img.code || img.title}
                         fill
+                        priority={index < 4}
                         sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
                         className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
                         unoptimized
                       />
-
                     </div>
 
                     {/* Bottom Info */}
