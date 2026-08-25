@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Download, MoreVertical, Trash2, Edit, FolderKanban, Sparkles, Layers } from 'lucide-react';
-import { formatCurrency, formatNumber, formatDisplayDate } from '@/lib/formatters';
+import { formatCurrency, formatNumber, formatDisplayDate, getImageUrl } from '@/lib/formatters';
 import { CollectionSummary } from './CollectionTable';
 
 interface CollectionCardProps {
@@ -41,7 +41,7 @@ export function CollectionCard({ collection, onEdit, onDelete }: CollectionCardP
       >
         {collection.coverImage ? (
           <Image
-            src={`/api/image?path=${encodeURIComponent(collection.coverImage.filePath)}`}
+            src={getImageUrl(collection.coverImage.filePath)}
             alt={collection.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -49,6 +49,7 @@ export function CollectionCard({ collection, onEdit, onDelete }: CollectionCardP
             unoptimized
           />
         ) : (
+
           <div className="flex flex-col items-center justify-center gap-2 text-muted">
             <FolderKanban size={32} className="text-primary/60" />
             <span className="text-xs">Empty Collection</span>

@@ -161,25 +161,31 @@ export function parseContributorHtml(html: string): ContributorItem[] {
 
   // Regex fallback if items empty or DOMParser is unavailable
   if (items.length === 0) {
-    const titleRegex = /<div\s+title="([^"]+)"[^>]*>([\s\S]*?)<\/div>/gi;
-    let cardMatch: RegExpExecArray | null;
-    while ((cardMatch = titleRegex.exec(html)) !== null) {
-      const title = cardMatch[1].trim();
-      const inner = cardMatch[2];
-      const imgMatch = inner.match(/_F_(\d+)_/);
-      if (imgMatch) {
-        const asId = imgMatch[1];
-        if (!seenIds.has(asId)) {
-          seenIds.add(asId);
-          let downloads = 0;
-          const dlMatch = inner.match(/<span[^>]*class="[^"]*text-medium[^"]*"[^>]*>([0-9,]+)<\/span>/i);
-          if (dlMatch) {
-            const parsed = parseInt(dlMatch[1].replace(/,/g, ''), 10);
-            if (!isNaN(parsed)) downloads = parsed;
-          }
-          items.push({ asId, title, downloads });
-        }
+    const cardChunks = html.split(/(?=<div\s+title=)/i);
+    for (const chunk of cardChunks) {
+      const titleMatch = chunk.match(/<div\s+title="([^"]+)"/i);
+      if (!titleMatch) continue;
+      const title = titleMatch[1].trim();
+
+      const imgMatch = chunk.match(/_F_(\d+)_/);
+      if (!imgMatch) continue;
+      const asId = imgMatch[1];
+      if (seenIds.has(asId)) continue;
+      seenIds.add(asId);
+
+      let downloads = 0;
+      const dlMatch =
+        chunk.match(/downloads<\/div>\s*<span[^>]*class="[^"]*text-medium[^"]*"[^>]*>([0-9,]+)<\/span>/i) ||
+        chunk.match(/<span[^>]*class="[^"]*text-medium[^"]*"[^>]*>([0-9,]+)<\/span>/i);
+      if (dlMatch) {
+        const parsed = parseInt(dlMatch[1].replace(/,/g, ''), 10);
+        if (!isNaN(parsed)) downloads = parsed;
       }
+
+      const srcMatch = chunk.match(/src="([^"]+_F_\d+_[^"]+)"/i);
+      const thumbnailUrl = srcMatch ? srcMatch[1] : '';
+
+      items.push({ asId, title, downloads, thumbnailUrl });
     }
   }
 

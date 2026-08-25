@@ -14,7 +14,9 @@ import {
   Edit3, 
   Trash2 
 } from 'lucide-react';
-import { formatCurrency, formatNumber, formatDisplayDate } from '@/lib/formatters';
+import { formatCurrency, formatNumber, formatDisplayDate, getImageUrl } from '@/lib/formatters';
+
+
 
 export interface CollectionSummary {
   id: string;
@@ -175,13 +177,14 @@ export function CollectionTable({
                     <div className="relative w-11 h-11 shrink-0 rounded-lg bg-background border border-border overflow-hidden flex items-center justify-center p-1">
                       {col.coverImage ? (
                         <Image
-                          src={`/api/image?path=${encodeURIComponent(col.coverImage.filePath)}`}
+                          src={getImageUrl(col.coverImage.filePath)}
                           alt={col.name}
                           fill
                           sizes="44px"
                           className="object-contain p-0.5"
                           unoptimized
                         />
+
                       ) : (
                         <FolderKanban size={20} className="text-primary/50" />
                       )}

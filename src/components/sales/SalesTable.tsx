@@ -5,7 +5,11 @@ import Image from 'next/image';
 import { Trash2, Download, Calendar, ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, Eye, X } from 'lucide-react';
 import { DateRangePicker } from '../portfolio/DateRangePicker';
 import { SALES_FILTER_PLATFORMS } from '@/lib/platforms';
-import { formatCurrency, formatNumber, formatTableDate } from '@/lib/formatters';
+import { formatCurrency, formatNumber, formatTableDate, getImageUrl } from '@/lib/formatters';
+
+
+
+
 import { PaginationCapsule } from '../common/PaginationCapsule';
 
 export interface SaleItem {
@@ -367,7 +371,7 @@ export function SalesTable({
                               onMouseEnter={(e) => {
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 setHoveredThumb({
-                                  src: `/api/image?path=${encodeURIComponent(sale.image!.filePath)}`,
+                                  src: getImageUrl(sale.image!.filePath),
                                   title: sale.image!.title,
                                   code: sale.image!.code || undefined,
                                   x: rect.right + 12,
@@ -380,7 +384,7 @@ export function SalesTable({
                               onMouseLeave={() => setHoveredThumb(null)}
                             >
                               <Image
-                                src={`/api/image?path=${encodeURIComponent(sale.image.filePath)}`}
+                                src={getImageUrl(sale.image.filePath)}
                                 alt={sale.image.title || 'Image'}
                                 fill
                                 className="object-cover"
@@ -388,6 +392,7 @@ export function SalesTable({
                               />
                             </div>
                           )}
+
                           <div className="min-w-0">
                             {sale.image.code && (
                               <span className="font-mono font-bold text-xs text-foreground mr-1.5">

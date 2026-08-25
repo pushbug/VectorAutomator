@@ -247,7 +247,115 @@ describe('Portfolio API Route', () => {
       expect(data.data[1].id).toBe('1'); // $5.00 second
       expect(data.data[0].totalEarnings).toBe(50.0);
     });
+
+    it('UT-API-PF-FILTER-ID-01: filters by idStatus across platform IDs and image file presence', async () => {
+      mockFindMany.mockResolvedValue([{ id: '1', title: 'Test Vector' }]);
+      mockCount.mockResolvedValue(1);
+
+      // 1. has_asId
+      const reqHasAs = new NextRequest('http://localhost:3000/api/portfolio?idStatus=has_asId');
+      await GET(reqHasAs);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [
+              { asId: { not: null } },
+              { NOT: { asId: '' } },
+            ],
+          },
+        })
+      );
+
+      // 2. missing_asId
+      const reqMissingAs = new NextRequest('http://localhost:3000/api/portfolio?idStatus=missing_asId');
+      await GET(reqMissingAs);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { asId: null },
+              { asId: '' },
+            ],
+          },
+        })
+      );
+
+      // 3. has_ssId
+      const reqHasSs = new NextRequest('http://localhost:3000/api/portfolio?idStatus=has_ssId');
+      await GET(reqHasSs);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [
+              { ssId: { not: null } },
+              { NOT: { ssId: '' } },
+            ],
+          },
+        })
+      );
+
+      // 4. missing_ssId
+      const reqMissingSs = new NextRequest('http://localhost:3000/api/portfolio?idStatus=missing_ssId');
+      await GET(reqMissingSs);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { ssId: null },
+              { ssId: '' },
+            ],
+          },
+        })
+      );
+
+      // 5. missing_image_file
+      const reqMissingFile = new NextRequest('http://localhost:3000/api/portfolio?idStatus=missing_image_file');
+      await GET(reqMissingFile);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            filePath: '',
+          },
+        })
+      );
+
+      // 6. has_image_file
+      const reqHasFile = new NextRequest('http://localhost:3000/api/portfolio?idStatus=has_image_file');
+      await GET(reqHasFile);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            filePath: { not: '' },
+          },
+        })
+      );
+
+
+      // 7. Combination of search and idStatus
+      const reqCombined = new NextRequest('http://localhost:3000/api/portfolio?search=business&idStatus=missing_asId');
+      await GET(reqCombined);
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { title: { contains: 'business' } },
+                ]),
+              }),
+              {
+                OR: [
+                  { asId: null },
+                  { asId: '' },
+                ],
+              },
+            ],
+          },
+        })
+      );
+    });
   });
+
 
   describe('PATCH', () => {
     it('updates download counts and computes totalDownloads', async () => {

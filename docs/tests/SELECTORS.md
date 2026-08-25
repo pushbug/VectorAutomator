@@ -101,6 +101,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `dash-top-item-{id}` | Top performing vector item row in Dashboard activity grid |
 | `portfolio-copy-title-btn` | Button next to Title in Portfolio Detail to copy title text |
 | `portfolio-copy-keywords-btn` | Button next to Keywords in Portfolio Detail to copy keywords text |
+| `portfolio-copy-platform-id-{platform}-btn` | Button next to Platform badge in Portfolio Detail to copy platform asset ID |
 | `keyword-suggest-search-field-select` | Search scope dropdown select (All / Title & Keywords / Code & IDs) in KeywordSuggester |
 | `keyword-suggest-search-input` | Search input in KeywordSuggester panel |
 | `keyword-suggest-search-clear-btn` | Clear button for search input in KeywordSuggester |
@@ -285,6 +286,17 @@ Always use `data-testid` for element selection in E2E tests.
 | `serp-kpi-best-rank` | KPI card display for highest ranking position |
 | `artwork-serp-drawer` | Slide-over inspector drawer for artwork keyword & sales correlation |
 | `full-serp-modal` | Modal dialog displaying full 100-item SERP search results & competitor author leaderboard |
+| `quick-import-dialog` | Modal dialog for creating placeholder artwork during Adobe ID paste sync |
+| `quick-import-date-picker-trigger` | Date picker input trigger inside Quick Import dialog |
+| `quick-import-date-picker-popover` | Date picker popover calendar inside Quick Import dialog |
+| `quick-import-code-input` | YYMM-Seq image code input field inside Quick Import dialog |
+| `quick-import-title-input` | Title textarea inside Quick Import dialog |
+| `quick-import-keywords-input` | Keywords textarea inside Quick Import dialog |
+| `quick-import-category-input` | Category input field inside Quick Import dialog |
+| `confirm-quick-import-btn` | Confirm and import button inside Quick Import dialog |
+| `cancel-quick-import-btn` | Cancel button inside Quick Import dialog |
+| `portfolio-id-status-select` | The dropdown select to filter by platform ID status and image file status in portfolio dashboard |
+
 
 
 

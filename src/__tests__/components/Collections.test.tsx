@@ -115,6 +115,23 @@ describe('Collections UI Components (UT-UI-COLLECTION-CARDS-01, UT-UI-COLLECTION
     expect(await screen.findByText('Copied 3 Tags!')).toBeInTheDocument();
   });
 
+  it('UT-UI-COLLECTION-DETAIL-02: TopSharedKeywordsBar invokes onViewModeChange when controlled', () => {
+    const handleViewModeChange = vi.fn();
+    render(
+      <TopSharedKeywordsBar
+        keywords={mockTopKeywords}
+        totalImages={10}
+        selectedKeyword="thai"
+        viewMode="frequency"
+        onViewModeChange={handleViewModeChange}
+      />
+    );
+
+    const controlledDlBtn = screen.getByTestId('collection-keywords-view-dl-btn');
+    fireEvent.click(controlledDlBtn);
+    expect(handleViewModeChange).toHaveBeenCalledWith('downloads');
+  });
+
   it('CreateCollectionModal submits valid collection name and selected image IDs', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

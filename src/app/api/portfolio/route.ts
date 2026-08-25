@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
-import { parseImageCode } from '@/lib/imageCode';
+import { parseImageCode, getNextImageCode } from '@/lib/imageCode';
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
 import { calculatePlatformBreakdown } from '@/lib/formatters';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { saveImageFile, deleteOldImageFile } from '@/lib/fileStorage';
+
 
 
 export async function GET(request: NextRequest) {
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
     const searchField = searchParams.get('searchField') || searchParams.get('field') || 'all';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const idStatus = searchParams.get('idStatus') || 'all';
 
     const skip = (page - 1) * limit;
 
@@ -77,6 +79,90 @@ export async function GET(request: NextRequest) {
       ];
     };
 
+    const getIdStatusCondition = (status: string) => {
+      switch (status) {
+        case 'has_asId':
+          return {
+            AND: [
+              { asId: { not: null } },
+              { NOT: { asId: '' } },
+            ],
+          };
+        case 'missing_asId':
+          return {
+            OR: [
+              { asId: null },
+              { asId: '' },
+            ],
+          };
+        case 'has_ssId':
+          return {
+            AND: [
+              { ssId: { not: null } },
+              { NOT: { ssId: '' } },
+            ],
+          };
+        case 'missing_ssId':
+          return {
+            OR: [
+              { ssId: null },
+              { ssId: '' },
+            ],
+          };
+        case 'has_vzId':
+          return {
+            AND: [
+              { vzId: { not: null } },
+              { NOT: { vzId: '' } },
+            ],
+          };
+        case 'missing_vzId':
+          return {
+            OR: [
+              { vzId: null },
+              { vzId: '' },
+            ],
+          };
+        case 'missing_any_id':
+          return {
+            OR: [
+              { asId: null },
+              { asId: '' },
+              { ssId: null },
+              { ssId: '' },
+            ],
+          };
+        case 'missing_all_ids':
+          return {
+            AND: [
+              { OR: [{ asId: null }, { asId: '' }] },
+              { OR: [{ ssId: null }, { ssId: '' }] },
+            ],
+          };
+        case 'has_all_ids':
+          return {
+            AND: [
+              { asId: { not: null } },
+              { NOT: { asId: '' } },
+              { ssId: { not: null } },
+              { NOT: { ssId: '' } },
+            ],
+          };
+        case 'missing_image_file':
+          return {
+            filePath: '',
+          };
+        case 'has_image_file':
+          return {
+            filePath: { not: '' },
+          };
+        case 'all':
+
+        default:
+          return null;
+      }
+    };
+
     const searchTerms = searchField === 'exactKeyword' 
       ? [search.trim()].filter(Boolean)
       : search.trim().split(/\s+/).filter(Boolean);
@@ -92,22 +178,36 @@ export async function GET(request: NextRequest) {
         }
       : {};
 
-    const where: any = {
-      ...searchCondition,
-    };
+    const andClauses: any[] = [];
+    if (Object.keys(searchCondition).length > 0) {
+      andClauses.push(searchCondition);
+    }
 
     if (startDate || endDate) {
-      where.createdAt = {};
+      const dateClause: any = {};
       if (startDate) {
-        where.createdAt.gte = new Date(startDate);
+        dateClause.gte = new Date(startDate);
       }
       if (endDate) {
         // To include the entire end date, set time to 23:59:59.999
         const end = new Date(endDate);
         end.setUTCHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
+        dateClause.lte = end;
       }
+      andClauses.push({ createdAt: dateClause });
     }
+
+    const idStatusClause = getIdStatusCondition(idStatus);
+    if (idStatusClause) {
+      andClauses.push(idStatusClause);
+    }
+
+    const where: any = andClauses.length === 0
+      ? {}
+      : andClauses.length === 1
+      ? andClauses[0]
+      : { AND: andClauses };
+
 
     let orderByClause: any;
     if (sortBy === 'createdAt') {
@@ -317,6 +417,13 @@ export async function PATCH(request: NextRequest) {
       dataToUpdate.keywords = keywords.trim();
     }
 
+    if (uploadDate !== undefined) {
+      const parsedDate = new Date(uploadDate);
+      if (!isNaN(parsedDate.getTime())) {
+        dataToUpdate.createdAt = parsedDate;
+      }
+    }
+
     if (code !== undefined) {
       const cleanedCode = code.trim() || null;
       if (cleanedCode) {
@@ -342,41 +449,38 @@ export async function PATCH(request: NextRequest) {
           dataToUpdate.month = parsedCode.month;
           dataToUpdate.seqNumber = parsedCode.seqNumber;
         }
+      } else if (!currentImage.code) {
+        // Auto-generate code for image that does not have one
+        const targetDate = dataToUpdate.createdAt || currentImage.createdAt || new Date();
+        const { nextCode, year, month, seqNumber } = await getNextImageCode(prisma, targetDate);
+        dataToUpdate.code = nextCode;
+        dataToUpdate.year = year;
+        dataToUpdate.month = month;
+        dataToUpdate.seqNumber = seqNumber;
       } else {
         dataToUpdate.code = null;
       }
-    }
-
-    if (uploadDate !== undefined) {
-      const parsedDate = new Date(uploadDate);
-      if (!isNaN(parsedDate.getTime())) {
-        dataToUpdate.createdAt = parsedDate;
-      }
+    } else if (!currentImage.code && dataToUpdate.createdAt) {
+      // Auto-generate code when date is updated for an image with no code
+      const { nextCode, year, month, seqNumber } = await getNextImageCode(prisma, dataToUpdate.createdAt);
+      dataToUpdate.code = nextCode;
+      dataToUpdate.year = year;
+      dataToUpdate.month = month;
+      dataToUpdate.seqNumber = seqNumber;
     }
 
     if (file) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
-      try {
-        await fs.access(uploadsDir);
-      } catch {
-        await fs.mkdir(uploadsDir, { recursive: true });
-      }
-      const uniqueFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const filePath = path.join(uploadsDir, uniqueFilename);
-      await fs.writeFile(filePath, buffer);
+      const finalCode = (dataToUpdate.code || currentImage.code || `img-${Date.now()}`).trim();
+      const saved = await saveImageFile(file, finalCode);
 
-      if (currentImage.filePath) {
-        try {
-          await fs.unlink(currentImage.filePath);
-        } catch (err: any) {
-          console.warn('Could not unlink old image file:', err?.message);
-        }
+      if (currentImage.filePath && currentImage.filePath !== saved.dbFilePath) {
+        await deleteOldImageFile(currentImage.filePath);
       }
 
-      dataToUpdate.filePath = filePath;
+      dataToUpdate.filePath = saved.dbFilePath;
+      dataToUpdate.status = 'uploaded';
     }
+
 
     if (category !== undefined) {
       dataToUpdate.category = typeof category === 'string' ? category.trim() || null : null;
@@ -465,7 +569,7 @@ export async function PATCH(request: NextRequest) {
     if (error.code === 'P2002') {
       return NextResponse.json({ error: 'Image code already exists in the system.' }, { status: 409 });
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -489,14 +593,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Safely remove file if it exists
-    if (image.filePath) {
-      try {
-        await fs.unlink(image.filePath);
-      } catch (err: any) {
-        // File may have been moved or manually deleted, proceed with DB deletion
-        console.warn(`File unlink warning for ${image.filePath}:`, err?.message);
-      }
-    }
+    await deleteOldImageFile(image.filePath);
+
 
     // Delete image from database (cascades platformStats)
     await prisma.image.delete({

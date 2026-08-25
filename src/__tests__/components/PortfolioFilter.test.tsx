@@ -100,4 +100,66 @@ describe('PortfolioFilter Component (UT-UI-PORTFOLIO-SEARCH-FIELD-01)', () => {
       expect.objectContaining({ search: '' })
     );
   });
+
+  it('UT-UI-PORTFOLIO-FILTER-ID-01: renders idStatus dropdown and propagates selected filter value', () => {
+    const handleFilterChange = vi.fn();
+    render(<PortfolioFilter onFilterChange={handleFilterChange} />);
+
+    const idSelect = screen.getByTestId('portfolio-id-status-select') as HTMLSelectElement;
+    expect(idSelect).toBeInTheDocument();
+    expect(idSelect.value).toBe('all');
+
+    // Verify streamlined missing/all options exist
+    expect(screen.getByText('Missing Adobe ID')).toBeInTheDocument();
+    expect(screen.getByText('Missing Shutterstock ID')).toBeInTheDocument();
+    expect(screen.getByText('No Platform IDs')).toBeInTheDocument();
+    expect(screen.getByText('Missing Image File')).toBeInTheDocument();
+
+    // Select missing_asId
+    fireEvent.change(idSelect, { target: { value: 'missing_asId' } });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(handleFilterChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idStatus: 'missing_asId' })
+    );
+
+    // Select missing_image_file via select element
+    fireEvent.change(idSelect, { target: { value: 'missing_image_file' } });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(handleFilterChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idStatus: 'missing_image_file' })
+    );
+
+    // Test clicking custom trigger button to open downwards popover
+    const triggerBtn = screen.getByTestId('portfolio-id-status-trigger');
+    expect(triggerBtn).toBeInTheDocument();
+    expect(triggerBtn).toHaveTextContent('Missing Image File');
+
+    fireEvent.click(triggerBtn);
+
+    const popoverMenu = screen.getByTestId('portfolio-id-status-menu');
+    expect(popoverMenu).toBeInTheDocument();
+
+    // Click on "Missing Adobe ID" inside popover
+    const missingAsBtn = screen.getByTestId('portfolio-filter-option-missing_asId');
+    expect(missingAsBtn).toBeInTheDocument();
+    fireEvent.click(missingAsBtn);
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(handleFilterChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idStatus: 'missing_asId' })
+    );
+    expect(triggerBtn).toHaveTextContent('Missing Adobe ID');
+  });
 });
+

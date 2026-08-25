@@ -65,7 +65,7 @@ describe('Upload API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.nextCode).toBe('2608-1');
+      expect(data.nextCode).toBe('2608-01');
       expect(data.seqNumber).toBe(1);
     });
   });
@@ -332,7 +332,49 @@ describe('Upload API Route', () => {
       );
     });
 
-    it('returns 400 when required fields are missing', async () => {
+    it('creates image record without a file (status pending, empty filePath)', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      const fakeCreated = {
+        id: 'img-no-file',
+        code: '1604-01',
+        title: 'Company History Brochure',
+        keywords: 'timeline, history, company',
+        category: 'Business',
+        filePath: '',
+        status: 'pending',
+        createdAt: new Date('2016-04-16T00:00:00.000Z'),
+      };
+      mockCreate.mockResolvedValue(fakeCreated);
+
+      const formData = new FormData();
+      formData.append('code', '1604-01');
+      formData.append('title', 'Company History Brochure');
+      formData.append('keywords', 'timeline, history, company');
+      formData.append('category', 'Business');
+      formData.append('uploadDate', '2016-04-16');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            code: '1604-01',
+            title: 'Company History Brochure',
+            filePath: '',
+            status: 'pending',
+          }),
+        })
+      );
+    });
+
+    it('returns 400 when required fields (title or keywords) are missing', async () => {
       const formData = new FormData();
       formData.append('title', 'Incomplete');
 
@@ -343,6 +385,45 @@ describe('Upload API Route', () => {
 
       const response = await POST(request);
       expect(response.status).toBe(400);
+    });
+
+    it('sets filePath matching /uploads/${code}.${ext}', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      const fakeCreated = {
+        id: 'img-code-test',
+        code: '2608-88',
+        title: 'Filename Test',
+        keywords: 'test',
+        filePath: '/uploads/2608-88.png',
+        ssDownloads: 0,
+        asDownloads: 0,
+        totalDownloads: 0,
+        status: 'uploaded',
+        createdAt: new Date('2026-08-24T00:00:00.000Z'),
+      };
+      mockCreate.mockResolvedValue(fakeCreated);
+
+      const formData = new FormData();
+      const fakeFile = new File(['png content'], 'photo.png', { type: 'image/png' });
+      formData.append('file', fakeFile);
+      formData.append('code', '2608-88');
+      formData.append('title', 'Filename Test');
+      formData.append('keywords', 'test');
+
+      const request = new NextRequest('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(201);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            filePath: '/uploads/2608-88.png',
+          }),
+        })
+      );
     });
   });
 });

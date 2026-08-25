@@ -11,6 +11,8 @@ import {
   KeywordSortMode
 } from "@/lib/keywordAnalytics";
 import { copyToClipboard } from "@/lib/clipboard";
+import { getImageUrl } from "@/lib/formatters";
+
 
 interface KeywordSuggesterProps {
   activeKeywords: string;
@@ -323,9 +325,8 @@ export function KeywordSuggester({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                 {portfolioImages.map((img) => {
                   const isSelected = selectedImageIds.has(img.id);
-                  const thumbUrl = img.filePath 
-                    ? `/api/image?path=${encodeURIComponent(img.filePath)}`
-                    : null;
+                  const thumbUrl = getImageUrl(img.filePath) || null;
+
 
                   return (
                     <div

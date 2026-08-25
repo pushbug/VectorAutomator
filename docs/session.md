@@ -1,27 +1,27 @@
-### Goal: Smart Adobe Contributor ID Bulk Ingestion, System-Wide Native SQLite Online Backup Engine, and Instant Batch Ingestion Durability.
+### Goal: Image Caching & Dynamic ETag Revalidation, Universal Image URL & File Storage Refactoring, and Action-Oriented Portfolio Filters.
 
 ### Status: COMPLETE
 
 ### Done:
-- Developed Smart ID Bulk Matcher (`SmartIdPasteModal.tsx`) for 1-click clipboard paste sync from Adobe Contributor dashboard with exact/fuzzy/ambiguous classification and live DB search.
-- Modularized text processing, suffix cleaning, and title similarity calculation into pure utility `src/lib/contributorParser.ts`.
-- Refactored `src/lib/dbBackup.ts` using native SQLite Online Backup (`better-sqlite3 db.backup()`) to capture all active `.wal` journal pages atomically into standalone snapshots.
-- Attached database backup coordinator to `globalThis.__dbBackupCoordinator` with concurrency mutex and standardized 30s debounce for micro-edits.
-- Implemented immediate post-commit snapshot persistence (`await createDbBackup()`) across batch ingestion routes (`/api/portfolio/paste-sync`, `/api/sales/paste-sync`, `/api/serp/paste-sync`, `/api/payouts/batch`).
-- Added Playwright test `E2E-PF-03` and unit test suites `UT-API-PORTFOLIO-SYNC-ID-01`, `UT-API-PORTFOLIO-FUZZY-SYNC-01`, `UT-LIB-BACKUP-01` (274/274 tests passing across 46 test files).
-- Logged ADR-019 in `docs/decisions.md` and updated `docs/tests/CATALOG.md`.
+- Implemented dynamic ETag and HTTP 304 conditional revalidation with `Cache-Control: no-cache, must-revalidate` in `/api/image`.
+- Streamlined Portfolio ID Filter down to 5 action-oriented options (`all`, `missing_asId`, `missing_ssId`, `missing_all_ids`, `missing_image_file`).
+- Consolidated `getImageUrl()` and `getTodayDateString()` into `src/lib/formatters.ts`, updating 12 UI components to eliminate manual `/api/image` concatenations.
+- Centralized image saving and unlinking into `src/lib/fileStorage.ts` (`saveImageFile`, `deleteOldImageFile`, `inferImageExtension`), refactoring `/api/upload` and `/api/portfolio`.
+- Added unit test suites `UT-API-IMG-CACHE-01`, `UT-LIB-FORMATTERS-02`, and `UT-LIB-STORAGE-01` (304/304 tests passing across 48 test files with 0 type errors).
+- Documented ADR-020 in `docs/decisions.md` and registered tests in `docs/tests/CATALOG.md`.
 
 ### Next:
-- 1. Monitor live usage of Smart ID Bulk Matcher and instant auto-backup during daily contributor operations.
-- 2. Explore automated cross-keyword market overlap and competitor saturation analytics in SERP dashboard.
+- 1. Monitor live image replacement workflow and file upload stability in daily operations.
+- 2. Expand keyword performance analytics and cross-platform sync capabilities.
 
 ### Decisions:
-- Online SQLite Backup Standard: Use `better-sqlite3 db.backup()` instead of raw file copy to guarantee full consolidation of WAL transactions before hash comparison and Gzip compression.
-- Dual Execution Strategy: Batch ingestion operations trigger immediate snapshots before HTTP response return; micro-edits coalesce across a 30-second quiet window on `globalThis`.
-- Zero-Risk Contributor Parsing: All parsing and string normalization execute strictly on local machine without external web scrapers or cloud dependencies.
+- Centralized Image URL: Always use `getImageUrl(filePath, updatedAt)` from `@/lib/formatters` for automatic URI encoding and versioned cache-busting.
+- Shared Storage Logic: Always use `saveImageFile` and `deleteOldImageFile` from `@/lib/fileStorage` for disk mutations.
+- ETag Revalidation: Images are served with dynamic ETags derived from file size and mtimeMs, enabling instant browser refresh on overwrite without sacrificing bandwidth.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning, root-cause forensics, and TDD-Lite specification.
-- [`coding`](.agents/skills/coding/SKILL.md) — Parser modularization, SQLite backup engine, API routes, and test suites.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Rigorous WAL verification, timer lifecycle audit, and code duplication analysis.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and TDD-Lite specification.
+- [`coding`](.agents/skills/coding/SKILL.md) — File storage consolidation, image URL formatting, and route refactoring.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — System-wide verification, zero-regression audit, and test coverage validation.
 - [`handoff`](.agents/skills/handoff/SKILL.md) — Documentation synchronization, ADR logging, session wrap-up, and git push.
+

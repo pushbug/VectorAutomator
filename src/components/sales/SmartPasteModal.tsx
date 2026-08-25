@@ -6,7 +6,10 @@ import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check } from 'lucide-reac
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
 import { parseStockPaste } from '@/lib/stockPasteParser';
 import { SUPPORTED_PLATFORMS, PlatformType } from '@/lib/platforms';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, getImageUrl } from '@/lib/formatters';
+
+
+
 
 
 
@@ -363,13 +366,14 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                             <div className="flex items-center gap-2.5">
                               <div className="relative w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
                                 <Image
-                                  src={`/api/image?path=${encodeURIComponent(row.matchedImage.filePath)}`}
+                                  src={getImageUrl(row.matchedImage.filePath)}
                                   alt={row.matchedImage.title}
                                   fill
                                   sizes="40px"
                                   className="object-contain p-0.5"
                                   unoptimized
                                 />
+
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="font-mono font-bold text-foreground truncate">{row.matchedImage.code || `#${row.matchedImage.id.slice(0, 8)}`}</div>

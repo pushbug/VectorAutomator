@@ -5,7 +5,10 @@ import {
   formatTableDate,
   formatDisplayDate,
   calculatePlatformBreakdown,
+  getTodayDateString,
+  getImageUrl,
 } from '@/lib/formatters';
+
 import { parseImageCode, getNextImageCode } from '@/lib/imageCode';
 import { SUPPORTED_PLATFORMS, PLATFORM_THEMES } from '@/lib/platforms';
 
@@ -93,4 +96,40 @@ describe('Formatters and Shared Utilities', () => {
       Vecteezy: { downloads: 3, earnings: 2.0 },
     });
   });
+
+  it('UT-LIB-FORMATTERS-02: getTodayDateString returns valid YYYY-MM-DD format', () => {
+    const today = getTodayDateString();
+    expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const d = new Date();
+    const expectedYear = String(d.getFullYear());
+    expect(today.startsWith(expectedYear)).toBe(true);
+  });
+
+  it('UT-LIB-FORMATTERS-02: getImageUrl formats URLs with encoding and cache-busting', () => {
+    expect(getImageUrl('')).toBe('');
+    expect(getImageUrl(null)).toBe('');
+    expect(getImageUrl(undefined)).toBe('');
+
+    // Basic path
+    expect(getImageUrl('/uploads/2608-12.jpg')).toBe('/api/image?path=%2Fuploads%2F2608-12.jpg');
+
+    // Path with timestamp number
+    expect(getImageUrl('/uploads/2608-12.jpg', 1724580000000)).toBe(
+      '/api/image?path=%2Fuploads%2F2608-12.jpg&v=1724580000000'
+    );
+
+    // Path with ISO string date
+    const isoDate = '2026-08-25T10:00:00.000Z';
+    const expectedTimestamp = new Date(isoDate).getTime();
+    expect(getImageUrl('/uploads/2608-12.jpg', isoDate)).toBe(
+      `/api/image?path=%2Fuploads%2F2608-12.jpg&v=${expectedTimestamp}`
+    );
+
+    // Path with Date object
+    const dateObj = new Date('2026-08-25T12:00:00.000Z');
+    expect(getImageUrl('/uploads/2608-12.jpg', dateObj)).toBe(
+      `/api/image?path=%2Fuploads%2F2608-12.jpg&v=${dateObj.getTime()}`
+    );
+  });
 });
+

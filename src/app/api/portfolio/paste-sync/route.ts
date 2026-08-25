@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { scheduleAutoBackup, createDbBackup } from '@/lib/dbBackup';
+import { getNextImageCode, parseImageCode } from '@/lib/imageCode';
+import { reconcileImageSales } from '@/lib/salesReconciler';
 import {
   parseContributorHtml,
   parseTsvString,
@@ -37,8 +39,87 @@ export async function POST(request: NextRequest) {
       }
 
       let committedCount = 0;
+      const createdItems: Array<{
+        id: string;
+        code: string;
+        title: string;
+        filePath: string;
+        asId: string;
+        asDownloads: number;
+      }> = [];
 
       for (const item of itemsToCommit) {
+        // Handle Action: Create Placeholder Artwork in Portfolio (Metadata-Only, no file required)
+        if (item.action === 'create_placeholder' || (!item.imageId && item.asId && item.title)) {
+          let targetDate = new Date();
+          if (item.date || item.createdAt) {
+            const rawDateStr = String(item.date || item.createdAt).trim();
+            const dateToParse = rawDateStr.length === 10 ? `${rawDateStr}T12:00:00.000Z` : rawDateStr;
+            const parsed = new Date(dateToParse);
+            if (!isNaN(parsed.getTime())) {
+              targetDate = parsed;
+            }
+          }
+
+          const autoResult = await getNextImageCode(prisma, targetDate);
+          let finalCode = autoResult.nextCode;
+          let finalYear = autoResult.year;
+          let finalMonth = autoResult.month;
+          let finalSeqNumber = autoResult.seqNumber;
+
+          if (typeof item.code === 'string' && item.code.trim().length > 0) {
+            const parsedCode = parseImageCode(item.code);
+            finalCode = item.code.trim();
+            if (parsedCode) {
+              finalYear = parsedCode.year;
+              finalMonth = parsedCode.month;
+              finalSeqNumber = parsedCode.seqNumber;
+            }
+          }
+
+          const created = await prisma.image.create({
+            data: {
+              code: finalCode,
+              year: finalYear,
+              month: finalMonth,
+              seqNumber: finalSeqNumber,
+              title: String(item.title).trim(),
+              asId: String(item.asId).trim(),
+              asDownloads: 0,
+              totalDownloads: 0,
+              keywords: typeof item.keywords === 'string' ? item.keywords.trim() : (item.keywords || ''),
+              category: typeof item.category === 'string' && item.category.trim().length > 0 ? item.category.trim() : null,
+              filePath: '',
+              status: 'pending',
+              createdAt: targetDate,
+            },
+          });
+
+          createdItems.push({
+            id: created.id,
+            code: created.code || 'NO-CODE',
+            title: created.title,
+            filePath: created.filePath,
+            asId: created.asId || String(item.asId).trim(),
+            asDownloads: created.asDownloads,
+          });
+
+          // Reconcile unlinked sales from PlatformStats if any match this asId
+          await reconcileImageSales(prisma, { id: created.id, asId: String(item.asId) });
+
+          // Two-way reconciliation with SERP database
+          await prisma.serpItem.updateMany({
+            where: { assetId: String(item.asId) },
+            data: {
+              isMine: true,
+              matchedImageId: created.id,
+            },
+          });
+
+          committedCount++;
+          continue;
+        }
+
         if (!item.imageId || !item.asId) continue;
 
         const img = await prisma.image.findUnique({
@@ -48,13 +129,16 @@ export async function POST(request: NextRequest) {
 
         if (!img) continue;
 
-        // Update Image Asset ID strictly (does not touch daily sales/PlatformStats)
+        // Update Image Asset ID strictly (do NOT mutate asDownloads/totalDownloads from contributor metadata)
         await prisma.image.update({
           where: { id: img.id },
           data: {
             asId: String(item.asId),
           },
         });
+
+        // Reconcile unlinked sales from PlatformStats if any match this asId
+        await reconcileImageSales(prisma, { id: img.id, asId: String(item.asId) });
 
         // Two-way reconciliation with SERP database
         await prisma.serpItem.updateMany({
@@ -79,6 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         committedCount,
+        createdItems,
       });
     }
 
@@ -127,6 +212,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Group images by asId for Top Priority exact matching (Already Synced)
+    const asIdImageMap = new Map<string, typeof allImages[0]>();
+    for (const img of allImages) {
+      if (img.asId && img.asId.trim().length > 0) {
+        asIdImageMap.set(img.asId.trim(), img);
+      }
+    }
+
     // Group images by normalized title to detect potential title duplicates
     const normImageMap = new Map<string, typeof allImages>();
 
@@ -141,10 +234,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Pre-collect exact match claims in this batch to prevent duplicate candidate claims
+    const claimedExactImageIds = new Set<string>();
+    for (const item of candidateItems) {
+      const cleanAsId = item.asId.trim();
+      const matchedByAsId = asIdImageMap.get(cleanAsId);
+      if (matchedByAsId) {
+        claimedExactImageIds.add(matchedByAsId.id);
+        continue;
+      }
+
+      const cleanTitle = item.title.trim();
+      const normCandidate = normalizeTitle(cleanTitle);
+      const exactMatches = normImageMap.get(normCandidate) || [];
+      if (exactMatches.length === 1) {
+        claimedExactImageIds.add(exactMatches[0].id);
+      }
+    }
+
     const previewRows = candidateItems.map((item) => {
+      const cleanAsId = item.asId.trim();
       const cleanTitle = item.title.trim();
       const normCandidate = normalizeTitle(cleanTitle);
 
+      // ───────────────────────────────────────────────────────────────────────
+      // PRIORITY 1: Direct Asset ID Match (Already Synced / Verified)
+      // ───────────────────────────────────────────────────────────────────────
+      const matchedByAsId = asIdImageMap.get(cleanAsId);
+      if (matchedByAsId) {
+        return {
+          asId: item.asId,
+          adobeTitle: cleanTitle,
+          downloads: Number(item.downloads || 0),
+          thumbnailUrl: item.thumbnailUrl || '',
+          status: 'exact' as const,
+          confidence: 1.0,
+          isAlreadySynced: true,
+          isOverwrite: false,
+          existingAsId: matchedByAsId.asId || null,
+          matchedImage: {
+            id: matchedByAsId.id,
+            code: matchedByAsId.code || 'NO-CODE',
+            title: matchedByAsId.title,
+            filePath: matchedByAsId.filePath,
+            asId: matchedByAsId.asId,
+            asDownloads: matchedByAsId.asDownloads,
+          },
+          candidates: [],
+        };
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
+      // PRIORITY 2: Exact Title Match
+      // ───────────────────────────────────────────────────────────────────────
       const exactMatches = normImageMap.get(normCandidate) || [];
 
       if (exactMatches.length === 1) {
@@ -172,6 +314,30 @@ export async function POST(request: NextRequest) {
           candidates: [],
         };
       } else if (exactMatches.length > 1) {
+        const alreadyMatchedCand = exactMatches.find((cand) => cand.asId === item.asId);
+        if (alreadyMatchedCand) {
+          return {
+            asId: item.asId,
+            adobeTitle: cleanTitle,
+            downloads: Number(item.downloads || 0),
+            thumbnailUrl: item.thumbnailUrl || '',
+            status: 'exact' as const,
+            confidence: 1.0,
+            isAlreadySynced: true,
+            isOverwrite: false,
+            existingAsId: alreadyMatchedCand.asId || null,
+            matchedImage: {
+              id: alreadyMatchedCand.id,
+              code: alreadyMatchedCand.code || 'NO-CODE',
+              title: alreadyMatchedCand.title,
+              filePath: alreadyMatchedCand.filePath,
+              asId: alreadyMatchedCand.asId,
+              asDownloads: alreadyMatchedCand.asDownloads,
+            },
+            candidates: [],
+          };
+        }
+
         return {
           asId: item.asId,
           adobeTitle: cleanTitle,
@@ -195,11 +361,17 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // Fuzzy Similarity Search
+      // ───────────────────────────────────────────────────────────────────────
+      // PRIORITY 3: Fuzzy Similarity Search
+      // STRICT SAFETY: Exclude images that ALREADY have a DIFFERENT assigned asId or are claimed by exact matches in this batch
+      // ───────────────────────────────────────────────────────────────────────
       let bestImage: typeof allImages[0] | null = null;
       let bestScore = 0;
 
       for (const img of allImages) {
+        if (img.asId && img.asId.trim().length > 0 && img.asId.trim() !== cleanAsId) continue;
+        if (claimedExactImageIds.has(img.id)) continue;
+
         const score = computeSimilarity(cleanTitle, img.title);
         if (score > bestScore) {
           bestScore = score;
@@ -242,6 +414,9 @@ export async function POST(request: NextRequest) {
         };
       }
 
+      // ───────────────────────────────────────────────────────────────────────
+      // PRIORITY 4: Unmatched Fallback
+      // ───────────────────────────────────────────────────────────────────────
       return {
         asId: item.asId,
         adobeTitle: cleanTitle,

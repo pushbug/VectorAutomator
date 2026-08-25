@@ -152,15 +152,17 @@
   5. **Playwright E2E & Integration Tests:** Added `e2e/serp.spec.ts` (`E2E-SERP-01`) and integration tests `UT-UI-FULL-SERP-MODAL-01`, `UT-SERP-RECONCILE-02`.
 - **Impact:** Provides a unified search engine rank intelligence interface with 100% automated data reconciliation and responsive analytics.
 
-## ADR-019: System-Wide Native SQLite Online Backup Engine & Instant Batch Ingestion Persistence
-- **Date:** 2026-08-24
-- **Context:** Previously, the auto-backup mechanism suffered from 3 edge-case failures: (1) active WAL writes residing in `dev.db-wal` were missed during SHA-256 hash comparison against `dev.db`, causing false duplicate skips, (2) 3-minute timers in ephemeral Next.js dev server workers were discarded before firing, and (3) manual backup triggers were scattered.
+## ADR-020: Centralized Image URL & File Storage Consolidation, Dynamic ETag Revalidation, and Action-Oriented Portfolio Filters
+- **Date:** 2026-08-25
+- **Context:** (1) Replacing/overwriting vector preview images on disk was prevented from reflecting in the browser due to `Cache-Control: immutable` on `/api/image` and lack of URI encoding/cache-busting query strings. (2) File writing, directory creation, and old file unlinking were duplicated across `/api/upload` and `/api/portfolio`. (3) Portfolio ID filtering had redundant options that cluttered contributor daily tasks.
 - **Decision:**
-  1. **Native SQLite Online Backup (`better-sqlite3 db.backup()`):** Replaced manual file reading with official SQLite online backup API to atomically merge `dev.db` and active `dev.db-wal` pages into standalone snapshots in ~20ms with zero lock contention.
-  2. **Singleton State Coordinator (`globalThis.__dbBackupCoordinator`):** Persisted backup dirty flags, timers, and concurrency mutex on `globalThis` to survive Next.js module re-evaluations and HMR cycles.
-  3. **Dual Execution Strategy:** Implemented instant post-commit snapshots (`await createDbBackup()`) for bulk ingestion operations (`/api/portfolio/paste-sync`, `/api/sales/paste-sync`, `/api/serp/paste-sync`, `/api/payouts/batch`) and standardized single-edit coalescing to a 30-second window (`DEFAULT_BACKUP_DEBOUNCE_MS = 30000`).
-  4. **Automated Verification:** Added unit tests (`UT-LIB-BACKUP-01`, `UT-API-PORTFOLIO-SYNC-ID-01`) verifying 30s debounce, online backup generation, Gzip compression, and 10-file rolling retention limits.
-- **Impact:** Guarantees 100% reliable automated backup snapshots across all application features without timer evaporation or WAL data loss.
+  1. **Dynamic ETag & 304 Revalidation (`/api/image`):** Implemented dynamic ETag calculation (`${stat.size}-${stat.mtimeMs}`) and conditional HTTP 304 (Not Modified) responses with `Cache-Control: no-cache, must-revalidate` in `src/app/api/image/route.ts`.
+  2. **Unified Image URL Generator (`getImageUrl`):** Created `getImageUrl(filePath, updatedAt)` in `src/lib/formatters.ts` to handle path encoding and version cache-busting. Refactored all 12 UI components to consume this single helper.
+  3. **Centralized Backend File Storage (`src/lib/fileStorage.ts`):** Extracted `saveImageFile`, `deleteOldImageFile`, and `inferImageExtension` into a dedicated storage module used across `/api/upload` and `/api/portfolio`.
+  4. **Action-Oriented Portfolio Filtering:** Streamlined portfolio ID filters to 5 essential daily actions (`All Assets`, `Missing Adobe ID`, `Missing Shutterstock ID`, `No Platform IDs`, `Missing Image File`).
+  5. **Automated Verification:** Added unit tests `UT-API-IMG-CACHE-01`, `UT-LIB-FORMATTERS-02`, and `UT-LIB-STORAGE-01`. All 48 test suites and 304 tests pass.
+- **Impact:** Eliminates stale browser image caching, secures file storage operations, removes redundant code across routes, and streamlines creator portfolio workflow.
+
 
 
 

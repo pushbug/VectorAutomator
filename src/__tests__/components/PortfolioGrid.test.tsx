@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PortfolioGrid } from '@/components/portfolio/PortfolioGrid';
 
 const mockImages = [
@@ -92,7 +92,56 @@ describe('PortfolioGrid Component', () => {
     expect(screen.getAllByText('$6.41')).toHaveLength(2);
     expect(screen.getAllByText('4')).toHaveLength(2);
     expect(screen.getByText('#949535178')).toBeInTheDocument();
+  });
 
+  it('UT-UI-PORTFOLIO-DETAIL-COPY-PLATFORM-01: copies platform asset ID to clipboard when clicking copy button next to platform badge', async () => {
+    const { PortfolioDetail } = await import('@/components/portfolio/PortfolioDetail');
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    const mockImage = {
+      id: 'img1',
+      code: '2408-71',
+      title: 'Infographic Banner',
+      keywords: 'infographic, vector',
+      status: 'uploaded',
+      filePath: '/path/to/img1.jpg',
+      asId: '175524050',
+      ssId: null,
+      vzId: null,
+      ssDownloads: 0,
+      asDownloads: 4,
+      totalDownloads: 4,
+      totalEarnings: 0,
+      platformBreakdown: {
+        'Adobe Stock': { downloads: 4, earnings: 0 },
+        'Shutterstock': { downloads: 0, earnings: 0 },
+      },
+      createdAt: '2024-08-30T00:00:00.000Z',
+    };
+
+    render(
+      <PortfolioDetail
+        image={mockImage}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Adobe Stock has ID '175524050' -> copy button should exist and copy ID
+    const copyAdobeBtn = screen.getByTestId('portfolio-copy-platform-id-adobe-stock-btn');
+    expect(copyAdobeBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(copyAdobeBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledWith('175524050');
+
+    // Shutterstock has ssId: null -> copy button should not be rendered
+    expect(screen.queryByTestId('portfolio-copy-platform-id-shutterstock-btn')).not.toBeInTheDocument();
   });
 
   it('UT-UI-PORTFOLIO-SUMMARY-01: renders portfolio dashboard summary bar with artworks count, downloads, and revenue', async () => {

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Search, CheckCircle2, DollarSign, Download, Calendar } from 'lucide-react';
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms';
+import { getImageUrl, getTodayDateString } from '@/lib/formatters';
 
 interface PortfolioImage {
   id: string;
@@ -22,14 +23,6 @@ interface SaleEntryDrawerProps {
 
 const PLATFORMS = SUPPORTED_PLATFORMS;
 
-const getTodayStr = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 export function SaleEntryDrawer({
   isOpen,
   onClose,
@@ -42,7 +35,7 @@ export function SaleEntryDrawer({
   const [isSearching, setIsSearching] = useState(false);
 
   const [platform, setPlatform] = useState('Shutterstock');
-  const [date, setDate] = useState(getTodayStr);
+  const [date, setDate] = useState(getTodayDateString);
   const [downloads, setDownloads] = useState('');
   const [earnings, setEarnings] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +47,7 @@ export function SaleEntryDrawer({
       if (preselectedImage) {
         setSelectedImage(preselectedImage);
       }
-      setDate(getTodayStr());
+      setDate(getTodayDateString());
       setError(null);
     }
   }, [isOpen, preselectedImage]);
@@ -98,7 +91,7 @@ export function SaleEntryDrawer({
     }
     setImageSearch('');
     setPlatform('Shutterstock');
-    setDate(getTodayStr());
+    setDate(getTodayDateString());
     setDownloads('');
     setEarnings('');
     setError(null);
@@ -206,7 +199,7 @@ export function SaleEntryDrawer({
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
                       <Image
-                        src={`/api/image?path=${encodeURIComponent(selectedImage.filePath)}`}
+                        src={getImageUrl(selectedImage.filePath)}
                         alt={selectedImage.title}
                         fill
                         className="object-cover"
@@ -262,7 +255,7 @@ export function SaleEntryDrawer({
                         >
                           <div className="relative w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                             <Image
-                              src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                              src={getImageUrl(img.filePath)}
                               alt={img.title}
                               fill
                               className="object-cover"

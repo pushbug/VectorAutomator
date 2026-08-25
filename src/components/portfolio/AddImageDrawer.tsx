@@ -1,16 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, Plus, Edit3 } from 'lucide-react';
+import { X, Upload, Plus, Edit3, Sparkles } from 'lucide-react';
 import { SingleDatePicker } from './SingleDatePicker';
+import { getImageUrl, getTodayDateString } from '@/lib/formatters';
 
-const getTodayStr = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 export interface PortfolioImage {
   id: string;
@@ -46,7 +40,7 @@ interface AddImageDrawerProps {
 export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddImageDrawerProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [uploadDate, setUploadDate] = useState(getTodayStr);
+  const [uploadDate, setUploadDate] = useState(getTodayDateString);
   const [code, setCode] = useState('');
   const [hasManuallyEditedCode, setHasManuallyEditedCode] = useState(false);
   const [title, setTitle] = useState('');
@@ -64,15 +58,34 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
   const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
   const keywordsTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const handleAutoGenerateCode = (targetDate = uploadDate) => {
+    fetch(`/api/upload?date=${targetDate}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.nextCode) {
+          setCode(data.nextCode);
+          setHasManuallyEditedCode(false);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch next code:', err));
+  };
+
   // Sync initial form values when opening drawer or when editImage changes
   useEffect(() => {
     if (isOpen) {
       if (editImage) {
         setFile(null);
-        setPreview(editImage.filePath ? `/api/image?path=${encodeURIComponent(editImage.filePath)}` : null);
-        setUploadDate(editImage.createdAt ? editImage.createdAt.split('T')[0] : getTodayStr());
+        setPreview(
+          getImageUrl(
+            editImage.filePath,
+            (editImage as any).updatedAt || editImage.createdAt || Date.now()
+          ) || null
+        );
+
+        const parsedDate = editImage.createdAt ? editImage.createdAt.split('T')[0] : getTodayDateString();
+        setUploadDate(parsedDate);
         setCode(editImage.code || '');
-        setHasManuallyEditedCode(true);
+        setHasManuallyEditedCode(Boolean(editImage.code));
         setTitle(editImage.title || '');
         setKeywords(editImage.keywords || '');
         setCategory(editImage.category || '');
@@ -81,10 +94,14 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
         setSsId(editImage.ssId || '');
         setAsId(editImage.asId || '');
         setVzId(editImage.vzId || '');
+
+        if (!editImage.code) {
+          handleAutoGenerateCode(parsedDate);
+        }
       } else {
         setFile(null);
         setPreview(null);
-        setUploadDate(getTodayStr());
+        setUploadDate(getTodayDateString());
         setCode('');
         setHasManuallyEditedCode(false);
         setTitle('');
@@ -95,6 +112,7 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
         setSsId('');
         setAsId('');
         setVzId('');
+        handleAutoGenerateCode(getTodayDateString());
       }
       setHasSubmitted(false);
       setError(null);
@@ -115,19 +133,12 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
     }
   }, [isOpen, editImage]);
 
-  // Auto-fetch next suggested code only when creating new image
-  useEffect(() => {
-    if (isOpen && !editImage && !hasManuallyEditedCode) {
-      fetch(`/api/upload?date=${uploadDate}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.nextCode && !hasManuallyEditedCode) {
-            setCode(data.nextCode);
-          }
-        })
-        .catch((err) => console.error('Failed to fetch next code:', err));
+  const handleDateChange = (newDate: string) => {
+    setUploadDate(newDate);
+    if (!editImage?.code && !hasManuallyEditedCode) {
+      handleAutoGenerateCode(newDate);
     }
-  }, [isOpen, editImage, uploadDate, hasManuallyEditedCode]);
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -174,7 +185,8 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
   const resetForm = () => {
     setFile(null);
     setPreview(null);
-    setUploadDate(getTodayStr());
+    setUploadDate(getTodayDateString());
+
     setCode('');
     setHasManuallyEditedCode(false);
     setTitle('');
@@ -194,8 +206,7 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasSubmitted(true);
-    const isFileMissing = !editImage && !file;
-    if (isFileMissing || !title.trim() || !keywords.trim()) {
+    if (!title.trim() || !keywords.trim()) {
       return;
     }
 
@@ -302,14 +313,25 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
               <SingleDatePicker
                 label="Upload Date"
                 value={uploadDate}
-                onChange={setUploadDate}
+                onChange={handleDateChange}
                 testId="portfolio-add-date-picker"
               />
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Image Code
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-foreground">
+                    Image Code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoGenerateCode(uploadDate)}
+                    title="Auto-generate code for selected date"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer"
+                  >
+                    <Sparkles size={12} />
+                    <span>Auto</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   data-testid="portfolio-add-code-input"
@@ -327,7 +349,7 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
             {/* File Dropzone / Preview */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Image File {editImage ? '(Optional)' : '*'}
+                Image File (Optional)
               </label>
               {preview ? (
                 <div className="relative w-full bg-background rounded-lg border border-border overflow-hidden group">
@@ -353,20 +375,16 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
                   <div
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed ${
-                      hasSubmitted && !file
-                        ? 'border-destructive bg-destructive/5'
-                        : 'border-border hover:border-primary/60 bg-background'
-                    } rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors`}
+                    className="border-2 border-dashed border-border hover:border-primary/60 bg-background rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
                     onClick={() => document.getElementById('portfolio-file-input')?.click()}
                   >
-                    <div className={`p-3 rounded-full ${hasSubmitted && !file ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'} mb-3`}>
+                    <div className="p-3 rounded-full bg-primary/10 text-primary mb-3">
                       <Upload size={24} />
                     </div>
                     <p className="text-sm font-medium text-foreground">
                       Click to upload or drag & drop
                     </p>
-                    <p className="text-xs text-muted mt-1">JPG, PNG, or WebP</p>
+                    <p className="text-xs text-muted mt-1">JPG, PNG, or WebP (Optional)</p>
                     <input
                       id="portfolio-file-input"
                       data-testid="portfolio-add-file-input"
@@ -376,9 +394,6 @@ export function AddImageDrawer({ isOpen, onClose, onSuccess, editImage }: AddIma
                       className="hidden"
                     />
                   </div>
-                  {hasSubmitted && !file && (
-                    <p className="text-xs text-destructive mt-1.5 font-medium">Please select an image file</p>
-                  )}
                 </div>
               )}
             </div>

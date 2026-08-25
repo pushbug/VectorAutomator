@@ -3,7 +3,8 @@ import React from 'react';
 import Image from 'next/image';
 import { Download } from 'lucide-react';
 import { PaginationCapsule } from '../common/PaginationCapsule';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
+
 
 interface PortfolioImage {
   id: string;
@@ -100,7 +101,7 @@ export function PortfolioGrid({
                 {/* Full Image Container */}
                 <div className="relative aspect-4/3 sm:aspect-square w-full bg-background overflow-hidden flex items-center justify-center p-2">
                   <Image 
-                    src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                    src={getImageUrl(img.filePath, (img as any).updatedAt)}
                     alt={img.code || img.title}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
@@ -108,6 +109,8 @@ export function PortfolioGrid({
                     unoptimized
                   />
                 </div>
+
+
 
               {/* Bottom Info Section */}
               <div className="p-2.5 border-t border-border bg-surface flex flex-col gap-1">

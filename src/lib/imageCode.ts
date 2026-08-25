@@ -59,7 +59,8 @@ export async function getNextImageCode(
   });
 
   const nextSeq = (highestImage?.seqNumber ?? 0) + 1;
-  const nextCode = `${yy}${mm}-${nextSeq}`;
+  const paddedSeq = String(nextSeq).padStart(2, '0');
+  const nextCode = `${yy}${mm}-${paddedSeq}`;
 
   return {
     nextCode,

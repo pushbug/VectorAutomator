@@ -101,6 +101,14 @@
 | `UT-API-PORTFOLIO-FUZZY-SYNC-01` | Verify /api/portfolio/paste-sync 3-tier matching: exact auto-match, fuzzy candidate suggestion (>= 70%), and manual link confirmation | `src/__tests__/api/portfolio_paste_sync.test.ts` |
 | `UT-UI-PORTFOLIO-SYNC-MODAL-01` | Verify SmartIdPasteModal rendering, live clipboard parsing, match preview table, and bulk submission | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
 | `UT-UI-PORTFOLIO-MANUAL-LINK-01` | Verify SmartIdPasteModal review confirmation and manual DB artwork search and 1-click binding | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
+| `UT-API-PF-FILTER-ID-01` | Verify /api/portfolio idStatus query filtering for platform IDs (Adobe, Shutterstock, Vecteezy) and image file presence | `src/__tests__/api/portfolio.test.ts` |
+| `UT-UI-PORTFOLIO-FILTER-ID-01` | Verify PortfolioFilter idStatus dropdown rendering, value selection, and filter change propagation | `src/__tests__/components/PortfolioFilter.test.tsx` |
+| `UT-API-IMG-CACHE-01` | Verify /api/image dynamic ETag generation, conditional 304 Not Modified, and no-cache revalidation headers | `src/__tests__/api/image.test.ts` |
+| `UT-LIB-FORMATTERS-02` | Verify getImageUrl URI encoding, fallback handling, timestamp cache-busting, and getTodayDateString | `src/__tests__/lib/formatters.test.ts` |
+| `UT-LIB-STORAGE-01` | Verify inferImageExtension, saveImageFile sanitization/directory creation, and deleteOldImageFile safe unlinking | `src/__tests__/lib/fileStorage.test.ts` |
+
+
+
 
 
 ## E2E Tests

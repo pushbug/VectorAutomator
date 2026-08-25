@@ -21,6 +21,7 @@ export const prisma =
         adapter,
       });
 
+// Force connection fresh reload on module change
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }

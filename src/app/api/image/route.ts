@@ -42,6 +42,19 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Unsupported file type', { status: 415 });
     }
 
+    const etag = `W/"${stat.size}-${Math.floor(stat.mtimeMs)}"`;
+    const ifNoneMatch = request.headers.get('if-none-match');
+
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': etag,
+          'Cache-Control': 'no-cache, must-revalidate',
+        },
+      });
+    }
+
     // Read file and return as stream/buffer
     const fileBuffer = await fs.promises.readFile(absolutePath);
 
@@ -49,8 +62,8 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        // Cache images aggressively for local performance
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'ETag': etag,
+        'Cache-Control': 'no-cache, must-revalidate',
       },
     });
   } catch (error) {
@@ -58,3 +71,4 @@ export async function GET(request: NextRequest) {
     return new NextResponse('File not found or unreadable', { status: 404 });
   }
 }
+

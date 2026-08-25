@@ -19,6 +19,8 @@ interface TopSharedKeywordsBarProps {
   totalImages: number;
   selectedKeyword?: string | null;
   onSelectKeyword?: (keyword: string | null) => void;
+  viewMode?: KeywordViewMode;
+  onViewModeChange?: (mode: KeywordViewMode) => void;
 }
 
 export function TopSharedKeywordsBar({
@@ -26,9 +28,20 @@ export function TopSharedKeywordsBar({
   totalImages,
   selectedKeyword,
   onSelectKeyword,
+  viewMode: controlledViewMode,
+  onViewModeChange,
 }: TopSharedKeywordsBarProps) {
   const [copied, setCopied] = useState(false);
-  const [viewMode, setViewMode] = useState<KeywordViewMode>('frequency');
+  const [internalViewMode, setInternalViewMode] = useState<KeywordViewMode>('frequency');
+  const viewMode = controlledViewMode !== undefined ? controlledViewMode : internalViewMode;
+
+  const handleViewModeChange = (mode: KeywordViewMode) => {
+    if (onViewModeChange) {
+      onViewModeChange(mode);
+    } else {
+      setInternalViewMode(mode);
+    }
+  };
 
   const sortedKeywords = useMemo(() => {
     const list = [...keywords];
@@ -96,7 +109,7 @@ export function TopSharedKeywordsBar({
             <button
               type="button"
               data-testid="collection-keywords-view-freq-btn"
-              onClick={() => setViewMode('frequency')}
+              onClick={() => handleViewModeChange('frequency')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === 'frequency'
                   ? 'bg-surface text-foreground shadow-xs font-semibold'
@@ -109,7 +122,7 @@ export function TopSharedKeywordsBar({
             <button
               type="button"
               data-testid="collection-keywords-view-dl-btn"
-              onClick={() => setViewMode('downloads')}
+              onClick={() => handleViewModeChange('downloads')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === 'downloads'
                   ? 'bg-surface text-foreground shadow-xs font-semibold'
@@ -122,7 +135,7 @@ export function TopSharedKeywordsBar({
             <button
               type="button"
               data-testid="collection-keywords-view-rev-btn"
-              onClick={() => setViewMode('revenue')}
+              onClick={() => handleViewModeChange('revenue')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === 'revenue'
                   ? 'bg-surface text-foreground shadow-xs font-semibold'

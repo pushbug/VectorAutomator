@@ -37,6 +37,7 @@ export default function PortfolioPage() {
   const [filters, setFilters] = useState<PortfolioFilterValues>({
     search: '',
     searchField: 'all',
+    idStatus: 'all',
     sortBy: 'createdAt',
     sortOrder: 'desc',
     startDate: '',
@@ -55,6 +56,9 @@ export default function PortfolioPage() {
         searchField: filters.searchField,
       });
 
+      if (filters.idStatus && filters.idStatus !== 'all') {
+        params.append('idStatus', filters.idStatus);
+      }
       if (filters.startDate) {
         params.append('startDate', filters.startDate);
       }
@@ -97,6 +101,7 @@ export default function PortfolioPage() {
       if (
         prev.search === newFilters.search &&
         prev.searchField === newFilters.searchField &&
+        prev.idStatus === newFilters.idStatus &&
         prev.sortBy === newFilters.sortBy &&
         prev.sortOrder === newFilters.sortOrder &&
         prev.startDate === newFilters.startDate &&
@@ -170,6 +175,23 @@ export default function PortfolioPage() {
     }
   };
 
+  const getIdStatusLabel = (status: string) => {
+    switch (status) {
+      case 'has_asId': return 'Has Adobe ID';
+      case 'missing_asId': return 'Missing Adobe ID';
+      case 'has_ssId': return 'Has Shutterstock ID';
+      case 'missing_ssId': return 'Missing Shutterstock ID';
+      case 'has_vzId': return 'Has Vecteezy ID';
+      case 'missing_vzId': return 'Missing Vecteezy ID';
+      case 'missing_any_id': return 'Missing Any Platform ID';
+      case 'missing_all_ids': return 'No Platform IDs';
+      case 'has_all_ids': return 'All Platform IDs Present';
+      case 'missing_image_file': return 'Missing Image File';
+      case 'has_image_file': return 'Has Image File';
+      default: return '';
+    }
+  };
+
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -217,7 +239,7 @@ export default function PortfolioPage() {
           data-testid="portfolio-summary-bar"
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-surface/70 border border-border rounded-xl text-xs text-muted -mt-2 shadow-2xs backdrop-blur-xs"
         >
-          <div className="flex items-center gap-2 font-medium">
+          <div className="flex items-center gap-2 font-medium flex-wrap">
             {filters.startDate || filters.endDate ? (
               <div className="flex items-center gap-1.5 text-foreground">
                 <Calendar size={14} className="text-primary shrink-0" />
@@ -249,7 +271,14 @@ export default function PortfolioPage() {
                 </span>
               </div>
             )}
+
+            {filters.idStatus !== 'all' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                {getIdStatusLabel(filters.idStatus)}
+              </span>
+            )}
           </div>
+
 
           <div className="flex items-center gap-4 sm:gap-6 font-mono text-xs">
             <div className="flex items-center gap-1.5">

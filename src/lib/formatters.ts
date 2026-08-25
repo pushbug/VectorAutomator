@@ -119,3 +119,39 @@ export function calculatePlatformBreakdown(
 
   return result;
 }
+
+/**
+ * Returns today's date formatted as YYYY-MM-DD string.
+ */
+export function getTodayDateString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Builds a sanitized, URI-encoded image serving URL with optional cache-busting version parameter.
+ */
+export function getImageUrl(
+  filePath?: string | null,
+  updatedAt?: string | Date | number | null
+): string {
+  if (!filePath || typeof filePath !== 'string' || !filePath.trim()) {
+    return '';
+  }
+  const encoded = encodeURIComponent(filePath.trim());
+  if (!updatedAt) {
+    return `/api/image?path=${encoded}`;
+  }
+  let v: number;
+  if (typeof updatedAt === 'number') {
+    v = updatedAt;
+  } else {
+    const d = new Date(updatedAt);
+    v = isNaN(d.getTime()) ? Date.now() : d.getTime();
+  }
+  return `/api/image?path=${encoded}&v=${v}`;
+}
+

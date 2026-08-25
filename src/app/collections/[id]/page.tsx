@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, use, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TopSharedKeywordsBar } from '@/components/collections/TopSharedKeywordsBar';
+import { TopSharedKeywordsBar, type KeywordViewMode } from '@/components/collections/TopSharedKeywordsBar';
 import { EditCollectionModal } from '@/components/collections/EditCollectionModal';
 import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { DeleteConfirmDialog } from '@/components/portfolio/DeleteConfirmDialog';
@@ -22,8 +22,10 @@ import {
   Pencil,
   Tag
 } from 'lucide-react';
-import { formatCurrency, formatNumber, formatDisplayDate } from '@/lib/formatters';
+import { formatCurrency, formatNumber, formatDisplayDate, getImageUrl } from '@/lib/formatters';
+
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
+
 
 export default function CollectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -36,19 +38,51 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
+  const [keywordViewMode, setKeywordViewMode] = useState<KeywordViewMode>('frequency');
   const [itemToRemove, setItemToRemove] = useState<any | null>(null);
 
   const images = collection?.images || [];
 
   const filteredImages = useMemo(() => {
-    if (!selectedKeyword) return images;
-    const target = selectedKeyword.trim().toLowerCase();
-    return images.filter((img: any) => {
-      if (!img.keywords) return false;
-      const tokens = parseKeywordsString(img.keywords).map((k) => k.toLowerCase());
-      return tokens.includes(target);
-    });
-  }, [images, selectedKeyword]);
+    let list = images;
+    if (selectedKeyword) {
+      const target = selectedKeyword.trim().toLowerCase();
+      list = list.filter((img: any) => {
+        if (!img.keywords) return false;
+        const tokens = parseKeywordsString(img.keywords).map((k) => k.toLowerCase());
+        return tokens.includes(target);
+      });
+    }
+
+    const sorted = [...list];
+    if (keywordViewMode === 'downloads') {
+      sorted.sort((a: any, b: any) => {
+        const dlDiff = (b.totalDownloads || 0) - (a.totalDownloads || 0);
+        if (dlDiff !== 0) return dlDiff;
+        const revDiff = (b.totalEarnings || 0) - (a.totalEarnings || 0);
+        if (revDiff !== 0) return revDiff;
+        return (b.code || '').localeCompare(a.code || '');
+      });
+    } else if (keywordViewMode === 'revenue') {
+      sorted.sort((a: any, b: any) => {
+        const revDiff = (b.totalEarnings || 0) - (a.totalEarnings || 0);
+        if (revDiff !== 0) return revDiff;
+        const dlDiff = (b.totalDownloads || 0) - (a.totalDownloads || 0);
+        if (dlDiff !== 0) return dlDiff;
+        return (b.code || '').localeCompare(a.code || '');
+      });
+    } else {
+      // 'frequency' / default: preserve collection order (or addedAt desc)
+      sorted.sort((a: any, b: any) => {
+        if (a.addedAt && b.addedAt) {
+          return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+        }
+        return 0;
+      });
+    }
+
+    return sorted;
+  }, [images, selectedKeyword, keywordViewMode]);
 
   const fetchCollection = useCallback(async () => {
     setIsLoading(true);
@@ -265,6 +299,8 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
           totalImages={summary.totalImages}
           selectedKeyword={selectedKeyword}
           onSelectKeyword={(kw) => setSelectedKeyword(kw)}
+          viewMode={keywordViewMode}
+          onViewModeChange={setKeywordViewMode}
         />
       </div>
 
@@ -384,13 +420,14 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
                     {/* Image Container */}
                     <div className="relative aspect-4/3 sm:aspect-square w-full bg-background overflow-hidden flex items-center justify-center p-2">
                       <Image
-                        src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                        src={getImageUrl(img.filePath)}
                         alt={img.code || img.title}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
                         className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
                         unoptimized
                       />
+
                     </div>
 
                     {/* Bottom Info */}

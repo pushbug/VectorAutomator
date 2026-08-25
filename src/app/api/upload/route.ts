@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import path from 'path';
 import fs from 'fs/promises';
 import { reconcileImageSales } from '@/lib/salesReconciler';
 import { getNextImageCode, parseImageCode } from '@/lib/imageCode';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
+import { saveImageFile } from '@/lib/fileStorage';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,12 +24,14 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
-    const file = formData.get('file') as File;
+    const fileEntry = formData.get('file');
+    const hasFile = fileEntry && typeof fileEntry === 'object' && 'arrayBuffer' in fileEntry && (fileEntry as any).size > 0;
+    const file = hasFile ? (fileEntry as unknown as File) : null;
     const title = formData.get('title') as string;
     const keywords = formData.get('keywords') as string;
     const codeRaw = (formData.get('code') as string || '').trim();
 
-    if (!file || !title || !keywords) {
+    if (!title || !keywords) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -78,22 +81,17 @@ export async function POST(request: NextRequest) {
       seqNumber = nextResult.seqNumber;
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    let dbFilePath = '';
+    let status = 'pending';
+    let physicalFilePathToDelete: string | null = null;
 
-    const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
-    
-    // Ensure the uploads directory exists
-    try {
-      await fs.access(uploadsDir);
-    } catch {
-      await fs.mkdir(uploadsDir, { recursive: true });
+    if (file) {
+      const saved = await saveImageFile(file, code || `img-${Date.now()}`);
+      dbFilePath = saved.dbFilePath;
+      physicalFilePathToDelete = saved.physicalPath;
+      status = 'uploaded';
     }
 
-    const uniqueFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = path.join(uploadsDir, uniqueFilename);
-    
-    await fs.writeFile(filePath, buffer);
 
     const category = (formData.get('category') as string || '').trim() || null;
     const tags = (formData.get('tags') as string || '').trim() || null;
@@ -120,35 +118,44 @@ export async function POST(request: NextRequest) {
       initialStats.push({ platform: 'Vecteezy', downloads: validVzDownloads, earnings: 0, date: createdAt });
     }
 
-    let newImage = await prisma.image.create({
-      data: {
-        code,
-        year,
-        month,
-        seqNumber,
-        title,
-        keywords,
-        category,
-        tags,
-        notes,
-        filePath: filePath, // Storing absolute path for /api/image
-        ssId,
-        asId,
-        vzId,
-        ssDownloads: validSsDownloads,
-        asDownloads: validAsDownloads,
-        totalDownloads,
-        status: 'uploaded',
-        createdAt,
-        ...(initialStats.length > 0
-          ? {
-              stats: {
-                create: initialStats,
-              },
-            }
-          : {}),
-      },
-    });
+    let newImage;
+    try {
+      newImage = await prisma.image.create({
+        data: {
+          code,
+          year,
+          month,
+          seqNumber,
+          title,
+          keywords,
+          category,
+          tags,
+          notes,
+          filePath: dbFilePath,
+          ssId,
+          asId,
+          vzId,
+          ssDownloads: validSsDownloads,
+          asDownloads: validAsDownloads,
+          totalDownloads,
+          status,
+          createdAt,
+          ...(initialStats.length > 0
+            ? {
+                stats: {
+                  create: initialStats,
+                },
+              }
+            : {}),
+        },
+      });
+    } catch (dbErr: any) {
+      // Rollback physical file on database failure
+      if (physicalFilePathToDelete) {
+        await fs.unlink(physicalFilePathToDelete).catch(() => {});
+      }
+      throw dbErr;
+    }
 
     if (newImage.asId || newImage.ssId || newImage.vzId) {
       await reconcileImageSales(prisma, newImage);

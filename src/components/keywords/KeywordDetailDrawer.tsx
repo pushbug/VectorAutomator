@@ -3,7 +3,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { X, Tag, Download, DollarSign, ExternalLink, Loader2, Sparkles, Copy, Check } from 'lucide-react';
-import { formatCurrency, formatNumber, formatTableDate } from '@/lib/formatters';
+import { formatCurrency, formatNumber, formatTableDate, getImageUrl } from '@/lib/formatters';
+
+
 import { calculateCoOccurringKeywords } from '@/lib/keywordAnalytics';
 import { copyToClipboard } from '@/lib/clipboard';
 
@@ -202,13 +204,14 @@ export function KeywordDetailDrawer({
                       {/* Thumbnail */}
                       <div className="w-12 h-12 rounded-lg overflow-hidden border border-border/80 shrink-0 relative bg-muted/20 flex items-center justify-center">
                         <Image
-                          src={`/api/image?path=${encodeURIComponent(img.filePath)}`}
+                          src={getImageUrl(img.filePath)}
                           alt={img.title || 'Vector preview'}
                           width={48}
                           height={48}
                           className="w-full h-full object-cover"
                           unoptimized
                         />
+
                       </div>
 
                       <div className="min-w-0">

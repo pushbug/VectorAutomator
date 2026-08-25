@@ -6,7 +6,8 @@ import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check } from 'lu
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
 import { copyToClipboard } from '@/lib/clipboard';
-import { calculatePlatformBreakdown, formatCurrency, formatNumber } from '@/lib/formatters';
+import { calculatePlatformBreakdown, formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
+
 
 interface PortfolioImage {
   id: string;
@@ -58,10 +59,10 @@ export function PortfolioDetail({
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
   const [idInputVal, setIdInputVal] = useState('');
   const [isSavingId, setIsSavingId] = useState(false);
-  const [copiedField, setCopiedField] = useState<'title' | 'keywords' | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [enrichedData, setEnrichedData] = useState<PortfolioImage | null>(null);
 
-  const handleCopy = async (text: string, field: 'title' | 'keywords') => {
+  const handleCopy = async (text: string, field: string) => {
     if (!text) return;
     const success = await copyToClipboard(text);
     if (success) {
@@ -154,7 +155,13 @@ export function PortfolioDetail({
     }
   };
 
-  const imageUrl = `/api/image?path=${encodeURIComponent(activeImage.filePath)}`;
+  const imageUrl = getImageUrl(
+    activeImage.filePath,
+    (activeImage as any).updatedAt || activeImage.createdAt
+  );
+
+
+
 
   const stats = (activeImage as any).stats || [];
   let computedTotalEarnings = activeImage.totalEarnings;
@@ -373,10 +380,27 @@ export function PortfolioDetail({
                     >
                       {/* Top row: Platform Badge + Asset ID */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${theme.bg} ${theme.text} border ${theme.border}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${theme.dot} shrink-0`} />
-                          {p}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${theme.bg} ${theme.text} border ${theme.border}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${theme.dot} shrink-0`} />
+                            {p}
+                          </span>
+                          {currentId && (
+                            <button
+                              type="button"
+                              data-testid={`portfolio-copy-platform-id-${p.toLowerCase().replace(/\s+/g, '-')}-btn`}
+                              onClick={() => handleCopy(currentId, `platform-id-${p}`)}
+                              title={copiedField === `platform-id-${p}` ? 'Copied ID!' : `Copy ${p} ID`}
+                              className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
+                            >
+                              {copiedField === `platform-id-${p}` ? (
+                                <Check size={13} className="text-emerald-500" />
+                              ) : (
+                                <Copy size={13} className="text-muted hover:text-foreground" />
+                              )}
+                            </button>
+                          )}
+                        </div>
 
                         {/* Asset ID display / editor */}
                         <div className="flex items-center gap-1 text-xs">

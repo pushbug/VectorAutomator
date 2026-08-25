@@ -19,6 +19,9 @@ import {
   HelpCircle,
   AlertTriangle,
 } from 'lucide-react';
+import { SingleDatePicker } from './SingleDatePicker';
+import { getTodayDateString, getImageUrl } from '@/lib/formatters';
+
 
 interface SmartIdPasteModalProps {
   isOpen: boolean;
@@ -75,7 +78,7 @@ const CandidateCardItem: React.FC<CandidateCardItemProps> = ({
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="w-8 h-8 rounded bg-surface border border-border overflow-hidden shrink-0">
           <img
-            src={`/api/image?path=${encodeURIComponent(candidate.filePath)}`}
+            src={getImageUrl(candidate.filePath)}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -121,7 +124,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [selectedAsIds, setSelectedAsIds] = useState<Set<string>>(new Set());
   const [committedIds, setCommittedIds] = useState<Set<string>>(new Set());
-  const [filterTab, setFilterTab] = useState<'all' | 'exact' | 'review' | 'unmatched'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'exact' | 'synced' | 'review' | 'unmatched'>('all');
   const [tableSearch, setTableSearch] = useState('');
 
   // Inline Manual Search & Link State
@@ -214,7 +217,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
     const exact = new Set<string>();
     rows.forEach((r) => {
       if (
-        (r.status === 'exact' || committedIds.has(r.asId)) &&
+        r.status === 'exact' &&
         r.matchedImage &&
         !r.isAlreadySynced &&
         !committedIds.has(r.asId)
@@ -281,6 +284,29 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
     setDbSearchResults([]);
   };
 
+  // Unmatch / Detach candidate from row
+  const handleUnmatch = (asId: string) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.asId === asId) {
+          return {
+            ...r,
+            status: 'unmatched',
+            confidence: 0,
+            matchedImage: null,
+            candidates: [],
+          };
+        }
+        return r;
+      })
+    );
+    setSelectedAsIds((prev) => {
+      const next = new Set(prev);
+      next.delete(asId);
+      return next;
+    });
+  };
+
   // Commit Single Row (1-by-1 commit)
   const handleCommitSingle = async (row: PreviewRow) => {
     if (!row.matchedImage) return;
@@ -295,7 +321,6 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
             {
               imageId: row.matchedImage.id,
               asId: row.asId,
-              downloads: row.downloads,
             },
           ],
         }),
@@ -310,6 +335,135 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
     }
   };
 
+  // Quick Import Dialog State
+  const [quickImportRow, setQuickImportRow] = useState<PreviewRow | null>(null);
+  const [quickImportDate, setQuickImportDate] = useState<string>(getTodayDateString);
+  const [quickImportTitle, setQuickImportTitle] = useState<string>('');
+  const [quickImportKeywords, setQuickImportKeywords] = useState<string>('');
+  const [quickImportCategory, setQuickImportCategory] = useState<string>('');
+  const [quickImportCode, setQuickImportCode] = useState<string>('');
+  const [isGeneratingCode, setIsGeneratingCode] = useState<boolean>(false);
+  const [isSubmittingQuickImport, setIsSubmittingQuickImport] = useState<boolean>(false);
+  const [quickImportError, setQuickImportError] = useState<string | null>(null);
+
+  // Fetch next running code for selected date
+  const fetchNextCodeForDate = useCallback(async (targetDate: string) => {
+    setIsGeneratingCode(true);
+    try {
+      const res = await fetch(`/api/upload?date=${targetDate}`);
+      const data = await res.json();
+      if (data.nextCode) {
+        setQuickImportCode(data.nextCode);
+      }
+    } catch (err) {
+      console.error('Failed to fetch next code for date:', err);
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  }, []);
+
+  // Open Quick Import Dialog for an unmatched row
+  const handleOpenQuickImport = (row: PreviewRow) => {
+    const today = getTodayDateString();
+    setQuickImportRow(row);
+    setQuickImportTitle(row.adobeTitle);
+    setQuickImportKeywords('');
+    setQuickImportCategory('');
+    setQuickImportDate(today);
+    setQuickImportCode('');
+    setQuickImportError(null);
+    fetchNextCodeForDate(today);
+  };
+
+  // Handle Date Change in Quick Import Dialog
+  const handleQuickImportDateChange = (newDate: string) => {
+    setQuickImportDate(newDate);
+    fetchNextCodeForDate(newDate);
+  };
+
+  // Submit Quick Import
+  const handleConfirmQuickImport = async () => {
+    if (!quickImportRow) return;
+    if (!quickImportTitle.trim()) {
+      setQuickImportError('Please enter an artwork title');
+      return;
+    }
+
+    setIsSubmittingQuickImport(true);
+    setQuickImportError(null);
+
+    try {
+      const res = await fetch('/api/portfolio/paste-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'commit',
+          items: [
+            {
+              action: 'create_placeholder',
+              title: quickImportTitle.trim(),
+              asId: quickImportRow.asId,
+              date: quickImportDate,
+              code: quickImportCode.trim() || undefined,
+              keywords: quickImportKeywords.trim(),
+              category: quickImportCategory.trim() || undefined,
+            },
+          ],
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create artwork in portfolio');
+      }
+
+      const createdItem = data.createdItems?.[0] || {
+        id: data.createdId || `img-${Date.now()}`,
+        code: quickImportCode.trim() || 'NO-CODE',
+        title: quickImportTitle.trim(),
+        filePath: '',
+        asId: quickImportRow.asId,
+        asDownloads: 0,
+      };
+
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.asId === quickImportRow.asId) {
+            return {
+              ...r,
+              status: 'exact',
+              confidence: 1.0,
+              isAlreadySynced: true,
+              matchedImage: {
+                id: createdItem.id,
+                code: createdItem.code || quickImportCode.trim() || 'NO-CODE',
+                title: createdItem.title || quickImportTitle.trim(),
+                filePath: createdItem.filePath || '',
+                asId: quickImportRow.asId,
+                asDownloads: 0,
+              },
+              candidates: [],
+            };
+          }
+          return r;
+        })
+      );
+
+      setCommittedIds((prev) => new Set([...prev, quickImportRow.asId]));
+      setSelectedAsIds((prev) => {
+        const next = new Set(prev);
+        next.delete(quickImportRow.asId);
+        return next;
+      });
+      setQuickImportRow(null);
+      onSuccess();
+    } catch (err: any) {
+      setQuickImportError(err.message || 'Failed to create artwork');
+    } finally {
+      setIsSubmittingQuickImport(false);
+    }
+  };
+
   // Bulk Commit for all checked rows
   const handleBulkCommit = async () => {
     const itemsToCommit = rows
@@ -317,7 +471,6 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
       .map((r) => ({
         imageId: r.matchedImage!.id,
         asId: r.asId,
-        downloads: r.downloads,
       }));
 
     if (itemsToCommit.length === 0) return;
@@ -353,25 +506,34 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
     }
   };
 
-  // Dynamic metrics considering committed/resolved rows:
-  const exactCount = rows.filter((r) => r.status === 'exact' || committedIds.has(r.asId)).length;
+  // Dynamic metrics with discrete Already Synced vs New Exact:
+  const newExactCount = rows.filter(
+    (r) => r.status === 'exact' && !r.isAlreadySynced && !committedIds.has(r.asId)
+  ).length;
+  const alreadySyncedCount = rows.filter(
+    (r) => r.isAlreadySynced || committedIds.has(r.asId)
+  ).length;
   const reviewCount = rows.filter(
-    (r) => (r.status === 'fuzzy' || r.status === 'ambiguous') && !committedIds.has(r.asId)
+    (r) => (r.status === 'fuzzy' || r.status === 'ambiguous') && !r.isAlreadySynced && !committedIds.has(r.asId)
   ).length;
   const unmatchedCount = rows.filter(
-    (r) => r.status === 'unmatched' && !committedIds.has(r.asId) && !r.matchedImage
+    (r) => r.status === 'unmatched' && !r.isAlreadySynced && !committedIds.has(r.asId) && !r.matchedImage
   ).length;
   const uncommittedSelectedCount = rows.filter(
-    (r) => selectedAsIds.has(r.asId) && r.matchedImage && !committedIds.has(r.asId)
+    (r) => selectedAsIds.has(r.asId) && r.matchedImage && !r.isAlreadySynced && !committedIds.has(r.asId)
   ).length;
 
   // Filtered rows for display
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       const isCommitted = committedIds.has(r.asId);
-      if (filterTab === 'exact' && r.status !== 'exact' && !isCommitted) return false;
-      if (filterTab === 'review' && ((r.status !== 'fuzzy' && r.status !== 'ambiguous') || isCommitted)) return false;
-      if (filterTab === 'unmatched' && (r.status !== 'unmatched' || isCommitted || r.matchedImage)) return false;
+      const isAlreadySynced = Boolean(r.isAlreadySynced);
+      const isDone = isCommitted || isAlreadySynced;
+
+      if (filterTab === 'exact' && (r.status !== 'exact' || isDone)) return false;
+      if (filterTab === 'synced' && !isDone) return false;
+      if (filterTab === 'review' && ((r.status !== 'fuzzy' && r.status !== 'ambiguous') || isDone)) return false;
+      if (filterTab === 'unmatched' && (r.status !== 'unmatched' || isDone || r.matchedImage)) return false;
 
       if (tableSearch.trim()) {
         const query = tableSearch.toLowerCase();
@@ -401,7 +563,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">
-                Smart Adobe ID &amp; Downloads Matcher
+                Smart Adobe Contributor ID Matcher
               </h2>
             </div>
           </div>
@@ -457,91 +619,118 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
           ) : (
             /* STEP 2: STAGED VISUAL COMPARISON GRID */
             <div className="space-y-4 flex-1 flex flex-col min-h-0" data-testid="sync-preview-grid">
-              {/* Summary Badges & KPI Row (1:1 Match with Main App Design System) */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 shrink-0">
+              {/* Staged Preview Alert Banner */}
+              {uncommittedSelectedCount > 0 && (
+                <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs rounded-xl shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={15} className="shrink-0 text-blue-500 animate-pulse" />
+                    <span>
+                      <strong>Staged Preview (Not Yet Saved):</strong> {uncommittedSelectedCount} artworks matched. Click <strong className="underline font-semibold">"Apply {uncommittedSelectedCount} Checked Artworks"</strong> below to persist to database.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary Badges & KPI Row (6-Column Responsive Grid) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 shrink-0">
                 {/* Total Ingested */}
-                <div className="bg-surface border border-border rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs hover:border-primary/30 transition-all gap-2 min-w-0">
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-primary/30 transition-all gap-1.5 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] sm:text-2xs font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
                       Total Ingested
                     </p>
-                    <h3 className="text-lg sm:text-xl font-bold font-mono tabular-nums text-foreground truncate">
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-foreground truncate">
                       {rows.length}
                     </h3>
                   </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg border text-muted bg-surface-hover border-border shrink-0">
-                    <FileSpreadsheet size={18} />
+                  <div className="p-2 rounded-lg border text-muted bg-surface-hover border-border shrink-0">
+                    <FileSpreadsheet size={16} />
                   </div>
                 </div>
 
-                {/* Exact / Synced */}
-                <div className="bg-surface border border-border rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs hover:border-emerald-500/40 transition-all gap-2 min-w-0">
+                {/* New Exact */}
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-emerald-500/40 transition-all gap-1.5 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] sm:text-2xs font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
-                      Exact / Synced
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                      New Exact
                     </p>
-                    <h3 className="text-lg sm:text-xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 truncate">
-                      {exactCount}
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 truncate">
+                      {newExactCount}
                     </h3>
                   </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg border text-emerald-500 bg-emerald-500/10 border-emerald-500/20 shrink-0">
-                    <CheckCircle2 size={18} />
+                  <div className="p-2 rounded-lg border text-emerald-500 bg-emerald-500/10 border-emerald-500/20 shrink-0">
+                    <CheckCircle2 size={16} />
+                  </div>
+                </div>
+
+                {/* Already Synced */}
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-teal-500/40 transition-all gap-1.5 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                      Already Synced
+                    </p>
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-teal-600 dark:text-teal-400 truncate">
+                      {alreadySyncedCount}
+                    </h3>
+                  </div>
+                  <div className="p-2 rounded-lg border text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/20 shrink-0">
+                    <Check size={16} strokeWidth={2.5} />
                   </div>
                 </div>
 
                 {/* Needs Review */}
-                <div className="bg-surface border border-border rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs hover:border-amber-500/40 transition-all gap-2 min-w-0">
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-amber-500/40 transition-all gap-1.5 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] sm:text-2xs font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
                       Needs Review
                     </p>
-                    <h3 className="text-lg sm:text-xl font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400 truncate">
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400 truncate">
                       {reviewCount}
                     </h3>
                   </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg border text-amber-500 bg-amber-500/10 border-amber-500/20 shrink-0">
-                    <AlertTriangle size={18} />
+                  <div className="p-2 rounded-lg border text-amber-500 bg-amber-500/10 border-amber-500/20 shrink-0">
+                    <AlertTriangle size={16} />
                   </div>
                 </div>
 
                 {/* Unmatched */}
-                <div className="bg-surface border border-border rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs hover:border-rose-500/40 transition-all gap-2 min-w-0">
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-rose-500/40 transition-all gap-1.5 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] sm:text-2xs font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
                       Unmatched
                     </p>
-                    <h3 className="text-lg sm:text-xl font-bold font-mono tabular-nums text-rose-600 dark:text-rose-400 truncate">
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-rose-600 dark:text-rose-400 truncate">
                       {unmatchedCount}
                     </h3>
                   </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg border text-rose-500 bg-rose-500/10 border-rose-500/20 shrink-0">
-                    <AlertCircle size={18} />
+                  <div className="p-2 rounded-lg border text-rose-500 bg-rose-500/10 border-rose-500/20 shrink-0">
+                    <AlertCircle size={16} />
                   </div>
                 </div>
 
                 {/* Checked for Sync */}
-                <div className="bg-surface border border-border rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs hover:border-blue-500/40 transition-all gap-2 min-w-0 col-span-2 sm:col-span-1">
+                <div className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs hover:border-blue-500/40 transition-all gap-1.5 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] sm:text-2xs font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-wider mb-0.5 truncate">
                       Checked For Sync
                     </p>
-                    <h3 className="text-lg sm:text-xl font-bold font-mono tabular-nums text-blue-600 dark:text-blue-400 truncate">
+                    <h3 className="text-lg font-bold font-mono tabular-nums text-blue-600 dark:text-blue-400 truncate">
                       {uncommittedSelectedCount}
                     </h3>
                   </div>
-                  <div className="p-2 sm:p-2.5 rounded-lg border text-blue-500 bg-blue-500/10 border-blue-500/20 shrink-0">
-                    <CheckSquare size={18} />
+                  <div className="p-2 rounded-lg border text-blue-500 bg-blue-500/10 border-blue-500/20 shrink-0">
+                    <CheckSquare size={16} />
                   </div>
                 </div>
               </div>
 
               {/* Toolbar: Filter Tabs & Select Actions */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl text-xs">
+                <div className="flex items-center gap-1 p-1 bg-surface border border-border rounded-xl text-xs flex-wrap">
                   <button
                     type="button"
                     onClick={() => setFilterTab('all')}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                       filterTab === 'all'
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted hover:text-foreground'
@@ -552,18 +741,29 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setFilterTab('exact')}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                       filterTab === 'exact'
                         ? 'bg-emerald-700 text-white shadow-xs'
                         : 'text-muted hover:text-foreground'
                     }`}
                   >
-                    Exact ({exactCount})
+                    New Exact ({newExactCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('synced')}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                      filterTab === 'synced'
+                        ? 'bg-teal-700 text-white shadow-xs'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Already Synced ({alreadySyncedCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFilterTab('review')}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                       filterTab === 'review'
                         ? 'bg-amber-600 text-white shadow-xs'
                         : 'text-muted hover:text-foreground'
@@ -574,7 +774,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setFilterTab('unmatched')}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                       filterTab === 'unmatched'
                         ? 'bg-rose-600 text-white shadow-xs'
                         : 'text-muted hover:text-foreground'
@@ -628,8 +828,8 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                         <span className="sr-only">Select Row</span>
                       </th>
                       <th className="p-3 w-[43%]">Local Database Artwork</th>
-                      <th className="p-3 w-[41%]">Adobe Contributor Live</th>
-                      <th className="p-3 w-[16%] text-right">Match &amp; Action</th>
+                      <th className="p-3 w-[39%]">Adobe Contributor Live</th>
+                      <th className="p-3 w-[18%] text-right">Match &amp; Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -663,7 +863,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                 className="cursor-pointer disabled:opacity-80"
                               >
                                 {isDone ? (
-                                  <div className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
+                                  <div className="w-4 h-4 rounded bg-teal-600 text-white flex items-center justify-center shadow-2xs">
                                     <Check size={11} strokeWidth={3} />
                                   </div>
                                 ) : isSelected ? (
@@ -762,7 +962,16 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                   <div className="w-11 h-11 rounded-lg bg-surface border border-border overflow-hidden shrink-0 relative">
                                     {row.matchedImage.filePath ? (
                                       <img
-                                        src={`/api/image?path=${encodeURIComponent(row.matchedImage.filePath)}`}
+                                        src={getImageUrl(row.matchedImage.filePath)}
+                                        alt={row.matchedImage.title}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          (e.target as any).style.display = 'none';
+                                        }}
+                                      />
+                                    ) : row.thumbnailUrl ? (
+                                      <img
+                                        src={row.thumbnailUrl}
                                         alt={row.matchedImage.title}
                                         className="w-full h-full object-cover"
                                         onError={(e) => {
@@ -799,22 +1008,33 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                       No direct match in DB
                                     </p>
                                     <p className="text-3xs text-muted truncate">
-                                      Click search to link manually.
+                                      Link existing or import as new
                                     </p>
                                   </div>
-                                  <button
-                                    type="button"
-                                    data-testid="pick-artwork-btn"
-                                    onClick={() => {
-                                      setLinkingAsId(row.asId);
-                                      setSearchQuery(row.adobeTitle.slice(0, 30));
-                                      executeDbSearch(row.adobeTitle.slice(0, 30));
-                                    }}
-                                    className="px-2 py-1 bg-surface hover:bg-surface-hover border border-border text-2xs font-semibold text-foreground rounded-lg transition-colors cursor-pointer shrink-0 flex items-center gap-1"
-                                  >
-                                    <Search size={11} />
-                                    <span>Pick Artwork</span>
-                                  </button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      data-testid="pick-artwork-btn"
+                                      onClick={() => {
+                                        setLinkingAsId(row.asId);
+                                        setSearchQuery(row.adobeTitle.slice(0, 30));
+                                        executeDbSearch(row.adobeTitle.slice(0, 30));
+                                      }}
+                                      className="px-2 py-1 bg-surface hover:bg-surface-hover border border-border text-2xs font-semibold text-foreground rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                    >
+                                      <Search size={11} />
+                                      <span>Pick</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      data-testid="create-placeholder-btn"
+                                      onClick={() => handleOpenQuickImport(row)}
+                                      className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-2xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                                    >
+                                      <Sparkles size={11} />
+                                      <span>+ Import as New</span>
+                                    </button>
+                                  </div>
                                 </div>
                               )}
                             </td>
@@ -855,7 +1075,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                             <td className="p-3 align-top text-right space-y-1.5 min-w-0">
                               <div>
                                 {isDone ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-700 dark:bg-emerald-700 text-white font-bold rounded-md text-3xs shadow-2xs">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-700 dark:bg-teal-700 text-white font-bold rounded-md text-3xs shadow-2xs">
                                     <CheckCircle2 size={10} strokeWidth={2.5} className="text-white" />
                                     Already Synced
                                   </span>
@@ -918,13 +1138,23 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                     </button>
 
                                     {row.matchedImage && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCommitSingle(row)}
-                                        className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-3xs font-bold rounded shadow-2xs transition-colors cursor-pointer"
-                                      >
-                                        Commit
-                                      </button>
+                                      <>
+                                        <button
+                                          type="button"
+                                          data-testid="unmatch-row-btn"
+                                          onClick={() => handleUnmatch(row.asId)}
+                                          className="px-2 py-0.5 bg-surface hover:bg-rose-500/10 border border-border hover:border-rose-500/30 text-3xs font-medium text-muted hover:text-rose-600 rounded transition-colors cursor-pointer"
+                                        >
+                                          Unmatch
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCommitSingle(row)}
+                                          className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-3xs font-bold rounded shadow-2xs transition-colors cursor-pointer"
+                                        >
+                                          Commit
+                                        </button>
+                                      </>
                                     )}
                                   </>
                                 )}
@@ -1016,6 +1246,187 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Quick Import Dialog Modal */}
+      {quickImportRow && (
+        <div
+          data-testid="quick-import-dialog"
+          className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        >
+
+          <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-visible relative flex flex-col animate-in fade-in zoom-in-95 duration-150 my-auto">
+            {/* Dialog Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface/40 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Import as New Artwork</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-testid="cancel-quick-import-btn"
+                onClick={() => setQuickImportRow(null)}
+                className="p-1 text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Dialog Body */}
+            <div className="p-5 space-y-4 relative z-20 overflow-visible">
+              {quickImportError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2 text-rose-600 dark:text-rose-400 text-xs">
+                  <AlertCircle size={15} className="shrink-0" />
+                  <span>{quickImportError}</span>
+                </div>
+              )}
+
+              {/* Thumbnail & AS ID Info */}
+              <div className="p-3 bg-surface/60 border border-border rounded-xl flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-surface border border-border overflow-hidden shrink-0">
+                  {quickImportRow.thumbnailUrl ? (
+                    <img
+                      src={quickImportRow.thumbnailUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as any).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted">
+                      <ImageIcon size={16} />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="font-mono text-3xs font-bold text-muted uppercase">Adobe Stock Asset</span>
+                    <span className="font-mono text-3xs px-1.5 py-0.5 bg-background border border-border rounded font-bold text-foreground">
+                      AS ID: {quickImportRow.asId}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted truncate">{quickImportRow.adobeTitle}</p>
+                </div>
+              </div>
+
+              {/* Upload Date & Generated Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-30">
+                <div className="relative z-30">
+                  <label className="block text-2xs font-semibold text-foreground mb-1.5">
+                    Upload Date
+                  </label>
+                  <SingleDatePicker
+                    value={quickImportDate}
+                    onChange={handleQuickImportDateChange}
+                    testId="quick-import-date-picker"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-2xs font-semibold text-foreground mb-1.5">
+                    Image Code (YYMM-Seq)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      data-testid="quick-import-code-input"
+                      value={quickImportCode}
+                      onChange={(e) => setQuickImportCode(e.target.value)}
+                      placeholder={isGeneratingCode ? 'Calculating...' : 'e.g. 2305-01'}
+                      className="w-full h-9 px-3 bg-surface border border-border rounded-lg text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    {isGeneratingCode && (
+                      <div className="absolute right-2.5 top-2.5 text-muted animate-spin">
+                        <RefreshCw size={14} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-2xs font-semibold text-foreground mb-1.5">
+                  Title *
+                </label>
+                <textarea
+                  data-testid="quick-import-title-input"
+                  rows={2}
+                  value={quickImportTitle}
+                  onChange={(e) => setQuickImportTitle(e.target.value)}
+                  placeholder="e.g. Minimalist Circular Flowchart Infographic"
+                  className="w-full p-2.5 bg-surface border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                />
+              </div>
+
+              {/* Keywords */}
+              <div>
+                <label className="block text-2xs font-semibold text-foreground mb-1.5">
+                  Keywords
+                </label>
+                <textarea
+                  data-testid="quick-import-keywords-input"
+                  rows={2}
+                  value={quickImportKeywords}
+                  onChange={(e) => setQuickImportKeywords(e.target.value)}
+                  placeholder="abstract, business, flowchart, infographic, vector..."
+                  className="w-full p-2.5 bg-surface border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-2xs font-semibold text-foreground mb-1.5">
+                  Category (Optional)
+                </label>
+                <input
+                  type="text"
+                  data-testid="quick-import-category-input"
+                  value={quickImportCategory}
+                  onChange={(e) => setQuickImportCategory(e.target.value)}
+                  placeholder="e.g. Business, Infographics, Icons, Backgrounds..."
+                  className="w-full h-9 px-3 bg-surface border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-border bg-surface/40 shrink-0 rounded-b-2xl relative z-10">
+              <button
+                type="button"
+                onClick={() => setQuickImportRow(null)}
+                disabled={isSubmittingQuickImport}
+                className="px-3.5 py-1.5 text-xs font-medium text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="confirm-quick-import-btn"
+                onClick={handleConfirmQuickImport}
+                disabled={isSubmittingQuickImport || !quickImportTitle.trim()}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isSubmittingQuickImport ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    <span>Importing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={13} />
+                    <span>Confirm &amp; Import</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
