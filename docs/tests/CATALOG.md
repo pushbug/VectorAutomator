@@ -112,6 +112,11 @@
 | `UT-UI-PF-LCP-01` | Verify PortfolioGrid applies eager loading priority to top 4 cards and lazy loading to subsequent cards | `src/__tests__/components/PortfolioGrid.test.tsx` |
 | `UT-SALES-RECONCILE-03` | Verify reconcileAllUnlinkedSales scans unlinked records and binds to matching artworks | `src/__tests__/lib/salesReconciler.test.ts` |
 | `UT-SERP-RECONCILE-03` | Verify reconcileImageSerp and autoReconcileSerpItems batch reconciliation | `src/__tests__/lib/serpReconciler.test.ts` |
+| `UT-SALES-PASTE-DATE-01` | Verify extractStatementDate parses ISO/US dates and parseStockPaste tolerates date header | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-DUP-01` | Verify /api/sales/paste-sync preview detects existing sales for target date and returns existingSalesWarning | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-DATE-02` | Verify /api/sales/paste-sync prioritizes date header in rawText over stale client statementDate | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-SALES-PASTE-DEDUP-01` | Verify parseStockPaste deduplicates concatenated paste payloads by assetId | `src/__tests__/api/sales_paste.test.ts` |
+| `UT-UI-SMART-PASTE-AUTODATE-01` | Verify SmartPasteModal auto-detects date from clipboard header and renders duplicate warning alert | `src/__tests__/components/SalesComponents.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |

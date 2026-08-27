@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check } from 'lucide-react';
+import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check, Trash2 } from 'lucide-react';
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
-import { parseStockPaste } from '@/lib/stockPasteParser';
+import { parseStockPaste, extractStatementDate } from '@/lib/stockPasteParser';
 import { SUPPORTED_PLATFORMS, PlatformType } from '@/lib/platforms';
 import { formatCurrency, getImageUrl } from '@/lib/formatters';
 
@@ -46,6 +46,12 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
   const [platform, setPlatform] = useState<PlatformType>('Adobe Stock');
   const [rawText, setRawText] = useState('');
   const [statementDate, setStatementDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [autoDetectedDate, setAutoDetectedDate] = useState<string | null>(null);
+  const [existingSalesWarning, setExistingSalesWarning] = useState<{
+    count: number;
+    totalEarnings: number;
+    dateStr: string;
+  } | null>(null);
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +67,27 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
     };
   }, [rawText]);
 
+  React.useEffect(() => {
+    if (rawText) {
+      const detected = extractStatementDate(rawText);
+      if (detected) {
+        setStatementDate(detected);
+        setAutoDetectedDate(detected);
+      }
+    }
+  }, [rawText]);
+
+  const handleRawTextChange = (text: string) => {
+    setRawText(text);
+    const detected = extractStatementDate(text);
+    if (detected) {
+      setStatementDate(detected);
+      setAutoDetectedDate(detected);
+    } else {
+      setAutoDetectedDate(null);
+    }
+  };
+
   if (!isOpen) return null;
 
 
@@ -72,6 +99,13 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
     setErrorMsg(null);
     setIsLoading(true);
 
+    const detected = extractStatementDate(rawText);
+    const effectiveStatementDate = detected || statementDate;
+    if (detected && detected !== statementDate) {
+      setStatementDate(detected);
+      setAutoDetectedDate(detected);
+    }
+
     try {
       const res = await fetch('/api/sales/paste-sync', {
         method: 'POST',
@@ -80,7 +114,7 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
           action: 'preview',
           platform,
           rawText,
-          statementDate,
+          statementDate: effectiveStatementDate,
           useStatementDate: true,
         }),
       });
@@ -96,7 +130,17 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
         return;
       }
 
+      if (data.detectedStatementDate) {
+        setStatementDate(data.detectedStatementDate);
+        setAutoDetectedDate(data.detectedStatementDate);
+      }
+
       setRows(data.rows);
+      if (data.existingSalesWarning) {
+        setExistingSalesWarning(data.existingSalesWarning);
+      } else {
+        setExistingSalesWarning(null);
+      }
       setStep('preview');
     } catch (err: any) {
       console.error('Error previewing paste:', err);
@@ -218,12 +262,21 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
             <div className="flex flex-col gap-4 flex-1 min-h-0">
               {/* Controls Toolbar: Statement Date Picker (Left) & Platform Selector (Right) */}
               <div className="p-3 bg-background border border-border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-30 overflow-visible shrink-0">
-                <div className="w-full sm:w-60 relative z-30" data-testid="smart-paste-date-input">
+                <div className="w-full sm:w-60 relative z-30 flex flex-col gap-1" data-testid="smart-paste-date-input">
                   <SingleDatePicker
                     value={statementDate}
-                    onChange={setStatementDate}
+                    onChange={(d) => {
+                      setStatementDate(d);
+                      setAutoDetectedDate(null);
+                    }}
                     testId="smart-paste-date-input"
                   />
+                  {autoDetectedDate && (
+                    <div className="flex items-center gap-1 text-[11px] text-primary font-medium pl-1">
+                      <Sparkles size={12} className="shrink-0" />
+                      <span>Auto-detected from clipboard</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -248,9 +301,28 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
               {/* Textarea with Realtime Live Stats filling full available vertical space */}
               <div className="flex flex-col gap-1.5 relative z-10 flex-1 min-h-0">
                 <div className="flex items-center justify-between shrink-0">
-                  <label htmlFor="smart-paste-textarea" className="block text-xs font-semibold text-muted uppercase tracking-wider">
-                    Paste Clipboard Text
-                  </label>
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="smart-paste-textarea" className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                      Paste Clipboard Text
+                    </label>
+                    {rawText.trim() && (
+                      <button
+                        type="button"
+                        data-testid="smart-paste-clear-btn"
+                        onClick={() => {
+                          setRawText('');
+                          setRows([]);
+                          setErrorMsg(null);
+                          setAutoDetectedDate(null);
+                          setExistingSalesWarning(null);
+                        }}
+                        className="text-[11px] text-muted hover:text-red-500 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+                      >
+                        <Trash2 size={12} />
+                        <span>Clear</span>
+                      </button>
+                    )}
+                  </div>
                   {quickStats.count > 0 && (
                     <div data-testid="smart-paste-live-stats" className="flex items-center gap-3 text-xs font-mono">
                       <span className="text-muted">
@@ -266,7 +338,15 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                   id="smart-paste-textarea"
                   data-testid="smart-paste-textarea"
                   value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
+                  onChange={(e) => handleRawTextChange(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData?.getData('text');
+                    // If pasting a full statement export, replace textarea cleanly instead of appending at cursor
+                    if (pasted && /(?:#\s*)?(?:statement\s+date|date|period):/i.test(pasted)) {
+                      e.preventDefault();
+                      handleRawTextChange(pasted);
+                    }
+                  }}
                   placeholder="Highlight table rows from Adobe Stock / Shutterstock and paste here..."
                   className="w-full flex-1 min-h-60 p-3.5 font-mono text-xs bg-background border border-border rounded-xl text-foreground focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30 leading-relaxed resize-none"
                 />
@@ -302,6 +382,19 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
                   </div>
                 </div>
               </div>
+
+              {existingSalesWarning && (
+                <div
+                  data-testid="smart-paste-duplicate-warning"
+                  className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5"
+                >
+                  <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-500" />
+                  <div className="flex-1 leading-relaxed">
+                    <span className="font-bold">Existing Records Detected: </span>
+                    Sales for <strong>{platform}</strong> on <strong>{existingSalesWarning.dateStr}</strong> were already imported previously ({existingSalesWarning.count} items, ${existingSalesWarning.totalEarnings.toFixed(2)}). Submitting will update existing records for this date.
+                  </div>
+                </div>
+              )}
 
               <div className="border border-border rounded-xl overflow-hidden bg-background max-h-[62vh] overflow-y-auto">
                 <table className="w-full text-left text-xs border-collapse">

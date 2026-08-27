@@ -8,6 +8,43 @@ export interface ParsedStockRow {
 }
 
 /**
+ * Extracts a statement date header from clipboard text if present.
+ * Matches patterns like:
+ * - Date: 2026-05-01
+ * - # Date: 2026-05-01
+ * - Statement Date: 2026-05-01
+ * - Period: 5/1/2026 or 2026-05-01
+ * Returns normalized YYYY-MM-DD string, or null if not found.
+ */
+export function extractStatementDate(rawText: string): string | null {
+  if (!rawText || typeof rawText !== 'string') return null;
+
+  const lines = rawText.split(/\r?\n/).slice(0, 10);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Pattern 1: ISO format YYYY-MM-DD
+    const isoMatch = trimmed.match(/(?:#\s*)?(?:statement\s+date|date|period):\s*(\d{4})-(\d{1,2})-(\d{1,2})/i);
+    if (isoMatch) {
+      const year = isoMatch[1];
+      const month = isoMatch[2].padStart(2, '0');
+      const day = isoMatch[3].padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Pattern 2: US format M/D/YYYY
+    const usMatch = trimmed.match(/(?:#\s*)?(?:statement\s+date|date|period):\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (usMatch) {
+      const month = usMatch[1].padStart(2, '0');
+      const day = usMatch[2].padStart(2, '0');
+      const year = usMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Parses unstructured/semi-structured text copied from stock contributor tables.
  * Handles:
  * - Line-separated tokens (with or without markdown links `[1929092005](url)`)
@@ -18,6 +55,7 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
   if (!rawText || typeof rawText !== 'string') return [];
 
   const results: ParsedStockRow[] = [];
+  const seenIds = new Set<string>();
   
   // Clean markdown links e.g. [1929092005](https://...) -> 1929092005
   const normalizedText = rawText.replace(/\[(\d{8,14})\]\([^)]+\)/g, '$1');
@@ -26,7 +64,7 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
   const lines = normalizedText
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .filter((l) => l.length > 0 && !/^(?:#\s*)?(?:statement\s+date|date|period):/i.test(l));
 
   // Check if each line is a standalone full row (contains ID, date, and currency on the same line)
   const singleLinePattern = /(\b\d{8,14}\b)[\s\t]+(?:(Vectors|Photos|Illustrations|Video)[\s\t]+)?(\d{1,2}\/\d{1,2}\/\d{4})[\s\t]+(?:([\d,]+)[\s\t]+)?\$?([\d,]+\.?\d*)/i;
@@ -37,15 +75,15 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
     if (match) {
       foundSingleLines = true;
       const assetId = match[1];
+      if (seenIds.has(assetId)) continue;
+      seenIds.add(assetId);
+
       const type = match[2] || 'Vectors';
       const dateDisplay = match[3];
       const earnings = parseFloat(match[5].replace(/,/g, '')) || 0;
       const downloads = match[4]
         ? parseInt(match[4].replace(/,/g, ''), 10)
         : (earnings > 0 ? 1 : 0);
-
-
-
 
       const dateParts = dateDisplay.split('/');
       const month = dateParts[0].padStart(2, '0');
@@ -138,15 +176,17 @@ export function parseStockPaste(rawText: string): ParsedStockRow[] {
         const year = dateParts[2];
         const dateStr = `${year}-${month}-${day}`;
 
-        results.push({
-          assetId,
-          type,
-          dateDisplay,
-          dateStr,
-          earnings,
-          downloads: downloads !== undefined ? downloads : (earnings > 0 ? 1 : 0),
-        });
-
+        if (!seenIds.has(assetId)) {
+          seenIds.add(assetId);
+          results.push({
+            assetId,
+            type,
+            dateDisplay,
+            dateStr,
+            earnings,
+            downloads: downloads !== undefined ? downloads : (earnings > 0 ? 1 : 0),
+          });
+        }
 
         i = j - 1; // Advance pointer
       }

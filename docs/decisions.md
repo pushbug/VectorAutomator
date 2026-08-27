@@ -173,3 +173,15 @@
   4. **LCP Image Eager Loading:** Added `priority={index < 4}` to top 4 cards across `PortfolioGrid`, `CollectionCard`, and `/collections/[id]` views.
   5. **Automated Verification:** Added unit test suites `UT-UI-PF-LCP-01`, `UT-SALES-RECONCILE-03`, and `UT-SERP-RECONCILE-03` (316/316 tests pass across 50 test files with 0 TypeScript errors).
 - **Impact:** Guarantees zero unlinked sales records when matching artworks exist, achieves 100% universal image URL handling across the entire application, eliminates Next.js LCP warnings, and modularizes background reconciliation pipelines.
+
+## ADR-022: Standalone Adobe Stock Sales Extractor Chrome Extension, Dual-Layer Statement Date Ingestion, and Robust In-Payload Sales Deduplication
+- **Date:** 2026-08-27
+- **Context:** Contributors faced high friction manually dragging mouse across table rows on Adobe Stock Contributor Statistics page, manually picking dates in VectorAutomator's Smart Paste modal, risk of duplicate sales ingestion, and accidental duplicate paste appending in textareas. Furthermore, Adobe Contributor is an SPA that asynchronously updates statistics without full-page reloads.
+- **Decision:**
+  1. **Dedicated Sales Extractor Extension (`extension/extension-sales/`):** Built a 100% decoupled Manifest V3 extension specifically for daily/period sales extraction. Features floating in-page copy button (`[⚡ Copy Sales]`), hook into Adobe's `Display statistics` CTA button (`insights-sidebar-cta`), dynamic content script injection fallback (`scripting.executeScript`), and zero-headless passive DOM parsing (100% immune to bot detection).
+  2. **Dual-Layer Statement Date Ingestion:** `stockPasteParser.ts` exports `extractStatementDate` supporting ISO (`YYYY-MM-DD`) and US (`M/D/YYYY`) formats. Both `SmartPasteModal` (`useEffect`) and `/api/sales/paste-sync` prioritize date headers from raw text over client datepicker states, ensuring zero temporal misalignment.
+  3. **Duplicate Sales Ingestion Warning:** In `action: 'preview'`, `/api/sales/paste-sync` queries existing `PlatformStats` on the target date and returns an alert banner payload (`existingSalesWarning`) to prevent accidental double-accounting.
+  4. **In-Payload Asset Deduplication & Clean Paste UX:** `parseStockPaste` implements Set-based deduplication by `assetId` in both Strategy 1 and 2, guaranteeing that concatenated/repeated pastes never duplicate items or double earnings. `SmartPasteModal` auto-replaces textarea content when pasting a statement payload and adds a 1-click `Clear` button (`smart-paste-clear-btn`).
+  5. **Automated Verification:** Added unit tests `UT-SALES-PASTE-DATE-01`, `UT-SALES-PASTE-DUP-01`, `UT-SALES-DATE-02`, `UT-SALES-PASTE-DEDUP-01`, and `UT-UI-SMART-PASTE-AUTODATE-01`. All 321 tests pass across 50 test files with 0 TypeScript errors.
+- **Impact:** Cuts sales entry time from minutes of manual table dragging and date picking down to a single 1-click copy/paste workflow with automated duplicate safety guards.
+

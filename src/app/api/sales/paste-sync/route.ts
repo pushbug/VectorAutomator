@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { parseStockPaste, ParsedStockRow } from '@/lib/stockPasteParser';
+import { parseStockPaste, extractStatementDate, ParsedStockRow } from '@/lib/stockPasteParser';
 import { syncImageRollup } from '@/lib/salesReconciler';
 import { scheduleAutoBackup, createDbBackup } from '@/lib/dbBackup';
 
@@ -43,11 +43,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Priority: 1. Date explicitly in rawText header (e.g. Date: 2026-05-01), 2. statementDate from client, 3. row upload date
+      const textExtractedDate = extractStatementDate(rawText);
+      const targetStatementDate = textExtractedDate || (useStatementDate && statementDate ? statementDate : null);
+
       const previewRows = parsedRows.map((row) => {
-        const effectiveDateStr =
-          useStatementDate && statementDate ? statementDate : row.dateStr;
-        const effectiveDateDisplay =
-          useStatementDate && statementDate ? statementDate : row.dateDisplay;
+        const effectiveDateStr = targetStatementDate || row.dateStr;
+        const effectiveDateDisplay = targetStatementDate || row.dateDisplay;
 
         // Priority 1: Match by existing platform ID
         const matched = allImages.find((img) => {
@@ -143,7 +145,46 @@ export async function POST(request: NextRequest) {
         };
       });
 
-      return NextResponse.json({ rows: previewRows });
+      // Check for existing platform sales on effective date to warn against duplicate ingestion
+      const targetDates = Array.from(new Set(previewRows.map((r) => r.dateStr)));
+      let existingSalesWarning: {
+        count: number;
+        totalEarnings: number;
+        dateStr: string;
+      } | null = null;
+
+      if (targetDates.length === 1) {
+        const targetDate = targetDates[0];
+        const normalizedTarget = new Date(`${targetDate}T00:00:00.000Z`);
+        const existingRecords =
+          (await prisma.platformStats.findMany({
+            where: {
+              platform,
+              date: normalizedTarget,
+            },
+            select: {
+              earnings: true,
+            },
+          })) || [];
+
+        if (existingRecords.length > 0) {
+          const totalExistingEarnings = existingRecords.reduce(
+            (sum, rec) => sum + (rec.earnings || 0),
+            0
+          );
+          existingSalesWarning = {
+            count: existingRecords.length,
+            totalEarnings: Number(totalExistingEarnings.toFixed(2)),
+            dateStr: targetDate,
+          };
+        }
+      }
+
+      return NextResponse.json({
+        rows: previewRows,
+        existingSalesWarning,
+        detectedStatementDate: textExtractedDate,
+      });
     }
 
     // ----------------------------------------------------

@@ -44,3 +44,15 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
 ## 7. Proactive Automatic Reconciliation (`src/lib/salesReconciler.ts`)
 - **Unlinked Sales Scan (`reconcileAllUnlinkedSales`):** Queries unlinked `PlatformStats` (`imageId: null`) on `GET /api/sales` and automatically correlates `platformAssetId` with `Image` records matching `asId`, `ssId`, or `vzId`.
 - **Collision-Safe Binding:** Binds `imageId` and updates rollup counters on parent artworks, ensuring that sales logged prior to artwork entry or ID synchronization automatically display their thumbnails and metadata without manual intervention.
+ 
++## 8. Dedicated Adobe Stock Sales Extractor & Smart Paste Automation (`extension/extension-sales/`)
++- **Standalone Extension:** Fully decoupled Manifest V3 Chrome extension under `extension/extension-sales/` for Adobe Stock Contributor Statistics (`data-t="insights-my-statistics-page"`).
++- **Passive In-Page Extractor:** Safely extracts period dates, Top Sellers table rows (`insights-top-sellers-table-row`), asset IDs, categories, and earnings into clipboard TSV format with metadata headers (`Date: YYYY-MM-DD`). 100% passive client DOM scraping with zero bot detection footprint.
++- **Single Page App (SPA) Synchronization:** Listens to Adobe's `Display statistics` CTA button (`insights-sidebar-cta`) and polls completion of spinner wrapper (`content-spinner-wrapper`) before updating the in-page floating copy button (`#va-sales-copy-btn`) with glowing pulse animation.
++- **Dynamic Tab Script Injection:** Extension popup utilizes `chrome.scripting.executeScript` fallback to seamlessly inject content script into existing tabs without forcing full-page reloads.
++- **Dual-Layer Date Defense:**
++  - **Frontend:** `SmartPasteModal` auto-detects date headers from pasted text using `extractStatementDate` and automatically syncs `statementDate` state with visual feedback.
++  - **Backend:** `POST /api/sales/paste-sync` unconditionally prioritizes date headers extracted from `rawText` over client datepicker values, eliminating temporal drift from stale UI sessions.
++- **Duplicate Sales Warning Alert:** Preview mode queries `PlatformStats` on target date and returns `existingSalesWarning`, rendering an amber warning banner if records exist for that platform and date.
++- **In-Payload Asset Deduplication & Clean Paste UX:** `parseStockPaste` enforces Set-based `assetId` deduplication across Strategy 1 (single-line) and Strategy 2 (stream tokens), preventing double-pasted text from inflating earnings or counts. Textarea auto-replaces on statement paste and includes a 1-click `Clear` button (`smart-paste-clear-btn`).
+

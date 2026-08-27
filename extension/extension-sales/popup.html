@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adobe Stock Sales Extractor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title-row">
+        <div class="header-icon">⚡</div>
+        <div>
+          <h1 class="title">Sales Extractor</h1>
+          <p class="subtitle">Adobe Stock Contributor</p>
+        </div>
+      </div>
+      <div id="status-pill" class="status-pill checking">Checking...</div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="main-content">
+      <!-- Info Card -->
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Statement Date:</span>
+          <span id="date-display" class="card-value font-mono">-</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">Detected Items:</span>
+          <span id="count-display" class="card-value font-bold">0 items</span>
+        </div>
+        <div class="card-row" id="revenue-row" style="display: none;">
+          <span class="card-label">Total Earnings:</span>
+          <span id="revenue-display" class="card-value text-success font-bold">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button id="copy-btn" class="btn btn-primary" disabled>
+          <span class="btn-icon">⚡</span>
+          <span>Copy for VectorAutomator</span>
+        </button>
+      </div>
+
+      <!-- Hint -->
+      <p class="hint-text">
+        Click to copy formatted daily sales. Then paste directly into VectorAutomator's <strong>Smart Paste</strong> modal.
+      </p>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

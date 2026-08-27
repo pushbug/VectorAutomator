@@ -549,8 +549,62 @@ describe('Sales Components (UT-UI-SALES-01)', () => {
       const parseBtn = screen.getByTestId('smart-paste-parse-btn');
       expect(parseBtn).toHaveTextContent('Parse & Match 2 Items ($5.31)');
     });
-  });
 
+    it('UT-UI-SMART-PASTE-AUTODATE-01: auto-detects date from clipboard header and renders duplicate warning alert', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          rows: [
+            {
+              assetId: '1905258292',
+              dateStr: '2026-05-01',
+              dateDisplay: '5/1/2026',
+              earnings: 1.91,
+              matchType: 'exact_id',
+              matchedImage: {
+                id: 'img1',
+                code: '2605-01',
+                title: 'Business Infographic',
+                filePath: '/path/1.jpg',
+                createdAt: '2026-05-01T00:00:00.000Z',
+              },
+              candidates: [],
+            },
+          ],
+          existingSalesWarning: {
+            count: 13,
+            totalEarnings: 13.11,
+            dateStr: '2026-05-01',
+          },
+        }),
+      });
+
+      render(
+        <SmartPasteModal
+          isOpen={true}
+          onClose={() => {}}
+          onSuccess={() => {}}
+        />
+      );
+
+      const textarea = screen.getByTestId('smart-paste-textarea');
+      const textWithDate = `Date: 2026-05-01\n1905258292 Vectors 2/8/2026 $1.91`;
+      fireEvent.change(textarea, { target: { value: textWithDate } });
+
+      // Auto-detected date badge appears
+      expect(screen.getByText('Auto-detected from clipboard')).toBeInTheDocument();
+
+      // Click parse
+      const parseBtn = screen.getByTestId('smart-paste-parse-btn');
+      fireEvent.click(parseBtn);
+
+      // Duplicate date warning alert is rendered in preview
+      const warningAlert = await screen.findByTestId('smart-paste-duplicate-warning');
+      expect(warningAlert).toBeInTheDocument();
+      expect(warningAlert).toHaveTextContent('Existing Records Detected:');
+      expect(warningAlert).toHaveTextContent('13 items, $13.11');
+    });
+  });
 });
 
 

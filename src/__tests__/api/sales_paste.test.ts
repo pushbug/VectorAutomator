@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseStockPaste } from '@/lib/stockPasteParser';
+import { parseStockPaste, extractStatementDate } from '@/lib/stockPasteParser';
 import { POST } from '@/app/api/sales/paste-sync/route';
 import { NextRequest } from 'next/server';
 
@@ -338,5 +338,114 @@ $207.04
         downloads: 15,
       },
     });
+  });
+
+  it('UT-SALES-PASTE-DATE-01: extractStatementDate extracts date and parseStockPaste tolerates date header', () => {
+    const rawPasteWithIso = `
+Date: 2026-05-01
+Thumb\tId\tType\tUpload date\tEarnings
+\t1905258292\tVectors\t2/8/2026\t$1.91
+\t638902325\tVectors\t8/24/2023\t$1.30
+`;
+    expect(extractStatementDate(rawPasteWithIso)).toBe('2026-05-01');
+
+    const rows = parseStockPaste(rawPasteWithIso);
+    expect(rows.length).toBe(2);
+    expect(rows[0].assetId).toBe('1905258292');
+    expect(rows[0].earnings).toBe(1.91);
+    expect(rows[1].assetId).toBe('638902325');
+    expect(rows[1].earnings).toBe(1.30);
+
+    const rawPasteWithUs = `
+# Statement Date: 5/1/2026
+1905258292\tVectors\t2/8/2026\t$1.91
+`;
+    expect(extractStatementDate(rawPasteWithUs)).toBe('2026-05-01');
+    expect(extractStatementDate('Just plain text with no date header')).toBeNull();
+  });
+
+  it('UT-SALES-PASTE-DUP-01: /api/sales/paste-sync preview detects existing sales for target date and returns existingSalesWarning', async () => {
+    mockFindMany.mockResolvedValue([]);
+    // Mock existing records found for platformStats on 2026-05-01
+    mockStatsFindMany.mockResolvedValueOnce([
+      { earnings: 1.91 },
+      { earnings: 1.30 },
+      { earnings: 0.99 },
+    ]);
+
+    const rawText = `
+Date: 2026-05-01
+1905258292\tVectors\t2/8/2026\t$1.91
+638902325\tVectors\t8/24/2023\t$1.30
+`;
+
+    const previewReq = new NextRequest('http://localhost:3000/api/sales/paste-sync', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'preview',
+        platform: 'Adobe Stock',
+        rawText,
+        statementDate: '2026-05-01',
+        useStatementDate: true,
+      }),
+    });
+
+    const res = await POST(previewReq);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.rows.length).toBe(2);
+    expect(data.existingSalesWarning).toEqual({
+      count: 3,
+      totalEarnings: 4.2,
+      dateStr: '2026-05-01',
+    });
+  });
+
+  it('UT-SALES-DATE-02: /api/sales/paste-sync prioritizes date header in rawText over stale client statementDate', async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    const rawText = `
+Date: 2026-05-01
+1905258292\tVectors\t2/8/2026\t$1.91
+`;
+
+    // Client mistakenly or stalely sends statementDate = 2026-08-27
+    const previewReq = new NextRequest('http://localhost:3000/api/sales/paste-sync', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'preview',
+        platform: 'Adobe Stock',
+        rawText,
+        statementDate: '2026-08-27',
+        useStatementDate: true,
+      }),
+    });
+
+    const res = await POST(previewReq);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.rows.length).toBe(1);
+    // Overrides stale client date 2026-08-27 with explicit text header 2026-05-01
+    expect(data.rows[0].dateStr).toBe('2026-05-01');
+    expect(data.detectedStatementDate).toBe('2026-05-01');
+  });
+
+  it('UT-SALES-PASTE-DEDUP-01: parseStockPaste deduplicates concatenated paste payloads by assetId', () => {
+    // Simulating user accidental double-paste (exactly as in user screenshot)
+    const doublePasteText = `
+656442298\tVectors\t10/3/2023\t$0.36
+Date: 2026-05-01
+Thumb\tId\tType\tUpload date\tEarnings
+1905258292\tVectors\t2/8/2026\t$1.91
+638902325\tVectors\t8/24/2023\t$1.30
+656442298\tVectors\t10/3/2023\t$0.36
+`;
+    const parsed = parseStockPaste(doublePasteText);
+    // Even though 656442298 appeared twice, it is deduplicated to 3 items
+    expect(parsed.length).toBe(3);
+    const ids = parsed.map((p) => p.assetId);
+    expect(ids).toEqual(['656442298', '1905258292', '638902325']);
   });
 });

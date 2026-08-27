@@ -136,6 +136,8 @@ Always use `data-testid` for element selection in E2E tests.
 | `smart-paste-summary-date` | Statement date display text in Smart Paste preview summary header |
 | `smart-paste-summary-revenue` | Total revenue display text in Smart Paste preview summary header |
 | `smart-paste-live-stats` | Real-time detected items count and estimated revenue badge in Smart Paste input view |
+| `smart-paste-duplicate-warning` | Warning banner in Smart Paste preview indicating existing sales records on target date |
+| `smart-paste-clear-btn` | Button to clear textarea text and reset stats in Smart Paste modal |
 
 
 
