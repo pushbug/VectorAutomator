@@ -1,29 +1,28 @@
-### Goal: Dedicated Adobe Stock Sales Extractor Chrome Extension, Dual-Layer Date Ingestion, Duplicate Sales Warning, and In-Payload Deduplication.
+### Goal: Database Query Performance Refactoring, SERP N+1 Subquery Elimination, Missing Indexes, and Helper Deduplication.
 
 ### Status: COMPLETE
 
 ### Done:
-- Created dedicated Manifest V3 Chrome Extension (`extension/extension-sales/`) for 1-click passive sales extraction from Adobe Contributor Insights, decoupled from contributor/serp extensions.
-- Hooked into Adobe's `Display statistics` button with async spinner polling and floating button pulse animation.
-- Implemented Dual-Layer Statement Date Ingestion: client auto-detection in `SmartPasteModal` and server-side date prioritization in `POST /api/sales/paste-sync`.
-- Added duplicate sales warning alert (`smart-paste-duplicate-warning`) in preview mode if existing records are detected on target date.
-- Added in-payload `assetId` deduplication in `parseStockPaste` (Strategy 1 & 2) and auto-replacement on paste, eliminating duplicated items/earnings.
-- Added 1-click `Clear` button (`smart-paste-clear-btn`) in `SmartPasteModal`.
-- Added and registered unit tests `UT-SALES-PASTE-DATE-01`, `UT-SALES-PASTE-DUP-01`, `UT-SALES-DATE-02`, `UT-SALES-PASTE-DEDUP-01`, and `UT-UI-SMART-PASTE-AUTODATE-01` (321/321 tests passing across 50 test files with 0 TypeScript errors).
-- Documented ADR-022 in `docs/decisions.md` and updated `docs/features/sales_tracking.md`.
+- Added missing database indexes (`PlatformStats.date`, `PlatformStats.imageId`, `Image.createdAt`, `Image.totalDownloads`) in `prisma/schema.prisma` and regenerated Prisma client.
+- Refactored `GET /api/sales` to remove heavy mutation reconciliation and stripped nested lifetime stats hydration from list items.
+- Replaced SERP ranking N+1 subquery loop in `GET /api/serp` with parallel batch queries for historical snapshots and direct stats, reducing roundtrips from 200+ to 2.
+- Optimized `GET /api/portfolio` summary aggregation projection to prevent loading large keyword tokens into memory for non-keyword searches.
+- Removed duplicate local `formatDisplayDate` from `src/app/portfolio/page.tsx` (consuming centralized `@/lib/formatters`) and memoized page selection IDs with `React.useMemo`.
+- Guarded `PortfolioDetail.tsx` to compute platform breakdowns synchronously when `image.stats` is already populated.
+- Verified zero regressions across the entire test suite (51/51 test files passing, 326/326 tests) and zero TypeScript errors (`npx tsc --noEmit`).
+- Documented ADR-023 in `docs/decisions.md` and updated `docs/features/sales_tracking.md`.
 
 ### Next:
-- 1. Monitor live microstock sales statements and daily earnings ingestion in contributor workflows.
-- 2. Explore multi-platform sales analytics expansions.
+- 1. Monitor live microstock portfolio browsing, sales dashboard filtering, and SERP queries.
+- 2. Expand analytical insights or multi-platform automations as needed.
 
 ### Decisions:
-- Standalone Sales Extension: Keep sales extractor 100% decoupled in `extension/extension-sales/` for zero bot detection and focused scope.
-- Dual-Layer Date Defense: Always prioritize date headers extracted from raw paste text over client-sent date state.
-- In-Payload Deduplication: Always deduplicate parsed rows by `assetId` to guarantee unique sales entries.
-- Safe Test Mocking: Automated tests mock Prisma delegates in memory and never touch `dev.db`.
+- Read-Path Mutation Decoupling: Never execute multi-step database mutations inside HTTP `GET` handlers. Keep reconciliation bound to ingestion and mutation flows.
+- Batch Queries over Loops: Replace per-row subqueries in API handlers with single batch `findMany` queries using `in` clauses and in-memory Map lookup.
+- Safe Test Mocking: Automated tests mock Prisma delegates in memory and never touch or truncate `dev.db`.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and TDD-Lite specification.
-- [`coding`](.agents/skills/coding/SKILL.md) — Extension implementation, parser upgrades, and UI modal enhancements.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Diff audits, test coverage checks, and regression audits.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Documentation synchronization, ADR logging, session wrap-up, and git push.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural planning and performance bottleneck auditing.
+- [`coding`](.agents/skills/coding/SKILL.md) — Query optimization, index creation, batch queries, and formatter deduplication.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Line-by-line diff audit, data flow trace, and full regression verification.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, ADR documentation, and git synchronization.

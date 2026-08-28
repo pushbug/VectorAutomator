@@ -9,8 +9,8 @@ import { PortfolioFloatingToolbar } from '@/components/portfolio/PortfolioFloati
 import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
 import { SmartIdPasteModal } from '@/components/portfolio/SmartIdPasteModal';
-import { Plus, Calendar, Layers, Download, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { Plus, Calendar, Layers, Download, Sparkles } from 'lucide-react';
+import { formatCurrency, formatNumber, formatDisplayDate } from '@/lib/formatters';
 
 export default function PortfolioPage() {
   const [images, setImages] = useState<any[]>([]);
@@ -23,8 +23,6 @@ export default function PortfolioPage() {
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [isSyncingFiles, setIsSyncingFiles] = useState(false);
-  const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
   
   // Summary metrics state
   const [summary, setSummary] = useState({
@@ -123,8 +121,11 @@ export default function PortfolioPage() {
     );
   }, []);
 
-  const currentPageIds = images.map((img: any) => img.id);
-  const allCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every((id: string) => selectedImageIds.includes(id));
+  const currentPageIds = React.useMemo(() => images.map((img: any) => img.id), [images]);
+  const allCurrentPageSelected = React.useMemo(
+    () => currentPageIds.length > 0 && currentPageIds.every((id: string) => selectedImageIds.includes(id)),
+    [currentPageIds, selectedImageIds]
+  );
 
   const handleToggleSelectPage = useCallback(() => {
     if (allCurrentPageSelected) {
@@ -137,30 +138,6 @@ export default function PortfolioPage() {
   const handleClearSelection = useCallback(() => {
     setSelectedImageIds([]);
   }, []);
-
-  const handleSyncFiles = async () => {
-    setIsSyncingFiles(true);
-    try {
-      const res = await fetch('/api/portfolio/sync-files', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setSyncToastMessage(
-          data.syncedCount > 0
-            ? `Successfully linked ${data.syncedCount} image ${data.syncedCount === 1 ? 'file' : 'files'}!`
-            : 'All image files in uploads are already up to date.'
-        );
-        await fetchPortfolio();
-        setTimeout(() => setSyncToastMessage(null), 4000);
-      } else {
-        alert(data.error || 'Failed to sync files');
-      }
-    } catch (err) {
-      console.error('Failed to sync files:', err);
-      alert('Error syncing files from uploads folder');
-    } finally {
-      setIsSyncingFiles(false);
-    }
-  };
 
   const handleUpdateDownloads = async (id: string, ssDownloads: number, asDownloads: number) => {
     try {
@@ -218,20 +195,6 @@ export default function PortfolioPage() {
     }
   };
 
-  const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    }
-    return dateStr;
-  };
-
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6" data-testid="portfolio-layout">
       <div className="mb-4">
@@ -259,26 +222,8 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {syncToastMessage && (
-          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium rounded-lg flex items-center justify-between animate-in fade-in duration-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
-              <span>{syncToastMessage}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSyncToastMessage(null)}
-              className="text-muted hover:text-foreground text-xs p-1 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
         <PortfolioFilter
           onFilterChange={handleFilterChange}
-          onSyncFiles={handleSyncFiles}
-          isSyncingFiles={isSyncingFiles}
         />
 
         {/* Portfolio Summary Stats Bar */}

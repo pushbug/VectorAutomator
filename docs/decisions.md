@@ -174,14 +174,16 @@
   5. **Automated Verification:** Added unit test suites `UT-UI-PF-LCP-01`, `UT-SALES-RECONCILE-03`, and `UT-SERP-RECONCILE-03` (316/316 tests pass across 50 test files with 0 TypeScript errors).
 - **Impact:** Guarantees zero unlinked sales records when matching artworks exist, achieves 100% universal image URL handling across the entire application, eliminates Next.js LCP warnings, and modularizes background reconciliation pipelines.
 
-## ADR-022: Standalone Adobe Stock Sales Extractor Chrome Extension, Dual-Layer Statement Date Ingestion, and Robust In-Payload Sales Deduplication
-- **Date:** 2026-08-27
-- **Context:** Contributors faced high friction manually dragging mouse across table rows on Adobe Stock Contributor Statistics page, manually picking dates in VectorAutomator's Smart Paste modal, risk of duplicate sales ingestion, and accidental duplicate paste appending in textareas. Furthermore, Adobe Contributor is an SPA that asynchronously updates statistics without full-page reloads.
+## ADR-023: Database Query Performance Refactoring, N+1 Subquery Elimination, and Read-Path Mutation Decoupling
+- **Date:** 2026-08-28
+- **Context:** (1) `GET /api/sales` executed a heavy multi-step mutation reconciliation loop (`reconcileAllUnlinkedSales`) on every read/page switch, introducing SQLite table lock contention and latency. (2) `GET /api/serp` suffered from an N+1 subquery storm where each ranking row triggered individual `findFirst` queries for historical snapshots and `findMany` for direct stats (200+ SQL roundtrips per page). (3) `GET /api/portfolio` loaded full entity graphs including serialized keyword tokens across all matching records for summary KPI calculations. (4) Missing indexes on `PlatformStats.date`, `PlatformStats.imageId`, and `Image.createdAt` caused table scans.
 - **Decision:**
-  1. **Dedicated Sales Extractor Extension (`extension/extension-sales/`):** Built a 100% decoupled Manifest V3 extension specifically for daily/period sales extraction. Features floating in-page copy button (`[⚡ Copy Sales]`), hook into Adobe's `Display statistics` CTA button (`insights-sidebar-cta`), dynamic content script injection fallback (`scripting.executeScript`), and zero-headless passive DOM parsing (100% immune to bot detection).
-  2. **Dual-Layer Statement Date Ingestion:** `stockPasteParser.ts` exports `extractStatementDate` supporting ISO (`YYYY-MM-DD`) and US (`M/D/YYYY`) formats. Both `SmartPasteModal` (`useEffect`) and `/api/sales/paste-sync` prioritize date headers from raw text over client datepicker states, ensuring zero temporal misalignment.
-  3. **Duplicate Sales Ingestion Warning:** In `action: 'preview'`, `/api/sales/paste-sync` queries existing `PlatformStats` on the target date and returns an alert banner payload (`existingSalesWarning`) to prevent accidental double-accounting.
-  4. **In-Payload Asset Deduplication & Clean Paste UX:** `parseStockPaste` implements Set-based deduplication by `assetId` in both Strategy 1 and 2, guaranteeing that concatenated/repeated pastes never duplicate items or double earnings. `SmartPasteModal` auto-replaces textarea content when pasting a statement payload and adds a 1-click `Clear` button (`smart-paste-clear-btn`).
-  5. **Automated Verification:** Added unit tests `UT-SALES-PASTE-DATE-01`, `UT-SALES-PASTE-DUP-01`, `UT-SALES-DATE-02`, `UT-SALES-PASTE-DEDUP-01`, and `UT-UI-SMART-PASTE-AUTODATE-01`. All 321 tests pass across 50 test files with 0 TypeScript errors.
-- **Impact:** Cuts sales entry time from minutes of manual table dragging and date picking down to a single 1-click copy/paste workflow with automated duplicate safety guards.
+  1. **Read-Path Mutation Decoupling:** Removed `reconcileAllUnlinkedSales` from `GET /api/sales`. Reconciliation is strictly preserved in ingestion and mutation endpoints (`POST /api/sales/paste-sync`, `POST /api/portfolio/paste-sync`, `PATCH /api/portfolio`).
+  2. **Batch Query for SERP Delta & Direct Stats:** Replaced inner N+1 subquery loops in `GET /api/serp` with single parallel batch queries (`allPrevItems`, `directStatsMap`) keyed by `assetId`, reducing roundtrips from 200+ to 2.
+  3. **Streamlined Summary Aggregation:** Optimized `allMatchingImages` projection in `GET /api/portfolio` to select only `totalDownloads` and `stats.earnings` (omitting bulky keyword strings unless `exactKeyword` search is active).
+  4. **Database Schema Indexing:** Added `@@index([date])` and `@@index([imageId])` to `PlatformStats`; added `@@index([createdAt])` and `@@index([totalDownloads])` to `Image`.
+  5. **Client Helper & Re-render Consolidation:** Removed duplicate local `formatDisplayDate` from `PortfolioPage` (consuming centralized `@/lib/formatters`) and memoized page selection IDs with `React.useMemo`. Guarded `PortfolioDetail` to calculate breakdowns synchronously when `image.stats` is present.
+  6. **Automated Verification:** All 51 test suites and 326 unit tests continue passing with 0 TypeScript errors.
+- **Impact:** Drastically reduces API response times, eliminates N+1 SQL bottlenecks, prevents memory bloat on large portfolios, and cleans up client-side redundancy.
+
 

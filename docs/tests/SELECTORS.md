@@ -300,7 +300,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `portfolio-id-status-select` | The dropdown select to filter by platform ID status and image file status in portfolio dashboard |
 | `portfolio-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio grid |
 | `portfolio-detail-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio detail |
-| `portfolio-sync-files-btn` | Button in Portfolio to trigger scanning and linking of physical upload files to database |
+| `portfolio-sync-files-btn` | *(Deprecated/Removed)* Previously used to manually trigger scanning and linking of physical upload files; replaced by backend auto-sync in GET /api/portfolio |
 
 
 

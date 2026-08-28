@@ -7,13 +7,6 @@ import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export async function GET(request: NextRequest) {
   try {
-    // Proactively auto-reconcile any unlinked sales matching existing artworks
-    try {
-      await reconcileAllUnlinkedSales(prisma);
-    } catch (reconcileErr) {
-      console.warn('Auto-reconcile sales warning:', reconcileErr);
-    }
-
     const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -63,7 +56,6 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-
     if (startDate || endDate) {
       where.date = {};
       if (startDate) {
@@ -85,12 +77,23 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy,
         include: {
-
           image: {
-            include: {
-              stats: {
-                orderBy: { date: 'desc' },
-              },
+            select: {
+              id: true,
+              code: true,
+              title: true,
+              filePath: true,
+              category: true,
+              tags: true,
+              notes: true,
+              status: true,
+              ssId: true,
+              asId: true,
+              vzId: true,
+              ssDownloads: true,
+              asDownloads: true,
+              totalDownloads: true,
+              createdAt: true,
             },
           },
         },
@@ -125,13 +128,11 @@ export async function GET(request: NextRequest) {
 
     const enrichedSales = sales.map((sale: any) => {
       if (!sale.image) return sale;
-      const { totalEarnings: imgTotalEarnings, platformBreakdown } = calculatePlatformBreakdown(sale.image.stats);
       return {
         ...sale,
         image: {
           ...sale.image,
-          totalEarnings: imgTotalEarnings,
-          platformBreakdown,
+          totalEarnings: sale.image.totalEarnings ?? 0,
         },
       };
     });

@@ -14,13 +14,88 @@ function showToast(msg) {
 }
 
 function formatClipboardTsv(salesData) {
-  const dateHeader = `Date: ${salesData.dateStr}`;
+  const dateHeader = `Date: ${salesData.dateStr || ''}`;
   const tsvHeader = ['Thumb', 'Id', 'Type', 'Upload date', 'Earnings'].join('\t');
   const rows = (salesData.items || []).map((item) => {
-    return ['', item.assetId, item.assetType, item.uploadDate, item.royalty].join('\t');
+    return ['', item.assetId, item.assetType || 'Vectors', item.uploadDate || '', item.royalty || '$0.00'].join('\t');
   });
 
   return [dateHeader, tsvHeader, ...rows].join('\n');
+}
+
+async function copyToClipboardSafe(text) {
+  if (!text) return false;
+  if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('Popup navigator.clipboard failed, attempting fallback:', err);
+    }
+  }
+
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      opacity: 0.01;
+      pointer-events: none;
+      z-index: -999;
+    `;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    textArea.setSelectionRange(0, text.length);
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return Boolean(success);
+  } catch (err) {
+    console.error('Popup execCommand copy failed:', err);
+    return false;
+  }
+}
+
+function isAutoCopyEnabled() {
+  try {
+    const val = localStorage.getItem('va_sales_autocopy_enabled');
+    return val === null ? true : val === 'true';
+  } catch (e) {
+    return true;
+  }
+}
+
+function setAutoCopyEnabled(enabled) {
+  try {
+    localStorage.setItem('va_sales_autocopy_enabled', String(enabled));
+  } catch (e) {}
+  updatePopupToggleUi();
+}
+
+function updatePopupToggleUi() {
+  const toggleBtn = document.getElementById('popup-autocopy-toggle');
+  if (!toggleBtn) return;
+  const enabled = isAutoCopyEnabled();
+  if (enabled) {
+    toggleBtn.textContent = 'Auto: ON';
+    toggleBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+    toggleBtn.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+    toggleBtn.style.color = '#34d399';
+  } else {
+    toggleBtn.textContent = 'Auto: OFF';
+    toggleBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+    toggleBtn.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+    toggleBtn.style.color = '#94a3b8';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +105,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const revenueRow = document.getElementById('revenue-row');
   const revenueDisplay = document.getElementById('revenue-display');
   const copyBtn = document.getElementById('copy-btn');
+  const toggleBtn = document.getElementById('popup-autocopy-toggle');
+
+  updatePopupToggleUi();
+
+  toggleBtn?.addEventListener('click', () => {
+    const nextState = !isAutoCopyEnabled();
+    setAutoCopyEnabled(nextState);
+    showToast(nextState ? 'Auto-Copy is ON' : 'Auto-Copy is OFF');
+  });
 
   if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -69,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (statusPill) {
-              statusPill.textContent = 'Use Page Button';
+              statusPill.textContent = 'Ready';
               statusPill.className = 'status-pill active';
             }
             if (dateDisplay) dateDisplay.textContent = 'Ready on screen';
@@ -88,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
           currentSalesData = response;
 
           if (statusPill) {
-            statusPill.textContent = 'Ready';
+            statusPill.textContent = 'Ready ✓';
             statusPill.className = 'status-pill active';
           }
 
@@ -102,6 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (copyBtn) {
             copyBtn.disabled = !(response.items && response.items.length > 0);
+            if (response.items && response.items.length > 0) {
+              copyBtn.innerHTML = '<span class="btn-icon">⚡</span> <span>Copy for VectorAutomator</span>';
+            }
           }
         });
       }
@@ -117,13 +204,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const tsv = formatClipboardTsv(currentSalesData);
-    await navigator.clipboard.writeText(tsv);
+    const success = await copyToClipboardSafe(tsv);
 
-    showToast(`Copied ${currentSalesData.totalItems} items for ${currentSalesData.dateStr}!`);
-    copyBtn.innerHTML = '<span>✓</span> <span>Copied to Clipboard!</span>';
+    if (success) {
+      showToast(`Copied ${currentSalesData.totalItems} items for ${currentSalesData.dateStr}!`);
+      copyBtn.innerHTML = '<span>✓</span> <span>Copied to Clipboard!</span>';
 
-    setTimeout(() => {
-      copyBtn.innerHTML = '<span class="btn-icon">⚡</span> <span>Copy for VectorAutomator</span>';
-    }, 2000);
+      setTimeout(() => {
+        copyBtn.innerHTML = '<span class="btn-icon">⚡</span> <span>Copy for VectorAutomator</span>';
+      }, 2000);
+    } else {
+      showToast('Failed to copy to clipboard');
+    }
   });
 });

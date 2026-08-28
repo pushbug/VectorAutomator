@@ -117,6 +117,9 @@
 | `UT-SALES-DATE-02` | Verify /api/sales/paste-sync prioritizes date header in rawText over stale client statementDate | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-PASTE-DEDUP-01` | Verify parseStockPaste deduplicates concatenated paste payloads by assetId | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-UI-SMART-PASTE-AUTODATE-01` | Verify SmartPasteModal auto-detects date from clipboard header and renders duplicate warning alert | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-API-PORTFOLIO-AUTO-SYNC-01` | Verify GET /api/portfolio auto-syncs physical files on page 1 without search, bypasses on pagination/filter, and handles disk errors safely | `src/__tests__/api/portfolio.test.ts` |
+| `UT-EXT-SALES-TSV-01` | Verify formatSalesClipboardTsv generates valid TSV with Date headers, tabbed columns, and fallbacks | `src/__tests__/extension/salesDomParser.test.ts` |
+| `UT-EXT-SALES-AUTOCOPY-01` | Verify formatted sales TSV payload parity with stockPasteParser and statement date detection | `src/__tests__/extension/salesDomParser.test.ts` |
 
 ## E2E Tests
 | Test ID | Description | Target |

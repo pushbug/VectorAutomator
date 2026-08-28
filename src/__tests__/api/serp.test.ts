@@ -162,33 +162,41 @@ describe('SERP API Routes', () => {
       .mockResolvedValueOnce(2) // page1Count
       .mockResolvedValueOnce(1); // top10Count
 
-    mockSerpItemFindMany.mockResolvedValue([
-      {
-        id: 'item-2',
-        rank: 3,
-        assetId: '684583478',
-        title: 'Infographic 3',
-        author: 'Me',
-        thumbnailUrl: null,
-        detailUrl: null,
-        serpQueryId: 'q-2',
-        matchedImageId: 'img-123',
-        serpQuery: {
-          keyword: 'infographic',
-          platform: 'Adobe Stock',
-          pageNumber: 1,
-          searchedAt: new Date('2026-08-15'),
-        },
-        matchedImage: {
-          code: 'TST-2608-01',
+    mockSerpItemFindMany
+      .mockResolvedValueOnce([
+        {
+          id: 'item-2',
+          rank: 3,
+          assetId: '684583478',
           title: 'Infographic 3',
-          filePath: '/uploads/test.jpg',
-          asDownloads: 10,
-          totalDownloads: 15,
-          stats: [{ downloads: 10, earnings: 12.5, platform: 'Adobe Stock' }],
+          author: 'Me',
+          thumbnailUrl: null,
+          detailUrl: null,
+          serpQueryId: 'q-2',
+          matchedImageId: 'img-123',
+          serpQuery: {
+            keyword: 'infographic',
+            platform: 'Adobe Stock',
+            pageNumber: 1,
+            searchedAt: new Date('2026-08-15'),
+          },
+          matchedImage: {
+            code: 'TST-2608-01',
+            title: 'Infographic 3',
+            filePath: '/uploads/test.jpg',
+            asDownloads: 10,
+            totalDownloads: 15,
+            stats: [{ downloads: 10, earnings: 12.5, platform: 'Adobe Stock' }],
+          },
         },
-      },
-    ]);
+      ])
+      .mockResolvedValueOnce([
+        {
+          assetId: '684583478',
+          rank: 15,
+          serpQuery: { keyword: 'infographic', searchedAt: new Date('2026-08-01') },
+        },
+      ]);
 
     mockSerpQueryFindMany.mockResolvedValue([{ keyword: 'infographic' }]);
     mockSerpQueryGroupBy.mockResolvedValue([{ keyword: 'infographic' }]);
@@ -197,7 +205,6 @@ describe('SERP API Routes', () => {
       .mockResolvedValueOnce([{ assetId: '684583478' }]); // top10Count
 
     mockSerpItemFindFirst
-      .mockResolvedValueOnce({ rank: 15, serpQuery: { searchedAt: new Date('2026-08-01') } }) // prevItem
       .mockResolvedValueOnce({ rank: 3, serpQuery: { keyword: 'infographic' } }); // bestRankItem
 
     const req = new NextRequest('http://localhost:3000/api/serp?view=artworks&keyword=infographic');

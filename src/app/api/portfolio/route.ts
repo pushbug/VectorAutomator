@@ -6,7 +6,7 @@ import { parseImageCode, getNextImageCode } from '@/lib/imageCode';
 import { parseKeywordsString } from '@/lib/keywordAnalytics';
 import { calculatePlatformBreakdown } from '@/lib/formatters';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
-import { saveImageFile, deleteOldImageFile } from '@/lib/fileStorage';
+import { saveImageFile, deleteOldImageFile, syncPhysicalUploadFiles } from '@/lib/fileStorage';
 
 
 
@@ -22,6 +22,15 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const idStatus = searchParams.get('idStatus') || 'all';
+
+    // Safe auto-sync disk files on initial portfolio fetch (page 1, non-search)
+    if (page === 1 && (!search || search.trim() === '')) {
+      try {
+        await syncPhysicalUploadFiles(prisma);
+      } catch (syncErr) {
+        console.error('Safe auto-sync disk files error:', syncErr);
+      }
+    }
 
     const skip = (page - 1) * limit;
 
@@ -266,7 +275,7 @@ export async function GET(request: NextRequest) {
       prisma.image.findMany({
         where,
         select: {
-          keywords: true,
+          ...(searchField === 'exactKeyword' ? { keywords: true } : {}),
           totalDownloads: true,
           stats: {
             select: {

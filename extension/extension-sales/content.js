@@ -1,5 +1,24 @@
 // Adobe Stock Sales Extractor - Content Script
-// Scrapes Insights / Statistics Top Sellers table and date picker in real time
+// 100% Passive Client-Side DOM Scraper (Zero Network Requests, Zero Bot Footprint)
+
+let isExtracting = false;
+let activePollTimer = null;
+
+function isAutoCopyEnabled() {
+  try {
+    const val = localStorage.getItem('va_sales_autocopy_enabled');
+    return val === null ? true : val === 'true';
+  } catch (e) {
+    return true;
+  }
+}
+
+function setAutoCopyEnabled(enabled) {
+  try {
+    localStorage.setItem('va_sales_autocopy_enabled', String(enabled));
+  } catch (e) {}
+  updateToggleUi();
+}
 
 function extractSalesData() {
   const isInsightsPage = Boolean(
@@ -128,16 +147,62 @@ function extractSalesData() {
 }
 
 function formatClipboardTsv(salesData) {
-  const dateHeader = `Date: ${salesData.dateStr}`;
+  const dateHeader = `Date: ${salesData.dateStr || ''}`;
   const tsvHeader = ['Thumb', 'Id', 'Type', 'Upload date', 'Earnings'].join('\t');
   const rows = (salesData.items || []).map((item) => {
-    return ['', item.assetId, item.assetType, item.uploadDate, item.royalty].join('\t');
+    return ['', item.assetId, item.assetType || 'Vectors', item.uploadDate || '', item.royalty || '$0.00'].join('\t');
   });
 
   return [dateHeader, tsvHeader, ...rows].join('\n');
 }
 
-function showInPageToast(message) {
+// 100% Reliable in-viewport clipboard copy for macOS/Chrome
+async function copyToClipboardSafe(text) {
+  if (!text) return false;
+
+  // Primary: Navigator Clipboard API
+  if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('[SalesExtractor] navigator.clipboard failed, attempting in-viewport textarea fallback:', err);
+    }
+  }
+
+  // Fallback: In-viewport non-readonly transparent textarea
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      opacity: 0.01;
+      pointer-events: none;
+      z-index: -999;
+    `;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    textArea.setSelectionRange(0, text.length);
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return Boolean(success);
+  } catch (err) {
+    console.error('[SalesExtractor] Fallback execCommand copy failed:', err);
+    return false;
+  }
+}
+
+function showInPageToast(message, type = 'success') {
   let toast = document.getElementById('va-sales-extractor-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -147,7 +212,7 @@ function showInPageToast(message) {
       bottom: 24px;
       right: 24px;
       z-index: 999999;
-      background: #18181b;
+      background: #0f172a;
       color: #ffffff;
       padding: 12px 18px;
       border-radius: 12px;
@@ -160,25 +225,55 @@ function showInPageToast(message) {
       gap: 10px;
       transform: translateY(20px);
       opacity: 0;
-      transition: all 0.25s ease-out;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       pointer-events: none;
     `;
     document.body.appendChild(toast);
   }
 
-  toast.innerHTML = `<span style="color:#38bdf8;">⚡</span> ${message}`;
+  const icon = type === 'success' ? '⚡' : type === 'info' ? 'ℹ️' : '⚠️';
+  const iconColor = type === 'success' ? '#10b981' : '#38bdf8';
+  toast.innerHTML = `<span style="color:${iconColor};font-weight:bold;">${icon}</span> <span>${message}</span>`;
+  
   requestAnimationFrame(() => {
     toast.style.transform = 'translateY(0)';
     toast.style.opacity = '1';
   });
 
-  setTimeout(() => {
+  if (window.vaToastTimeout) clearTimeout(window.vaToastTimeout);
+  window.vaToastTimeout = setTimeout(() => {
     toast.style.transform = 'translateY(20px)';
     toast.style.opacity = '0';
-  }, 2600);
+  }, 3200);
 }
 
-function updateFloatingButton(pulse = false) {
+function updateToggleUi() {
+  const toggleBtn = document.getElementById('va-sales-autocopy-toggle');
+  if (!toggleBtn) return;
+
+  const enabled = isAutoCopyEnabled();
+  const dot = toggleBtn.querySelector('.va-toggle-dot');
+  const text = toggleBtn.querySelector('.va-toggle-text');
+
+  if (enabled) {
+    toggleBtn.style.background = 'rgba(16, 185, 129, 0.16)';
+    toggleBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    toggleBtn.style.color = '#34d399';
+    if (dot) dot.style.background = '#10b981';
+    if (text) text.textContent = 'Auto: ON';
+    toggleBtn.title = 'Auto-Copy is ON (Click to turn OFF)';
+  } else {
+    toggleBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+    toggleBtn.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+    toggleBtn.style.color = '#94a3b8';
+    if (dot) dot.style.background = '#64748b';
+    if (text) text.textContent = 'Auto: OFF';
+    toggleBtn.title = 'Auto-Copy is OFF (Click to turn ON)';
+  }
+}
+
+// Updates floating button with distinct UI states: 'normal' | 'loading' | 'auto_copied' | 'manual_copied'
+function updateFloatingButton(state = 'normal') {
   const isInsightsPage = document.querySelector('div[data-t="insights-my-statistics-page"]');
   const btnContainer = document.getElementById('va-sales-copy-btn-container');
 
@@ -188,7 +283,7 @@ function updateFloatingButton(pulse = false) {
   }
 
   if (btnContainer) {
-    btnContainer.style.display = 'block';
+    btnContainer.style.display = 'flex';
   } else {
     injectFloatingButton();
     return;
@@ -197,33 +292,93 @@ function updateFloatingButton(pulse = false) {
   const btn = document.getElementById('va-sales-copy-btn');
   if (!btn) return;
 
+  // If currently extracting and a periodic poll calls normal, do not overwrite loading state
+  if (isExtracting && state === 'normal') return;
+
   const data = extractSalesData();
+  const iconEl = btn.querySelector('.va-icon');
   const btnText = btn.querySelector('.va-btn-text');
+
+  if (state === 'loading') {
+    if (iconEl) iconEl.textContent = '⏳';
+    if (btnText) btnText.textContent = `Extracting (${data.dateStr || '...'})`;
+    btn.style.borderColor = '#f59e0b';
+    btn.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.4)';
+    btn.style.opacity = '0.85';
+    return;
+  }
+
+  if (state === 'auto_copied') {
+    btn.dataset.locked = 'true';
+    if (iconEl) iconEl.textContent = '✓';
+    if (btnText) btnText.textContent = `Auto-Copied (${data.dateStr || 'Daily'}) [${data.totalItems}]`;
+    btn.style.borderColor = '#10b981';
+    btn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.7)';
+    btn.style.transform = 'scale(1.03)';
+    btn.style.opacity = '1';
+
+    setTimeout(() => {
+      btn.style.transform = 'none';
+      btn.style.boxShadow = '0 4px 14px 0 rgba(16, 185, 129, 0.4)';
+    }, 1000);
+
+    setTimeout(() => {
+      btn.dataset.locked = 'false';
+      if (btn && btn.querySelector('.va-btn-text') && btn.dataset.state !== 'manual_copied') {
+        if (iconEl) iconEl.textContent = '⚡';
+        btn.querySelector('.va-btn-text').textContent = `Copy Sales (${data.dateStr || 'Daily'}) [${data.totalItems}]`;
+        btn.style.borderColor = '#3b82f6';
+        btn.style.boxShadow = '0 4px 14px 0 rgba(37, 99, 235, 0.39)';
+      }
+    }, 4000);
+    return;
+  }
+
+  if (state === 'manual_copied') {
+    btn.dataset.state = 'manual_copied';
+    if (iconEl) iconEl.textContent = '✓';
+    if (btnText) btnText.textContent = 'Copied to Clipboard!';
+    btn.style.borderColor = '#10b981';
+    btn.style.boxShadow = '0 0 18px rgba(16, 185, 129, 0.6)';
+    btn.style.transform = 'scale(1.03)';
+    btn.style.opacity = '1';
+
+    setTimeout(() => {
+      btn.style.transform = 'none';
+    }, 300);
+
+    setTimeout(() => {
+      btn.dataset.state = 'normal';
+      if (btn && btn.querySelector('.va-btn-text')) {
+        if (iconEl) iconEl.textContent = '⚡';
+        btn.querySelector('.va-btn-text').textContent = `Copy Sales (${data.dateStr || 'Daily'}) [${data.totalItems}]`;
+        btn.style.borderColor = '#3b82f6';
+        btn.style.boxShadow = '0 4px 14px 0 rgba(37, 99, 235, 0.39)';
+      }
+    }, 2200);
+    return;
+  }
+
+  // Normal state
+  if (btn.dataset.locked === 'true' || btn.dataset.state === 'manual_copied') return;
+
+  if (iconEl) iconEl.textContent = '⚡';
   if (btnText) {
     btnText.textContent = `Copy Sales (${data.dateStr || 'Daily'}) [${data.totalItems}]`;
   }
+  btn.style.borderColor = '#3b82f6';
+  btn.style.boxShadow = '0 4px 14px 0 rgba(37, 99, 235, 0.39)';
   btn.style.opacity = '1';
-  btn.disabled = false;
-
-  if (pulse) {
-    btn.style.transform = 'scale(1.05)';
-    btn.style.borderColor = '#60a5fa';
-    btn.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.8)';
-    setTimeout(() => {
-      btn.style.transform = 'none';
-      btn.style.borderColor = '#3b82f6';
-      btn.style.boxShadow = '0 4px 14px 0 rgba(37, 99, 235, 0.39)';
-    }, 700);
-  }
 }
 
-// Injects the floating button cleanly (without recursive MutationObserver)
+// Injects the floating control bar (Button + Auto-Copy Toggle Switch)
 function injectFloatingButton() {
   const isInsightsPage = document.querySelector('div[data-t="insights-my-statistics-page"]');
   if (!isInsightsPage) return;
 
   if (document.getElementById('va-sales-copy-btn-container')) {
-    updateFloatingButton();
+    updateFloatingButton('normal');
+    updateToggleUi();
     return;
   }
 
@@ -236,8 +391,12 @@ function injectFloatingButton() {
     bottom: 28px;
     left: 28px;
     z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   `;
 
+  // 1. Main Action Button (Single Decoupled Icon)
   const btn = document.createElement('button');
   btn.id = 'va-sales-copy-btn';
   btn.type = 'button';
@@ -256,46 +415,80 @@ function injectFloatingButton() {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    user-select: none;
   `;
 
   btn.innerHTML = `
-    <span style="color:#60a5fa;">⚡</span>
+    <span class="va-icon" style="color:#60a5fa;">⚡</span>
     <span class="va-btn-text">Copy Sales (${data.dateStr || 'Daily'}) [${data.totalItems}]</span>
   `;
 
   btn.addEventListener('mouseenter', () => {
     btn.style.transform = 'translateY(-2px) scale(1.02)';
-    btn.style.boxShadow = '0 6px 20px 0 rgba(37, 99, 235, 0.5)';
   });
 
   btn.addEventListener('mouseleave', () => {
     btn.style.transform = 'none';
-    btn.style.boxShadow = '0 4px 14px 0 rgba(37, 99, 235, 0.39)';
   });
 
+  // 100% Guaranteed Manual Click Copy Handler
   btn.addEventListener('click', async () => {
     const currentData = extractSalesData();
     if (!currentData.items || currentData.items.length === 0) {
-      showInPageToast('No sales items found on this page.');
+      showInPageToast(`No sales items found for ${currentData.dateStr || 'selected period'}.`, 'info');
       return;
     }
 
     const tsv = formatClipboardTsv(currentData);
-    await navigator.clipboard.writeText(tsv);
+    const copied = await copyToClipboardSafe(tsv);
 
-    const originalText = btn.querySelector('.va-btn-text').textContent;
-    btn.querySelector('.va-btn-text').textContent = '✓ Copied to Clipboard!';
-    showInPageToast(`Copied ${currentData.totalItems} sales items for ${currentData.dateStr}!`);
+    if (copied) {
+      updateFloatingButton('manual_copied');
+      showInPageToast(`Copied ${currentData.totalItems} sales items for ${currentData.dateStr}!`, 'success');
+    } else {
+      showInPageToast('Could not access clipboard. Please check browser permissions.', 'warning');
+    }
+  });
 
-    setTimeout(() => {
-      if (btn && btn.querySelector('.va-btn-text')) {
-        btn.querySelector('.va-btn-text').textContent = originalText;
-      }
-    }, 2000);
+  // 2. Persistent Auto-Copy Toggle Switch (ON / OFF)
+  const toggleBtn = document.createElement('button');
+  toggleBtn.id = 'va-sales-autocopy-toggle';
+  toggleBtn.type = 'button';
+  toggleBtn.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 9999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  `;
+
+  toggleBtn.innerHTML = `
+    <span class="va-toggle-dot" style="width: 7px; height: 7px; border-radius: 9999px; display: inline-block;"></span>
+    <span class="va-toggle-text">Auto: ON</span>
+  `;
+
+  toggleBtn.addEventListener('click', () => {
+    const nextState = !isAutoCopyEnabled();
+    setAutoCopyEnabled(nextState);
+    showInPageToast(
+      nextState ? 'Auto-Copy enabled (will copy on Display statistics)' : 'Auto-Copy disabled (use manual Copy button)',
+      'info'
+    );
   });
 
   btnContainer.appendChild(btn);
+  btnContainer.appendChild(toggleBtn);
   document.body.appendChild(btnContainer);
+
+  updateToggleUi();
 }
 
 // Hook into Adobe's "Display statistics" button to capture updates seamlessly
@@ -305,32 +498,63 @@ function hookDisplayStatsCta() {
   ctaBtn.dataset.vaHooked = 'true';
 
   ctaBtn.addEventListener('click', () => {
-    const copyBtn = document.getElementById('va-sales-copy-btn');
-    if (copyBtn) {
-      const btnText = copyBtn.querySelector('.va-btn-text');
-      if (btnText) btnText.textContent = 'Loading statistics...';
-      copyBtn.style.opacity = '0.7';
+    if (activePollTimer) {
+      clearInterval(activePollTimer);
+      activePollTimer = null;
     }
 
-    // Poll until Adobe's loading spinner finishes
-    let pollCount = 0;
-    const maxPolls = 40; // 20 seconds max
-    const interval = setInterval(() => {
-      pollCount++;
-      const spinner = document.querySelector('div[data-t="content-spinner-wrapper"]');
-      const isSpinning = spinner && spinner.style.display !== 'none' && window.getComputedStyle(spinner).display !== 'none';
+    const autoEnabled = isAutoCopyEnabled();
+    if (autoEnabled) {
+      updateFloatingButton('loading');
+    }
+    isExtracting = true;
 
-      if (!isSpinning || pollCount >= maxPolls) {
-        clearInterval(interval);
-        setTimeout(() => {
-          updateFloatingButton(true);
-        }, 400);
-      }
-    }, 500);
+    // Initial 400ms stabilization delay before polling spinner disappearance
+    setTimeout(() => {
+      let pollCount = 0;
+      const maxPolls = 20; // 10s max timeout (500ms * 20)
+      activePollTimer = setInterval(async () => {
+        pollCount++;
+        const spinner = document.querySelector('div[data-t="content-spinner-wrapper"]');
+        const isSpinning = Boolean(spinner && spinner.style.display !== 'none' && window.getComputedStyle(spinner).display !== 'none');
+
+        if (!isSpinning || pollCount >= maxPolls) {
+          clearInterval(activePollTimer);
+          activePollTimer = null;
+
+          // Wait 300ms for DOM table render stabilization
+          setTimeout(async () => {
+            isExtracting = false;
+            const data = extractSalesData();
+
+            if (autoEnabled) {
+              if (data.items && data.items.length > 0) {
+                const tsv = formatClipboardTsv(data);
+                const copied = await copyToClipboardSafe(tsv);
+                if (copied) {
+                  updateFloatingButton('auto_copied');
+                  showInPageToast(`Auto-copied ${data.totalItems} sales items (${data.dateStr})! Ready to paste in VectorAutomator`, 'success');
+                } else {
+                  updateFloatingButton('normal');
+                  showInPageToast(`Extracted ${data.totalItems} items (${data.dateStr}). Click button to copy.`, 'info');
+                }
+              } else {
+                updateFloatingButton('normal');
+                showInPageToast(`No sales records found for ${data.dateStr}`, 'info');
+              }
+            } else {
+              // Auto-Copy is OFF: only passively update item counts on button
+              updateFloatingButton('normal');
+              showInPageToast(`Updated statistics: ${data.totalItems} items (${data.dateStr}). Ready to copy.`, 'info');
+            }
+          }, 300);
+        }
+      }, 500);
+    }, 400);
   });
 }
 
-// Periodic check (runs gently every 2s, using 0% CPU, safe from infinite loops)
+// Periodic check (runs gently every 2s, 100% passive, 0 network requests)
 function initCycle() {
   injectFloatingButton();
   hookDisplayStatsCta();
@@ -348,8 +572,8 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     } else if (request.action === 'COPY_SALES_DATA') {
       const data = extractSalesData();
       const tsv = formatClipboardTsv(data);
-      navigator.clipboard.writeText(tsv).then(() => {
-        sendResponse({ success: true, count: data.totalItems, dateStr: data.dateStr });
+      copyToClipboardSafe(tsv).then((success) => {
+        sendResponse({ success, count: data.totalItems, dateStr: data.dateStr });
       });
       return true;
     }

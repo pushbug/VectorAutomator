@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET, PATCH, DELETE } from '@/app/api/portfolio/route';
 import { NextRequest } from 'next/server';
 
-const { mockFindMany, mockCount, mockFindUnique, mockFindFirst, mockUpdate, mockDelete } = vi.hoisted(() => {
+const {
+  mockFindMany,
+  mockCount,
+  mockFindUnique,
+  mockFindFirst,
+  mockUpdate,
+  mockDelete,
+  mockSyncPhysicalUploadFiles,
+} = vi.hoisted(() => {
   return {
     mockFindMany: vi.fn(),
     mockCount: vi.fn(),
@@ -10,6 +18,7 @@ const { mockFindMany, mockCount, mockFindUnique, mockFindFirst, mockUpdate, mock
     mockFindFirst: vi.fn(),
     mockUpdate: vi.fn(),
     mockDelete: vi.fn(),
+    mockSyncPhysicalUploadFiles: vi.fn().mockResolvedValue({ syncedCount: 0, syncedCodes: [] }),
   };
 });
 
@@ -44,6 +53,14 @@ vi.mock('fs/promises', () => ({
   },
 }));
 
+vi.mock('@/lib/fileStorage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/fileStorage')>();
+  return {
+    ...actual,
+    syncPhysicalUploadFiles: mockSyncPhysicalUploadFiles,
+  };
+});
+
 describe('Portfolio API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,6 +90,35 @@ describe('Portfolio API Route', () => {
           ]
         })
       );
+    });
+
+    it('UT-API-PORTFOLIO-AUTO-SYNC-01: auto-syncs physical files on page 1 without search and handles errors safely', async () => {
+      mockFindMany.mockResolvedValue([]);
+      mockCount.mockResolvedValue(0);
+
+      // Call on page 1 with no search -> triggers auto-sync
+      const req1 = new NextRequest('http://localhost:3000/api/portfolio?page=1');
+      await GET(req1);
+      expect(mockSyncPhysicalUploadFiles).toHaveBeenCalledTimes(1);
+
+      // Call on page 2 -> should NOT trigger auto-sync
+      mockSyncPhysicalUploadFiles.mockClear();
+      const req2 = new NextRequest('http://localhost:3000/api/portfolio?page=2');
+      await GET(req2);
+      expect(mockSyncPhysicalUploadFiles).not.toHaveBeenCalled();
+
+      // Call with search keyword -> should NOT trigger auto-sync
+      mockSyncPhysicalUploadFiles.mockClear();
+      const req3 = new NextRequest('http://localhost:3000/api/portfolio?page=1&search=nature');
+      await GET(req3);
+      expect(mockSyncPhysicalUploadFiles).not.toHaveBeenCalled();
+
+      // Error in auto-sync does not break GET request (graceful error suppression)
+      mockSyncPhysicalUploadFiles.mockClear();
+      mockSyncPhysicalUploadFiles.mockRejectedValueOnce(new Error('Disk read error'));
+      const req4 = new NextRequest('http://localhost:3000/api/portfolio?page=1');
+      const res4 = await GET(req4);
+      expect(res4.status).toBe(200);
     });
 
     it('UT-API-PF-SUMMARY-01: calculates and returns totalImages, totalDownloads, and totalEarnings in summary', async () => {

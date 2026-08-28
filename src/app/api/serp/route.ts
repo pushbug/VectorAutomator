@@ -132,90 +132,114 @@ export async function GET(request: NextRequest) {
         }
       }
       const uniqueSerpItems = Array.from(latestItemsMap.values());
+      const assetIds = Array.from(new Set(uniqueSerpItems.map((i) => i.assetId).filter(Boolean)));
 
-      // Calculate Rank Deltas and Sales aggregations for each item
-      const enrichedItems = await Promise.all(
-        uniqueSerpItems.map(async (item) => {
-          // Find previous ranking for this image/asset under the same keyword
-          const prevItem = await prisma.serpItem.findFirst({
-            where: {
-              assetId: item.assetId,
-              serpQuery: {
-                keyword: item.serpQuery.keyword,
-                searchedAt: { lt: item.serpQuery.searchedAt },
+      // Batch query previous rankings and direct platform stats in parallel (eliminating N+1 loop)
+      const [allPrevItems, allDirectStats] = await Promise.all([
+        assetIds.length > 0
+          ? prisma.serpItem.findMany({
+              where: {
+                assetId: { in: assetIds },
+                isMine: true,
               },
-            },
-            orderBy: {
-              serpQuery: { searchedAt: 'desc' },
-            },
-            select: {
-              rank: true,
-              serpQuery: { select: { searchedAt: true } },
-            },
-          });
+              orderBy: {
+                serpQuery: { searchedAt: 'desc' },
+              },
+              select: {
+                assetId: true,
+                rank: true,
+                serpQuery: { select: { keyword: true, searchedAt: true } },
+              },
+            })
+          : Promise.resolve([]),
+        assetIds.length > 0 && prisma.platformStats
+          ? prisma.platformStats.findMany({
+              where: { platformAssetId: { in: assetIds } },
+              select: { platformAssetId: true, downloads: true, earnings: true },
+            })
+          : Promise.resolve([]),
+      ]);
 
-          const previousRank = prevItem ? prevItem.rank : null;
-          // Delta: positive means improved (e.g. was 10, now 2 -> +8)
-          const rankDelta = previousRank !== null ? previousRank - item.rank : null;
-          const isNew = previousRank === null;
+      // Direct stats lookup map
+      const directStatsMap = new Map<string, { downloads: number; earnings: number }>();
+      for (const s of (allDirectStats || [])) {
+        if (!s.platformAssetId) continue;
+        const entry = directStatsMap.get(s.platformAssetId) || { downloads: 0, earnings: 0 };
+        entry.downloads += (s.downloads || 0);
+        entry.earnings += (s.earnings || 0);
+        directStatsMap.set(s.platformAssetId, entry);
+      }
 
-          // Earnings and downloads rollup
-          const statsEarnings = (item.matchedImage?.stats || []).reduce(
-            (sum, s) => sum + s.earnings,
-            0
+      // Calculate Rank Deltas and Sales aggregations synchronously
+      const enrichedItems = uniqueSerpItems.map((item) => {
+        // Find previous ranking for this image/asset under the same keyword
+        let previousRank: number | null = null;
+        if (allPrevItems && allPrevItems.length > 0) {
+          const itemSearchTime = new Date(item.serpQuery.searchedAt).getTime();
+          const prevItem = allPrevItems.find(
+            (p: any) =>
+              p.assetId === item.assetId &&
+              p.serpQuery?.keyword === item.serpQuery.keyword &&
+              new Date(p.serpQuery.searchedAt).getTime() < itemSearchTime
           );
-          const statsDownloads = (item.matchedImage?.stats || []).reduce(
-            (sum, s) => sum + s.downloads,
-            0
-          );
-          let totalEarnings = statsEarnings;
-          const asDownloads = item.matchedImage?.asDownloads ?? 0;
-          let totalDownloads = Math.max(
-            statsDownloads,
-            item.matchedImage?.totalDownloads ?? 0,
-            asDownloads
-          );
-
-          // Check if unlinked PlatformStats exist directly with matching assetId
-          if (item.assetId && prisma.platformStats) {
-            const directStats = await prisma.platformStats.findMany({
-              where: { platformAssetId: item.assetId },
-              select: { downloads: true, earnings: true },
-            });
-            if (directStats.length > 0) {
-              const directDl = directStats.reduce((sum, s) => sum + s.downloads, 0);
-              const directEarn = directStats.reduce((sum, s) => sum + s.earnings, 0);
-              totalDownloads = Math.max(totalDownloads, directDl);
-              totalEarnings = Math.max(totalEarnings, directEarn);
-            }
+          if (prevItem) {
+            previousRank = prevItem.rank;
           }
+        }
 
-          return {
-            id: item.id,
-            rank: item.rank,
-            assetId: item.assetId,
-            title: item.title,
-            author: item.author,
-            thumbnailUrl: item.thumbnailUrl,
-            detailUrl: item.detailUrl,
-            keyword: item.serpQuery.keyword,
-            platform: item.serpQuery.platform,
-            pageNumber: item.serpQuery.pageNumber,
-            searchedAt: item.serpQuery.searchedAt,
-            serpQueryId: item.serpQueryId,
-            matchedImageId: item.matchedImageId,
-            imageCode: item.matchedImage?.code || null,
-            imageTitle: item.matchedImage?.title || item.title,
-            imageFilePath: item.matchedImage?.filePath || null,
-            previousRank,
-            rankDelta,
-            isNew,
-            asDownloads,
-            totalDownloads,
-            totalEarnings,
-          };
-        })
-      );
+        // Delta: positive means improved (e.g. was 10, now 2 -> +8)
+        const rankDelta = previousRank !== null ? previousRank - item.rank : null;
+        const isNew = previousRank === null;
+
+        // Earnings and downloads rollup
+        const statsEarnings = (item.matchedImage?.stats || []).reduce(
+          (sum: number, s: any) => sum + s.earnings,
+          0
+        );
+        const statsDownloads = (item.matchedImage?.stats || []).reduce(
+          (sum: number, s: any) => sum + s.downloads,
+          0
+        );
+        let totalEarnings = statsEarnings;
+        const asDownloads = item.matchedImage?.asDownloads ?? 0;
+        let totalDownloads = Math.max(
+          statsDownloads,
+          item.matchedImage?.totalDownloads ?? 0,
+          asDownloads
+        );
+
+        // Check if unlinked PlatformStats exist directly in lookup map
+        if (item.assetId && directStatsMap.has(item.assetId)) {
+          const direct = directStatsMap.get(item.assetId)!;
+          totalDownloads = Math.max(totalDownloads, direct.downloads);
+          totalEarnings = Math.max(totalEarnings, direct.earnings);
+        }
+
+        return {
+          id: item.id,
+          rank: item.rank,
+          assetId: item.assetId,
+          title: item.title,
+          author: item.author,
+          thumbnailUrl: item.thumbnailUrl,
+          detailUrl: item.detailUrl,
+          keyword: item.serpQuery.keyword,
+          platform: item.serpQuery.platform,
+          pageNumber: item.serpQuery.pageNumber,
+          searchedAt: item.serpQuery.searchedAt,
+          serpQueryId: item.serpQueryId,
+          matchedImageId: item.matchedImageId,
+          imageCode: item.matchedImage?.code || null,
+          imageTitle: item.matchedImage?.title || item.title,
+          imageFilePath: item.matchedImage?.filePath || null,
+          previousRank,
+          rankDelta,
+          isNew,
+          asDownloads,
+          totalDownloads,
+          totalEarnings,
+        };
+      });
 
       // KPI Summary calculations (Unique assets currently ranking)
       const [uniqueKeywordsCount, page1Count, top10Count, bestRankItem] = await Promise.all([

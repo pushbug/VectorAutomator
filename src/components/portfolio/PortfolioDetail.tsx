@@ -78,7 +78,10 @@ export function PortfolioDetail({
     setHasImageError(false);
     if (!image?.id) return;
 
-    if (image.totalEarnings !== undefined && image.platformBreakdown !== undefined) {
+    if (
+      (image.totalEarnings !== undefined && image.platformBreakdown !== undefined) ||
+      ((image as any).stats && Array.isArray((image as any).stats) && (image as any).stats.length > 0)
+    ) {
       return;
     }
 

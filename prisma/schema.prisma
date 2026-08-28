@@ -36,6 +36,9 @@ model Image {
   stats          PlatformStats[]
   collections    CollectionItem[]
   serpItems      SerpItem[]
+
+  @@index([createdAt])
+  @@index([totalDownloads])
 }
 
 model PlatformStats {
@@ -52,6 +55,8 @@ model PlatformStats {
 
   @@unique([imageId, platform, date])
   @@index([platform, platformAssetId])
+  @@index([date])
+  @@index([imageId])
 }
 
 model Collection {
