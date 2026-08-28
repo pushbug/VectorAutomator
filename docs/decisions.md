@@ -182,8 +182,17 @@
   2. **Batch Query for SERP Delta & Direct Stats:** Replaced inner N+1 subquery loops in `GET /api/serp` with single parallel batch queries (`allPrevItems`, `directStatsMap`) keyed by `assetId`, reducing roundtrips from 200+ to 2.
   3. **Streamlined Summary Aggregation:** Optimized `allMatchingImages` projection in `GET /api/portfolio` to select only `totalDownloads` and `stats.earnings` (omitting bulky keyword strings unless `exactKeyword` search is active).
   4. **Database Schema Indexing:** Added `@@index([date])` and `@@index([imageId])` to `PlatformStats`; added `@@index([createdAt])` and `@@index([totalDownloads])` to `Image`.
-  5. **Client Helper & Re-render Consolidation:** Removed duplicate local `formatDisplayDate` from `PortfolioPage` (consuming centralized `@/lib/formatters`) and memoized page selection IDs with `React.useMemo`. Guarded `PortfolioDetail` to calculate breakdowns synchronously when `image.stats` is present.
-  6. **Automated Verification:** All 51 test suites and 326 unit tests continue passing with 0 TypeScript errors.
-- **Impact:** Drastically reduces API response times, eliminates N+1 SQL bottlenecks, prevents memory bloat on large portfolios, and cleans up client-side redundancy.
+## ADR-024: SERP Table Multi-Column Sorting, 100-Item Pagination, Form Lifecycle Reset, and Extension Silent Clipboard Fallback
+- **Date:** 2026-08-28
+- **Context:** (1) The Ranking dashboard (`/serp`) lacked multi-column sorting and pagination controls, and long keywords caused table header text wrapping while the ACTION header was clipped. (2) `SmartSerpPasteModal` retained previous pasted text upon modal submission or close, requiring manual back-navigation and text deletion for subsequent imports. (3) Matched items in `SmartSerpPasteModal` were missing thumbnail and image code badges because the transaction return query omitted the relation. (4) Chrome's extension manager emitted yellow `DOMException` warnings in `chrome://extensions` when the sales extractor auto-copy timer completed after transient user activation expired.
+- **Decision:**
+  1. **SERP Multi-Column Sorting & Pagination:** Extended `GET /api/serp` and `SerpTable` with `sortBy` (`date`, `keyword`, `rank`, `delta`, `downloads`, `revenue`) and `sortOrder` (`asc`, `desc`), visual column sort state indicators (`ArrowUpDown`, `ArrowUp`, `ArrowDown`), default limit of 100, and integrated `PaginationCapsule` with automatic selection reset on page/sort changes.
+  2. **Table Header Layout & Wrap Prevention:** Adjusted column widths (`min-w-44` for keyword with `whitespace-nowrap`, `min-w-24` and `pr-6` for ACTION) preventing text clipping.
+  3. **SmartSerpPasteModal Lifecycle Reset:** Implemented `handleReset` clearing `rawText`, `keywordInput`, `matchedItems`, and `totalCount`, bound to "Paste Another", "Done & View Dashboard", cancel, and backdrop dismissal.
+  4. **Relation Mapping on Sync:** Updated `POST /api/serp/paste-sync` to include `matchedImage: { select: { id, code, title, filePath } }` and mapped `imageFilePath`, `imageCode`, and `imageTitle` in `myItems`.
+  5. **Silent Extension Clipboard Fallback:** Refactored `copyToClipboardSafe` in `extension/extension-sales` to check `document.hasFocus()` and silently switch to `document.execCommand('copy')` on `DOMException` without emitting noisy `console.warn` logs.
+  6. **Automated Verification:** Added test suites `UT-API-SERP-SORT-01` and `UT-UI-SERP-TABLE-SORT-01`. All 51 test suites and 329 tests pass with 0 TypeScript errors.
+- **Impact:** Delivers responsive 100-item SERP exploration with sorting and unclipped layouts, streamlines bulk ranking import workflows, and eliminates false-positive Chrome extension warnings.
+
 
 

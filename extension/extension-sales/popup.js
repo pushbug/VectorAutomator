@@ -25,12 +25,19 @@ function formatClipboardTsv(salesData) {
 
 async function copyToClipboardSafe(text) {
   if (!text) return false;
-  if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+  if (
+    navigator &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === 'function' &&
+    typeof document !== 'undefined' &&
+    document.hasFocus &&
+    document.hasFocus()
+  ) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch (err) {
-      console.warn('Popup navigator.clipboard failed, attempting fallback:', err);
+    } catch {
+      // Fallback silently without emitting console.warn
     }
   }
 
@@ -59,8 +66,7 @@ async function copyToClipboardSafe(text) {
     const success = document.execCommand('copy');
     document.body.removeChild(textArea);
     return Boolean(success);
-  } catch (err) {
-    console.error('Popup execCommand copy failed:', err);
+  } catch {
     return false;
   }
 }

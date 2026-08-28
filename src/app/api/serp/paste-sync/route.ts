@@ -156,6 +156,16 @@ export async function POST(request: NextRequest) {
         include: {
           items: {
             where: { isMine: true },
+            include: {
+              matchedImage: {
+                select: {
+                  id: true,
+                  code: true,
+                  title: true,
+                  filePath: true,
+                },
+              },
+            },
           },
         },
       });
@@ -180,7 +190,20 @@ export async function POST(request: NextRequest) {
         totalItems: savedQuery.totalItems,
         myItemsCount: savedQuery.myItemsCount,
         myRanks,
-        myItems: savedQuery.items,
+        myItems: (savedQuery.items || []).map((item: any) => ({
+          id: item.id,
+          rank: item.rank,
+          assetId: item.assetId,
+          title: item.matchedImage?.title || item.title,
+          author: item.author,
+          thumbnailUrl: item.thumbnailUrl,
+          detailUrl: item.detailUrl,
+          isMine: item.isMine,
+          matchedImageId: item.matchedImageId,
+          imageCode: item.matchedImage?.code || null,
+          imageTitle: item.matchedImage?.title || item.title,
+          imageFilePath: item.matchedImage?.filePath || null,
+        })),
       },
       {
         status: 201,

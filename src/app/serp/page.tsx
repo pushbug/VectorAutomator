@@ -25,6 +25,8 @@ export default function SerpPage() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -42,7 +44,9 @@ export default function SerpPage() {
       const params = new URLSearchParams({
         view: 'artworks',
         page: page.toString(),
-        limit: '50',
+        limit: '100',
+        sortBy,
+        sortOrder,
       });
 
       if (keywordFilter) params.append('keyword', keywordFilter);
@@ -70,7 +74,7 @@ export default function SerpPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, keywordFilter, search, startDate, endDate]);
+  }, [page, keywordFilter, search, startDate, endDate, sortBy, sortOrder]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget && (!bulkDeleteIds || bulkDeleteIds.length === 0)) return;
@@ -151,6 +155,13 @@ export default function SerpPage() {
           setPage(1);
         }}
         trackedKeywords={trackedKeywords}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={(field, order) => {
+          setSortBy(field);
+          setSortOrder(order);
+          setPage(1);
+        }}
         page={page}
         totalPages={totalPages}
         onPageChange={(p) => setPage(p)}

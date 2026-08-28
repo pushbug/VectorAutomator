@@ -283,11 +283,11 @@ export function ArtworkSerpDrawer({ imageId, onClose }: ArtworkSerpDrawerProps) 
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-border bg-surface-hover/50 text-muted font-semibold">
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Keyword</th>
-                        <th className="py-2.5 px-3 text-center">Rank & Delta</th>
-                        <th className="py-2.5 px-3 text-right">Downloads</th>
-                        <th className="py-2.5 px-3 text-right">Revenue</th>
+                        <th className="py-2.5 px-3 whitespace-nowrap">Date</th>
+                        <th className="py-2.5 px-3 whitespace-nowrap">Keyword</th>
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">Rank & Delta</th>
+                        <th className="py-2.5 px-3 text-right whitespace-nowrap">Downloads</th>
+                        <th className="py-2.5 px-3 text-right whitespace-nowrap">Revenue</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
@@ -299,7 +299,7 @@ export function ArtworkSerpDrawer({ imageId, onClose }: ArtworkSerpDrawerProps) 
                               <span>{formatTableDate(item.date)}</span>
                             </div>
                           </td>
-                          <td className="py-2.5 px-3 font-semibold text-foreground">
+                          <td className="py-2.5 px-3 font-semibold text-foreground whitespace-nowrap">
                             {item.keyword}
                           </td>
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">

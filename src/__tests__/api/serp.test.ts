@@ -124,8 +124,20 @@ describe('SERP API Routes', () => {
       totalItems: 2,
       myItemsCount: 1,
       items: [
-        { id: 'item-1', rank: 1, assetId: '507970140', isMine: false, matchedImageId: null },
-        { id: 'item-2', rank: 2, assetId: '684583478', isMine: true, matchedImageId: 'img-123' },
+        { id: 'item-1', rank: 1, assetId: '507970140', isMine: false, matchedImageId: null, matchedImage: null },
+        {
+          id: 'item-2',
+          rank: 2,
+          assetId: '684583478',
+          isMine: true,
+          matchedImageId: 'img-123',
+          matchedImage: {
+            id: 'img-123',
+            code: '2410-77',
+            title: 'Test Vector Title',
+            filePath: '/uploads/2410-77.jpg',
+          },
+        },
       ],
     });
 
@@ -153,7 +165,11 @@ describe('SERP API Routes', () => {
     expect(data.totalItems).toBe(2);
     expect(data.myItemsCount).toBe(1);
     expect(data.myRanks).toEqual([2]);
-    expect(data.myItems.find((i: any) => i.isMine)?.matchedImageId).toBe('img-123');
+    const matchedItem = data.myItems.find((i: any) => i.isMine);
+    expect(matchedItem?.matchedImageId).toBe('img-123');
+    expect(matchedItem?.imageCode).toBe('2410-77');
+    expect(matchedItem?.imageTitle).toBe('Test Vector Title');
+    expect(matchedItem?.imageFilePath).toBe('/uploads/2410-77.jpg');
   });
 
   it('UT-SERP-DELTA-01: calculates historical rank deltas across sequential snapshots', async () => {
@@ -225,6 +241,52 @@ describe('SERP API Routes', () => {
     expect(data.summary.page1Artworks).toBe(2);
     expect(data.summary.top10Artworks).toBe(1);
     expect(data.summary.bestRank).toContain('#3');
+  });
+
+  it('UT-API-SERP-SORT-01: /api/serp sorts enriched items by downloads, revenue, and keyword', async () => {
+    mockSerpItemCount.mockResolvedValue(2);
+    mockSerpItemFindMany.mockResolvedValue([
+      {
+        id: 'item-a',
+        rank: 10,
+        assetId: 'asset-a',
+        title: 'Artwork A',
+        author: 'Author A',
+        thumbnailUrl: null,
+        detailUrl: null,
+        serpQueryId: 'q-a',
+        matchedImageId: 'img-a',
+        serpQuery: { keyword: 'banner', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-08-10') },
+        matchedImage: { code: 'A-01', title: 'Artwork A', filePath: '/a.jpg', asDownloads: 5, totalDownloads: 5, stats: [{ downloads: 5, earnings: 5.0 }] },
+      },
+      {
+        id: 'item-b',
+        rank: 2,
+        assetId: 'asset-b',
+        title: 'Artwork B',
+        author: 'Author B',
+        thumbnailUrl: null,
+        detailUrl: null,
+        serpQueryId: 'q-b',
+        matchedImageId: 'img-b',
+        serpQuery: { keyword: 'poster', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-08-11') },
+        matchedImage: { code: 'B-02', title: 'Artwork B', filePath: '/b.jpg', asDownloads: 20, totalDownloads: 20, stats: [{ downloads: 20, earnings: 50.0 }] },
+      },
+    ]);
+
+    // Test sort by downloads desc
+    const reqDesc = new NextRequest('http://localhost:3000/api/serp?sortBy=downloads&sortOrder=desc');
+    const resDesc = await getSerp(reqDesc);
+    const dataDesc = await resDesc.json();
+    expect(dataDesc.items[0].assetId).toBe('asset-b');
+    expect(dataDesc.items[1].assetId).toBe('asset-a');
+
+    // Test sort by keyword asc
+    const reqAsc = new NextRequest('http://localhost:3000/api/serp?sortBy=keyword&sortOrder=asc');
+    const resAsc = await getSerp(reqAsc);
+    const dataAsc = await resAsc.json();
+    expect(dataAsc.items[0].keyword).toBe('banner');
+    expect(dataAsc.items[1].keyword).toBe('poster');
   });
 
   it('UT-API-SERP-ARTWORK-01: /api/serp/artwork/[id] returns keyword progression and sales correlation', async () => {

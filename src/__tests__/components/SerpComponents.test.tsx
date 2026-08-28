@@ -102,6 +102,40 @@ describe('SERP UI Components Test Suite', () => {
 
       // Check isNew badge
       expect(screen.getByText('★ NEW')).toBeInTheDocument();
+
+      // Check getImageUrl rendered on artwork with imageFilePath
+      const imgEl = screen.getByAltText('Presentation business infographic template');
+      expect(imgEl).toHaveAttribute('src', '/api/image?path=%2Fuploads%2F2410-77.jpg');
+    });
+
+    it('triggers onSortChange when clicking sortable column headers', () => {
+      const handleSortChange = vi.fn();
+
+      render(
+        <SerpTable
+          items={mockItems}
+          isLoading={false}
+          search=""
+          onSearchChange={vi.fn()}
+          onSelectArtwork={vi.fn()}
+          onViewFullSerp={vi.fn()}
+          sortBy="date"
+          sortOrder="desc"
+          onSortChange={handleSortChange}
+        />
+      );
+
+      // Click Date header (currently desc -> should toggle to asc)
+      fireEvent.click(screen.getByText('Date'));
+      expect(handleSortChange).toHaveBeenCalledWith('date', 'asc');
+
+      // Click Current Rank header (switch column -> should default to asc)
+      fireEvent.click(screen.getByText('Current Rank'));
+      expect(handleSortChange).toHaveBeenCalledWith('rank', 'asc');
+
+      // Click Total Revenue header (switch column -> should default to desc)
+      fireEvent.click(screen.getByText('Total Revenue'));
+      expect(handleSortChange).toHaveBeenCalledWith('revenue', 'desc');
     });
 
     it('triggers artwork drawer and full serp callbacks on click', () => {
@@ -250,6 +284,8 @@ describe('SERP UI Components Test Suite', () => {
               assetId: '502717541',
               title: 'Presentation Infographic',
               imageCode: '2410-77',
+              imageTitle: 'Presentation Infographic',
+              imageFilePath: '/uploads/2410-77.jpg',
             },
           ],
         }),
@@ -272,10 +308,55 @@ describe('SERP UI Components Test Suite', () => {
       await waitFor(() => {
         expect(screen.getByText('Snapshot Sync Complete')).toBeInTheDocument();
         expect(screen.getByText('Done & View Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('2410-77')).toBeInTheDocument();
+        const imgEl = screen.getByAltText('Presentation Infographic');
+        expect(imgEl).toHaveAttribute('src', '/api/image?path=%2Fuploads%2F2410-77.jpg');
       });
 
       fireEvent.click(screen.getByText('Done & View Dashboard'));
       expect(handleSuccess).toHaveBeenCalled();
+    });
+
+    it('resets textarea and step when clicking Paste Another', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          totalItems: 1,
+          myItems: [
+            {
+              rank: 5,
+              assetId: '12345678',
+              title: 'Sample Artwork',
+            },
+          ],
+        }),
+      } as any);
+
+      render(
+        <SmartSerpPasteModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      );
+
+      const textarea = screen.getByTestId('serp-smart-paste-textarea') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: 'diagram\t1\t5\t12345678\tTest' } });
+      expect(textarea.value).toBe('diagram\t1\t5\t12345678\tTest');
+
+      fireEvent.click(screen.getByTestId('serp-smart-paste-submit-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Snapshot Sync Complete')).toBeInTheDocument();
+      });
+
+      // Click "Paste Another"
+      fireEvent.click(screen.getByText('Paste Another'));
+
+      // Verify returned to input step and textarea is empty
+      const resetTextarea = screen.getByTestId('serp-smart-paste-textarea') as HTMLTextAreaElement;
+      expect(resetTextarea).toBeInTheDocument();
+      expect(resetTextarea.value).toBe('');
     });
   });
 

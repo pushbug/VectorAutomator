@@ -4,11 +4,13 @@ import React, { useState, useMemo } from 'react';
 import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check, Search, Calendar, Image as ImageIcon } from 'lucide-react';
 import { SingleDatePicker } from '@/components/portfolio/SingleDatePicker';
 import { parseSerpClipboardText, ParsedSerpBatch } from '@/lib/serpPasteParser';
+import { getImageUrl } from '@/lib/formatters';
 
 interface MatchedArtwork {
   rank: number;
   assetId: string;
   title: string;
+  thumbnailUrl?: string | null;
   matchedImageId?: string | null;
   imageCode?: string | null;
   imageTitle?: string | null;
@@ -104,21 +106,31 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
     }
   };
 
-  const handleCommit = () => {
-    onSuccess();
+  const handleReset = () => {
+    setStep('input');
+    setRawText('');
+    setKeywordInput('');
+    setMatchedItems([]);
+    setTotalCount(0);
+    setErrorMsg(null);
+  };
+
+  const handleClose = () => {
+    handleReset();
     onClose();
   };
 
-  const handleReset = () => {
-    setStep('input');
-    setErrorMsg(null);
+  const handleCommit = () => {
+    handleReset();
+    onSuccess();
+    onClose();
   };
 
   return (
     <div
       data-testid="serp-smart-paste-modal"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-surface border border-border rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-foreground"
@@ -138,8 +150,8 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-muted hover:bg-surface-hover hover:text-foreground transition-colors"
+            onClick={handleClose}
+            className="p-2 rounded-xl text-muted hover:bg-surface-hover hover:text-foreground transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -269,10 +281,10 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center overflow-hidden shrink-0">
-                            {item.imageFilePath ? (
+                            {item.imageFilePath || item.thumbnailUrl ? (
                               <img
-                                src={item.imageFilePath}
-                                alt={item.title}
+                                src={item.imageFilePath ? getImageUrl(item.imageFilePath) : item.thumbnailUrl!}
+                                alt={item.imageTitle || item.title}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -286,8 +298,8 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
                                   {item.imageCode}
                                 </span>
                               )}
-                              <span className="text-xs font-semibold text-foreground truncate max-w-70">
-                                {item.title}
+                              <span className="text-xs font-semibold text-foreground truncate max-w-70" title={item.imageTitle || item.title}>
+                                {item.imageTitle || item.title}
                               </span>
                             </div>
                             <p className="text-[11px] text-muted font-mono mt-0.5">
@@ -346,8 +358,8 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
             <>
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground transition-colors"
+                onClick={handleClose}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>

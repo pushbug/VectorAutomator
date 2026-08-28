@@ -89,9 +89,11 @@
 | `UT-EXT-AUTHOR-ENRICH-01` | Verify Adobe Stock author detail regex extractor, human-mimicking jitter range bounds, and depth slices | `src/__tests__/extension/authorFetcher.test.ts` |
 | `UT-EXT-STEALTH-NAV-01` | Verify stealth timing engine: watchdog constant, entry delay bounds, base jitter range, and smart linger detection | `src/__tests__/extension/stealthNavigator.test.ts` |
 | `UT-SERP-DELTA-01` | Verify rank delta calculation against previous SerpQuery snapshots for same keyword & artwork | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-SORT-01` | Verify /api/serp sorts enriched items by downloads, revenue, and keyword | `src/__tests__/api/serp.test.ts` |
 | `UT-API-SERP-ARTWORK-01` | Verify /api/serp/artwork/[id] returns chronological keyword ranks and correlated platform stats | `src/__tests__/api/serp.test.ts` |
 | `UT-UI-SERP-TABLE-01` | Verify SerpTable rendering, keyword filter, delta badge colors, and drawer trigger | `src/__tests__/components/SerpComponents.test.tsx` |
-| `UT-UI-SERP-PASTE-MODAL-01` | Verify SmartSerpPasteModal date selection, keyword auto-detect, and live matched preview | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-SERP-TABLE-SORT-01` | Verify SerpTable sortable header clicks, sort order toggling, and PaginationCapsule integration | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-SERP-PASTE-MODAL-01` | Verify SmartSerpPasteModal date selection, keyword auto-detect, live matched preview, and Paste Another reset | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-UI-SERP-ARTWORK-DRAWER-01` | Verify ArtworkSerpDrawer keyword pills, timeline points, backdrop dismissal, and snapshot delta table | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-UI-FULL-SERP-MODAL-01` | Verify FullSerpModal rendering, My Artwork filter toggle, accurate Unknown Author count, and backdrop click dismissal | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-SERP-RECONCILE-02` | Verify two-way auto-reconciliation across multi-platform asset IDs (asId, ssId, vzId) on paste-sync and proactive GET query triggers | `src/__tests__/api/serp.test.ts` |

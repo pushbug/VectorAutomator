@@ -10,6 +10,8 @@ import {
   MoreHorizontal,
   MoreVertical,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Eye,
   Trash2,
   Calendar,
@@ -19,7 +21,7 @@ import {
   Check,
   Download,
 } from 'lucide-react';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
 import { DateRangePicker } from '@/components/portfolio/DateRangePicker';
 import { PaginationCapsule } from '@/components/common/PaginationCapsule';
 
@@ -64,13 +66,14 @@ interface SerpTableProps {
   keywordFilter?: string;
   onKeywordFilterChange?: (kw: string) => void;
   trackedKeywords?: string[];
-  // Pagination
+  // Sorting & Pagination
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (field: string, order: 'asc' | 'desc') => void;
+  onSort?: (field: string) => void;
   page?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  onSort?: (field: string) => void;
 }
 
 export function SerpTable({
@@ -88,12 +91,13 @@ export function SerpTable({
   keywordFilter = '',
   onKeywordFilterChange,
   trackedKeywords = [],
+  sortBy = 'date',
+  sortOrder = 'desc',
+  onSortChange,
+  onSort,
   page = 1,
   totalPages = 1,
   onPageChange,
-  sortBy,
-  sortOrder,
-  onSort,
 }: SerpTableProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -155,6 +159,35 @@ export function SerpTable({
         .map((item) => item.serpQueryId)
     )
   );
+
+  // Reset selection on filter, search, page, or sort change
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, keywordFilter, search, startDate, endDate, sortBy, sortOrder]);
+
+  const handleHeaderClick = (column: string) => {
+    if (!onSortChange && !onSort) return;
+    if (sortBy === column) {
+      const nextOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      if (onSortChange) onSortChange(column, nextOrder);
+      else if (onSort) onSort(column);
+    } else {
+      const defaultOrder = column === 'rank' || column === 'keyword' ? 'asc' : 'desc';
+      if (onSortChange) onSortChange(column, defaultOrder);
+      else if (onSort) onSort(column);
+    }
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) {
+      return <ArrowUpDown size={12} className="opacity-40 shrink-0" />;
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUp size={12} className="text-primary shrink-0" />
+    ) : (
+      <ArrowDown size={12} className="text-primary shrink-0" />
+    );
+  };
 
   const filteredTrackedKeywords = trackedKeywords.filter((kw) =>
     kw.toLowerCase().includes(keywordSearchInput.toLowerCase().trim())
@@ -336,14 +369,62 @@ export function SerpTable({
                   aria-label="Select all artworks"
                 />
               </th>
-              <th className="py-3 px-4 font-semibold">Date</th>
-              <th className="py-3 px-4 font-semibold">Keyword</th>
-              <th className="py-3 px-4 font-semibold">Artwork</th>
-              <th className="py-3 px-4 font-semibold text-center">Current Rank</th>
-              <th className="py-3 px-4 font-semibold text-center">Rank Change</th>
-              <th className="py-3 px-4 font-semibold text-right">Downloads</th>
-              <th className="py-3 px-4 font-semibold text-right">Total Revenue</th>
-              <th className="py-3 px-4 font-semibold text-right">ACTION</th>
+              <th
+                onClick={() => handleHeaderClick('date')}
+                className="py-3 px-4 font-semibold whitespace-nowrap min-w-28 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Date</span>
+                  {renderSortIcon('date')}
+                </div>
+              </th>
+              <th
+                onClick={() => handleHeaderClick('keyword')}
+                className="py-3 px-4 font-semibold whitespace-nowrap min-w-44 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Keyword</span>
+                  {renderSortIcon('keyword')}
+                </div>
+              </th>
+              <th className="py-3 px-4 font-semibold min-w-64">Artwork</th>
+              <th
+                onClick={() => handleHeaderClick('rank')}
+                className="py-3 px-4 font-semibold text-center whitespace-nowrap min-w-32 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span>Current Rank</span>
+                  {renderSortIcon('rank')}
+                </div>
+              </th>
+              <th
+                onClick={() => handleHeaderClick('delta')}
+                className="py-3 px-4 font-semibold text-center whitespace-nowrap min-w-32 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span>Rank Change</span>
+                  {renderSortIcon('delta')}
+                </div>
+              </th>
+              <th
+                onClick={() => handleHeaderClick('downloads')}
+                className="py-3 px-4 font-semibold text-right whitespace-nowrap min-w-28 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>Downloads</span>
+                  {renderSortIcon('downloads')}
+                </div>
+              </th>
+              <th
+                onClick={() => handleHeaderClick('revenue')}
+                className="py-3 px-4 font-semibold text-right whitespace-nowrap min-w-32 cursor-pointer hover:bg-surface-hover/60 transition-colors select-none"
+              >
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>Total Revenue</span>
+                  {renderSortIcon('revenue')}
+                </div>
+              </th>
+              <th className="py-3 px-4 pr-6 font-semibold text-right whitespace-nowrap min-w-24">ACTION</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
@@ -403,8 +484,8 @@ export function SerpTable({
                     </td>
 
                     {/* 2. Keyword */}
-                    <td className="py-3.5 px-4">
-                      <span className="font-semibold text-foreground bg-surface-hover/80 px-2.5 py-1 rounded-lg border border-border">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-block font-semibold text-foreground bg-surface-hover/80 px-2.5 py-1 rounded-lg border border-border whitespace-nowrap">
                         {item.keyword}
                       </span>
                     </td>
@@ -416,10 +497,10 @@ export function SerpTable({
                         className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 max-w-sm sm:max-w-md"
                       >
                         <div className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
-                          {item.imageFilePath ? (
+                          {item.imageFilePath || item.thumbnailUrl ? (
                             <img
-                              src={item.imageFilePath}
-                              alt={item.title}
+                              src={item.imageFilePath ? getImageUrl(item.imageFilePath) : item.thumbnailUrl!}
+                              alt={item.imageTitle || item.title}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -497,7 +578,7 @@ export function SerpTable({
                     </td>
 
                     {/* 8. Actions */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap relative">
+                    <td className="py-3.5 px-4 pr-6 text-right whitespace-nowrap relative min-w-24">
                       <div className="flex items-center justify-end gap-1.5">
                         {item.matchedImageId && (
                           <button

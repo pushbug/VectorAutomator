@@ -160,13 +160,20 @@ function formatClipboardTsv(salesData) {
 async function copyToClipboardSafe(text) {
   if (!text) return false;
 
-  // Primary: Navigator Clipboard API
-  if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+  // Primary: Navigator Clipboard API (when document is active & focused)
+  if (
+    navigator &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === 'function' &&
+    typeof document !== 'undefined' &&
+    document.hasFocus &&
+    document.hasFocus()
+  ) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch (err) {
-      console.warn('[SalesExtractor] navigator.clipboard failed, attempting in-viewport textarea fallback:', err);
+    } catch {
+      // Fallback silently without emitting console.warn so Chrome Extensions error tracker remains clean
     }
   }
 
@@ -196,8 +203,7 @@ async function copyToClipboardSafe(text) {
     const success = document.execCommand('copy');
     document.body.removeChild(textArea);
     return Boolean(success);
-  } catch (err) {
-    console.error('[SalesExtractor] Fallback execCommand copy failed:', err);
+  } catch {
     return false;
   }
 }

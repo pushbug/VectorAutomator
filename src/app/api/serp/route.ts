@@ -22,8 +22,10 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get('keyword') || undefined;
     const platform = searchParams.get('platform') || undefined;
     const search = searchParams.get('search') || undefined;
+    const sortBy = searchParams.get('sortBy') || 'date';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '20', 10)));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '100', 10)));
     const skip = (page - 1) * limit;
 
     // Auto-reconcile SerpItems with newly populated Image IDs (asId, ssId, vzId)
@@ -239,6 +241,42 @@ export async function GET(request: NextRequest) {
           totalDownloads,
           totalEarnings,
         };
+      });
+
+      // Apply requested sort order on enriched items
+      enrichedItems.sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+          case 'date':
+          case 'searchedAt':
+            comparison = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
+            break;
+          case 'keyword':
+            comparison = (a.keyword || '').localeCompare(b.keyword || '');
+            break;
+          case 'rank':
+            comparison = a.rank - b.rank;
+            break;
+          case 'delta':
+          case 'rankDelta': {
+            const valA = a.rankDelta ?? (sortOrder === 'asc' ? 999999 : -999999);
+            const valB = b.rankDelta ?? (sortOrder === 'asc' ? 999999 : -999999);
+            comparison = valA - valB;
+            break;
+          }
+          case 'downloads':
+          case 'totalDownloads':
+            comparison = (a.totalDownloads ?? 0) - (b.totalDownloads ?? 0);
+            break;
+          case 'revenue':
+          case 'totalEarnings':
+            comparison = (a.totalEarnings ?? 0) - (b.totalEarnings ?? 0);
+            break;
+          default:
+            comparison = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
+            break;
+        }
+        return sortOrder === 'asc' ? comparison : -comparison;
       });
 
       // KPI Summary calculations (Unique assets currently ranking)
