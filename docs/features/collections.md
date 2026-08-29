@@ -65,6 +65,10 @@ Implemented in `prisma/schema.prisma` via a relational many-to-many join archite
   - Multi-Identifier Resolution: Automatically matches across Adobe Asset IDs (`asId`), Internal Image Codes (`code`), Shutterstock IDs (`ssId`), and CUIDs (`id`).
   - Safe Batch Commit: Deduplicates inputs and skips assets already present in the collection, returning matched and added counts.
 - Edit Header Action: In-place pencil button opening `EditCollectionModal` to update name and description.
+- **Collection Search & Instant Filtering (`TopSharedKeywordsBar.tsx`):**
+  - Integrated search input in the toolbar header for real-time client-side grid filtering.
+  - Multi-attribute query resolution matching across Artwork Title, Image Code (`code`), Adobe Asset ID (`asId`), Shutterstock ID (`ssId`), Vecteezy ID (`vzId`), Database CUID (`id`), and Keywords.
+  - Active search badge with clear button and unified "Clear All Filters" control when combined with tag filtering.
 - **Top 15 Shared Keywords Bar (`TopSharedKeywordsBar.tsx`):**
   - Segmented View Mode Toggle: `Frequency` (occurrence count), `Downloads` (total volume), `Revenue` (accumulated dollars).
   - Dynamic in-memory re-ranking across all unique keywords in the collection.

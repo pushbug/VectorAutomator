@@ -22,7 +22,8 @@ import {
   Star,
   Pencil,
   Tag,
-  UploadCloud
+  UploadCloud,
+  Search
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatDisplayDate, getImageUrl } from '@/lib/formatters';
 
@@ -40,6 +41,7 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
   const [keywordViewMode, setKeywordViewMode] = useState<KeywordViewMode>('frequency');
   const [itemToRemove, setItemToRemove] = useState<any | null>(null);
@@ -55,6 +57,23 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
 
   const filteredImages = useMemo(() => {
     let list = images;
+
+    // 1. Text Search Filter (Title, Vector Code, Adobe ID, Shutterstock ID, Vecteezy ID, DB ID, or Keywords)
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((img: any) => {
+        const titleMatch = img.title?.toLowerCase().includes(q);
+        const codeMatch = img.code?.toLowerCase().includes(q);
+        const asIdMatch = img.asId?.toLowerCase().includes(q);
+        const ssIdMatch = img.ssId?.toLowerCase().includes(q);
+        const vzIdMatch = img.vzId?.toLowerCase().includes(q);
+        const idMatch = img.id?.toLowerCase().includes(q);
+        const keywordMatch = img.keywords?.toLowerCase().includes(q);
+        return !!(titleMatch || codeMatch || asIdMatch || ssIdMatch || vzIdMatch || idMatch || keywordMatch);
+      });
+    }
+
+    // 2. Shared Keyword Tag Filter
     if (selectedKeyword) {
       const target = selectedKeyword.trim().toLowerCase();
       list = list.filter((img: any) => {
@@ -92,7 +111,7 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
     }
 
     return sorted;
-  }, [images, selectedKeyword, keywordViewMode]);
+  }, [images, searchQuery, selectedKeyword, keywordViewMode]);
 
   const fetchCollection = useCallback(async () => {
     setIsLoading(true);
@@ -332,7 +351,7 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
-        {/* Top 15 Shared Keywords Bar */}
+        {/* Top 15 Shared Keywords Bar with Search */}
         <TopSharedKeywordsBar
           keywords={collection.topKeywords || []}
           totalImages={summary.totalImages}
@@ -340,34 +359,77 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
           onSelectKeyword={(kw) => setSelectedKeyword(kw)}
           viewMode={keywordViewMode}
           onViewModeChange={setKeywordViewMode}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
       </div>
 
       {/* Main Content Area: Artworks Grid and Detail Drawer */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden gap-4 md:gap-6 min-h-0">
         <div className="flex-1 overflow-y-auto pr-1 pb-6 min-h-0">
-          {/* Active Tag Filter Indicator */}
-          {selectedKeyword && (
+          {/* Active Filter Badges */}
+          {(selectedKeyword || searchQuery.trim()) && (
             <div
-              data-testid="collection-keyword-filter-badge"
-              className="mb-3 flex items-center justify-between px-3.5 py-2 bg-primary/10 border border-primary/20 rounded-xl text-xs"
+              data-testid="collection-active-filters-bar"
+              className="mb-3 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-primary/10 border border-primary/20 rounded-xl text-xs"
             >
-              <div className="flex items-center gap-2">
-                <Tag size={13} className="text-primary shrink-0" />
-                <span className="text-muted">Filtering artworks containing tag:</span>
-                <strong className="text-foreground font-semibold">&quot;{selectedKeyword}&quot;</strong>
+              <div className="flex flex-wrap items-center gap-2">
+                {searchQuery.trim() && (
+                  <div
+                    data-testid="collection-search-filter-badge"
+                    className="flex items-center gap-1.5 bg-background/90 px-2.5 py-1 rounded-lg border border-border text-xs shadow-2xs"
+                  >
+                    <Search size={12} className="text-primary shrink-0" />
+                    <span className="text-muted text-[11px]">Search:</span>
+                    <strong className="text-foreground font-semibold">&quot;{searchQuery.trim()}&quot;</strong>
+                    <button
+                      type="button"
+                      data-testid="collection-clear-search-badge-btn"
+                      onClick={() => setSearchQuery('')}
+                      className="text-muted hover:text-foreground cursor-pointer ml-1 p-0.5 rounded hover:bg-surface"
+                      title="Clear text search"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+
+                {selectedKeyword && (
+                  <div
+                    data-testid="collection-keyword-filter-badge"
+                    className="flex items-center gap-1.5 bg-background/90 px-2.5 py-1 rounded-lg border border-border text-xs shadow-2xs"
+                  >
+                    <Tag size={12} className="text-primary shrink-0" />
+                    <span className="text-muted text-[11px]">Tag:</span>
+                    <strong className="text-foreground font-semibold">&quot;{selectedKeyword}&quot;</strong>
+                    <button
+                      type="button"
+                      data-testid="collection-keyword-filter-clear-btn"
+                      onClick={() => setSelectedKeyword(null)}
+                      className="text-muted hover:text-foreground cursor-pointer ml-1 p-0.5 rounded hover:bg-surface"
+                      title="Clear tag filter"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+
                 <span className="text-muted font-mono text-[11px]">
                   ({filteredImages.length} of {images.length} artworks)
                 </span>
               </div>
+
               <button
                 type="button"
-                data-testid="collection-keyword-filter-clear-btn"
-                onClick={() => setSelectedKeyword(null)}
+                data-testid="collection-clear-all-filters-btn"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedKeyword(null);
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
               >
                 <X size={12} />
-                <span>Clear Filter</span>
+                <span>Clear All Filters</span>
               </button>
             </div>
           )}
@@ -388,17 +450,27 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
             </div>
           ) : filteredImages.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center gap-2 text-center border-2 border-dashed border-border rounded-2xl p-6 bg-surface/30">
-              <Tag size={28} className="text-muted" />
-              <h3 className="text-sm font-bold text-foreground">No artworks match tag &quot;{selectedKeyword}&quot;</h3>
+              <Search size={28} className="text-muted" />
+              <h3 className="text-sm font-bold text-foreground">
+                {searchQuery.trim() && selectedKeyword
+                  ? `No artworks match search "${searchQuery}" and tag "${selectedKeyword}"`
+                  : searchQuery.trim()
+                  ? `No artworks match search "${searchQuery}"`
+                  : `No artworks match tag "${selectedKeyword}"`}
+              </h3>
               <p className="text-xs text-muted max-w-sm">
-                Try selecting a different keyword from the list above or clear the active filter.
+                Try searching for another keyword, artwork title, or platform ID, or clear the active filters.
               </p>
               <button
                 type="button"
-                onClick={() => setSelectedKeyword(null)}
+                data-testid="collection-empty-clear-filters-btn"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedKeyword(null);
+                }}
                 className="mt-2 text-xs font-semibold text-primary hover:underline cursor-pointer"
               >
-                Clear Filter &rarr;
+                Clear Filters &rarr;
               </button>
             </div>
           ) : (

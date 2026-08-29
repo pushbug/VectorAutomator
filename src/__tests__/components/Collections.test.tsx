@@ -7,6 +7,7 @@ import { TopSharedKeywordsBar } from '@/components/collections/TopSharedKeywords
 import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
 import { EditCollectionModal } from '@/components/collections/EditCollectionModal';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
+import CollectionDetailPage from '@/app/collections/[id]/page';
 
 const mockCollection = {
   id: 'col-1',
@@ -354,5 +355,105 @@ describe('Collections UI Components (UT-UI-COLLECTION-CARDS-01, UT-UI-COLLECTION
       fireEvent.change(searchInput, { target: { value: 'Gold' } });
     });
     expect(searchInput).toHaveValue('Gold');
+  });
+
+  it('UT-UI-COLLECTION-DETAIL-03: TopSharedKeywordsBar renders search input, handles typing, and triggers clear', () => {
+    const handleSearchChange = vi.fn();
+    render(
+      <TopSharedKeywordsBar
+        keywords={mockTopKeywords}
+        totalImages={10}
+        searchQuery="Elephant"
+        onSearchChange={handleSearchChange}
+      />
+    );
+
+    const searchInput = screen.getByTestId('collection-search-input');
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveValue('Elephant');
+
+    fireEvent.change(searchInput, { target: { value: 'Lotus' } });
+    expect(handleSearchChange).toHaveBeenCalledWith('Lotus');
+
+    const clearBtn = screen.getByTestId('collection-search-clear-btn');
+    expect(clearBtn).toBeInTheDocument();
+    fireEvent.click(clearBtn);
+    expect(handleSearchChange).toHaveBeenCalledWith('');
+  });
+
+  it('UT-UI-COLLECTION-DETAIL-04: CollectionDetailPage filters artworks by search query across code, title, ID, and keywords', async () => {
+    const mockDetailData = {
+      id: 'col-1',
+      name: 'Thai Traditional Gold',
+      description: 'Gold luxury vector ornaments',
+      coverId: 'img-1',
+      images: [
+        { id: 'img-1', code: '2608-01', asId: '1001', ssId: '2001', vzId: '3001', title: 'Golden Elephant Ornament', filePath: '/img1.jpg', keywords: 'thai, elephant, gold', totalDownloads: 50, totalEarnings: 25.0 },
+        { id: 'img-2', code: '2608-02', asId: '1002', ssId: '2002', vzId: '3002', title: 'Lotus Flower Pattern', filePath: '/img2.jpg', keywords: 'thai, lotus, flower', totalDownloads: 30, totalEarnings: 15.0 },
+        { id: 'img-3', code: '2608-03', asId: '1003', ssId: '2003', vzId: '3003', title: 'Vintage Temple Banner', filePath: '/img3.jpg', keywords: 'thai, temple, vintage', totalDownloads: 20, totalEarnings: 10.0 },
+      ],
+      topKeywords: mockTopKeywords,
+      summary: { totalImages: 3, totalDownloads: 100, totalEarnings: 50.0, avgRpi: 16.67 },
+    };
+
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/collections/col-1')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockDetailData,
+        });
+      }
+      if (url.includes('/api/portfolio?limit=1')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ summary: {} }),
+        });
+      }
+      return Promise.reject(new Error('Not found'));
+    });
+
+    await act(async () => {
+      render(<CollectionDetailPage params={Promise.resolve({ id: 'col-1' })} />);
+    });
+
+    expect(screen.getByTestId('collection-detail-title')).toHaveTextContent('Thai Traditional Gold');
+    expect(screen.getAllByTestId('collection-artwork-item')).toHaveLength(3);
+
+    // Search by title "Elephant"
+    const searchInputs = screen.getAllByTestId('collection-search-input');
+    const searchInput = searchInputs[searchInputs.length - 1];
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'Elephant' } });
+    });
+
+    expect(screen.getAllByTestId('collection-artwork-item')).toHaveLength(1);
+    expect(screen.getByTestId('collection-search-filter-badge')).toBeInTheDocument();
+    expect(screen.getByText('"Elephant"')).toBeInTheDocument();
+
+    // Search by code "2608-02"
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: '2608-02' } });
+    });
+    expect(screen.getAllByTestId('collection-artwork-item')).toHaveLength(1);
+
+    // Search by Adobe ID "1003"
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: '1003' } });
+    });
+    expect(screen.getAllByTestId('collection-artwork-item')).toHaveLength(1);
+
+    // Search by non-existent string -> empty state
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'NonExistentXYZ' } });
+    });
+    expect(screen.queryAllByTestId('collection-artwork-item')).toHaveLength(0);
+    expect(screen.getByText('No artworks match search "NonExistentXYZ"')).toBeInTheDocument();
+
+    // Clear filter
+    const clearBtn = screen.getByTestId('collection-empty-clear-filters-btn');
+    await act(async () => {
+      fireEvent.click(clearBtn);
+    });
+    expect(screen.getAllByTestId('collection-artwork-item')).toHaveLength(3);
   });
 });

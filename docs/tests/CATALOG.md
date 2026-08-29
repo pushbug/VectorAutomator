@@ -133,6 +133,8 @@
 | `UT-API-PF-BENCHMARK-01` | Verify /api/portfolio computes dynamic Top 100 and portfolio monthly average earnings and downloads | `src/__tests__/api/portfolio.test.ts` |
 | `UT-API-PF-BENCHMARK-FILTER-01` | Verify /api/portfolio calculates global benchmarks from full dataset when search filter is active | `src/__tests__/api/portfolio.test.ts` |
 | `UT-UI-PF-BENCHMARK-01` | Verify PortfolioAnalyticsTab renders Top 100 and Portfolio Avg benchmark comparison cards with reactive metric toggle | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
+| `UT-UI-COLLECTION-DETAIL-03` | Verify TopSharedKeywordsBar search input rendering, query changes, and clear button triggers | `src/__tests__/components/Collections.test.tsx` |
+| `UT-UI-COLLECTION-DETAIL-04` | Verify CollectionDetailPage multi-attribute search filtering (title, code, asId, ssId, vzId, DB ID, keywords) and active badges | `src/__tests__/components/Collections.test.tsx` |
 
 
 
@@ -152,7 +154,7 @@
 | `E2E-SALES-04` | Verify multi-row selection, select-all checkbox, floating action bar, and BulkDateModal | `e2e/sales.spec.ts` |
 | `E2E-KW-01` | Keyword Insights: Page navigation, KPI summary cards, table sorting, tier filtering, bulk copy, and artwork inspection drawer | `e2e/keywords.spec.ts` |
 | `E2E-COL-01` | Artwork Collections: Create from portfolio multi-select, view card rollups, inspect Top-15 shared keywords, copy keywords, and delete collection | `e2e/collections.spec.ts` |
-| `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, tag drill-down filter & clear, and in-place pencil edit modal | `e2e/collections.spec.ts` |
+| `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, search query filter & clear, tag drill-down filter, and in-place pencil edit modal | `e2e/collections.spec.ts` |
 | `E2E-PAYOUT-01` | Payouts & Withdrawals: Page navigation, summary KPI cards, table filters, open log payout modal, and Smart Paste importer | `e2e/payouts.spec.ts` |
 | `E2E-PAYOUT-02` | Payout Creation & Table Reflection: Form input validation, create transaction, DB commit, and table row render | `e2e/payouts.spec.ts` |
 | `E2E-SERP-01` | Asset Rankings & SERP Telemetry: Page navigation, summary KPI cards, searchable keyword combobox, FullSerpModal with My Artwork filter, and ArtworkSerpDrawer backdrop dismissal | `e2e/serp.spec.ts` |

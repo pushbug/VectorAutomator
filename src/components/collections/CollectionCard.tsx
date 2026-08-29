@@ -32,12 +32,12 @@ export function CollectionCard({ collection, index, onEdit, onDelete }: Collecti
   return (
     <div
       data-testid={`collection-card-${collection.id}`}
-      className="group flex flex-col bg-surface border border-border hover:border-primary/50 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300"
+      className="group flex flex-col bg-surface border border-border hover:border-primary/50 rounded-xl overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300"
     >
       {/* Cover / Image Preview Area */}
       <Link
         href={`/collections/${collection.id}`}
-        className="relative aspect-16/10 w-full bg-background overflow-hidden flex items-center justify-center p-3 cursor-pointer"
+        className="relative aspect-16/10 w-full bg-background overflow-hidden flex items-center justify-center p-2.5 cursor-pointer"
         data-testid={`collection-card-cover-${collection.id}`}
       >
         {collection.coverImage ? (
@@ -46,32 +46,31 @@ export function CollectionCard({ collection, index, onEdit, onDelete }: Collecti
             alt={collection.name}
             fill
             priority={index !== undefined ? index < 4 : false}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 25vw, 16vw"
+            className="object-contain p-1.5 transition-transform duration-500 group-hover:scale-105"
             unoptimized
           />
         ) : (
-
-          <div className="flex flex-col items-center justify-center gap-2 text-muted">
-            <FolderKanban size={32} className="text-primary/60" />
+          <div className="flex flex-col items-center justify-center gap-1.5 text-muted">
+            <FolderKanban size={28} className="text-primary/60" />
             <span className="text-xs">Empty Collection</span>
           </div>
         )}
 
         {/* Artworks Count Badge */}
-        <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 bg-surface/90 text-foreground text-xs font-semibold rounded-full border border-border shadow-xs backdrop-blur-xs flex items-center gap-1">
-          <Layers size={12} className="text-primary shrink-0" />
+        <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-surface/90 text-foreground text-[11px] font-semibold rounded-full border border-border shadow-xs backdrop-blur-xs flex items-center gap-1">
+          <Layers size={11} className="text-primary shrink-0" />
           <span>{collection.totalImages} artworks</span>
         </div>
       </Link>
 
       {/* Content Section */}
-      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-        <div className="flex flex-col gap-1 min-w-0">
+      <div className="p-3 flex-1 flex flex-col justify-between gap-2.5">
+        <div className="flex flex-col gap-0.5 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <Link
               href={`/collections/${collection.id}`}
-              className="text-base font-bold text-foreground hover:text-primary transition-colors truncate"
+              className="text-sm font-bold text-foreground hover:text-primary transition-colors truncate"
               data-testid={`collection-card-title-${collection.id}`}
               title={collection.name}
             >
@@ -91,7 +90,7 @@ export function CollectionCard({ collection, index, onEdit, onDelete }: Collecti
                   className="p-1 text-muted hover:text-foreground hover:bg-surface-hover rounded-md transition-colors cursor-pointer"
                   title="Options"
                 >
-                  <MoreVertical size={16} />
+                  <MoreVertical size={15} />
                 </button>
 
                 {isMenuOpen && (
@@ -133,48 +132,48 @@ export function CollectionCard({ collection, index, onEdit, onDelete }: Collecti
 
           {/* Description - 1 line with ellipsis */}
           <p
-            className="text-xs text-muted truncate leading-relaxed"
+            className="text-xs text-muted truncate leading-normal"
             title={collection.description || undefined}
           >
             {collection.description || 'No description provided.'}
           </p>
 
-          {/* Date Created - matched with description font size and color */}
-          <p className="text-xs text-muted font-sans truncate mt-0.5">
+          {/* Date Created */}
+          <p className="text-[11px] text-muted font-sans truncate mt-0.5">
             Created {formatDisplayDate(collection.createdAt.split('T')[0])}
           </p>
         </div>
 
         {/* Rollup KPI Metrics Bar */}
-        <div className="pt-3 border-t border-border grid grid-cols-3 gap-2 text-xs font-mono tabular-nums">
+        <div className="pt-2 border-t border-border grid grid-cols-3 gap-1 text-xs font-mono tabular-nums">
           <div className="flex flex-col">
-            <span className="text-xs text-muted uppercase font-sans font-medium">Downloads</span>
+            <span className="text-[10px] text-muted uppercase font-sans font-medium">Downloads</span>
             <span
               data-testid={`collection-card-downloads-${collection.id}`}
-              className="font-bold text-foreground flex items-center gap-0.5 mt-1.5"
+              className="font-bold text-foreground flex items-center gap-0.5 mt-0.5 text-xs"
             >
-              <Download size={12} className="text-muted shrink-0" />
+              <Download size={11} className="text-muted shrink-0" />
               {formatNumber(collection.totalDownloads)}
             </span>
           </div>
 
           <div className="flex flex-col">
-            <span className="text-xs text-muted uppercase font-sans font-medium">Revenue</span>
+            <span className="text-[10px] text-muted uppercase font-sans font-medium">Revenue</span>
             <span
               data-testid={`collection-card-earnings-${collection.id}`}
-              className="font-bold text-foreground mt-1.5"
+              className="font-bold text-foreground mt-0.5 text-xs"
             >
               {formatCurrency(collection.totalEarnings)}
             </span>
           </div>
 
           <div className="flex flex-col">
-            <span className="text-xs text-muted uppercase font-sans font-medium">Avg RPI</span>
+            <span className="text-[10px] text-muted uppercase font-sans font-medium">Avg RPI</span>
             <span
               data-testid={`collection-card-rpi-${collection.id}`}
-              className="font-semibold text-primary mt-1.5 flex items-center gap-0.5"
+              className="font-semibold text-primary mt-0.5 flex items-center gap-0.5 text-xs"
             >
-              <Sparkles size={12} className="shrink-0" />
+              <Sparkles size={11} className="shrink-0" />
               {formatCurrency(collection.avgRpi)}
             </span>
           </div>

@@ -9,10 +9,14 @@ async function main() {
     include: { items: { include: { image: { include: { stats: true } } } } },
   });
 
-  if (!collection) return;
+  if (!collection) {
+    console.error('Adobe Nominate 2026 collection not found.');
+    return;
+  }
 
-  const now = new Date('2026-08-28');
-  const oneYearAgo = new Date('2025-08-28');
+  const now = new Date();
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(now.getFullYear() - 1);
 
   const items = collection.items.map((it) => {
     const img = it.image;
@@ -23,6 +27,7 @@ async function main() {
     let y2026 = 0;
     let y2025 = 0;
     let y2024 = 0;
+    let y2023 = 0;
 
     stats.forEach((s) => {
       const amt = Number(s.earnings || 0);
@@ -32,6 +37,7 @@ async function main() {
       if (d.getFullYear() === 2026) y2026 += amt;
       if (d.getFullYear() === 2025) y2025 += amt;
       if (d.getFullYear() === 2024) y2024 += amt;
+      if (d.getFullYear() === 2023) y2023 += amt;
     });
 
     return {
@@ -45,6 +51,7 @@ async function main() {
       y2026: Number(y2026.toFixed(2)),
       y2025: Number(y2025.toFixed(2)),
       y2024: Number(y2024.toFixed(2)),
+      y2023: Number(y2023.toFixed(2)),
     };
   });
 
@@ -62,50 +69,59 @@ async function main() {
     return !tier1Protect.includes(it) && !tier2Nominate4.includes(it);
   });
 
-  console.log('--- MODEL 2 SUMMARY (130 / 524 / 131) ---');
-  console.log(`Tier 1 Protect: ${tier1Protect.length} items (Total Revenue in DB: $${tier1Protect.reduce((sum, it) => sum + it.totalAdobe, 0).toFixed(2)})`);
-  console.log(`Tier 2 Nominate 1-Year $4: ${tier2Nominate4.length} items (Total Revenue in DB: $${tier2Nominate4.reduce((sum, it) => sum + it.totalAdobe, 0).toFixed(2)})`);
-  console.log(`Tier 3 Nominate Perpetual $10: ${tier3Nominate10.length} items (Total Revenue in DB: $${tier3Nominate10.reduce((sum, it) => sum + it.totalAdobe, 0).toFixed(2)})`);
+  const sumEarnings = (arr: typeof items) => arr.reduce((sum, it) => sum + it.totalAdobe, 0);
 
-  // Write new nominate_v2.md
+  const t1Rev = sumEarnings(tier1Protect);
+  const t2Rev = sumEarnings(tier2Nominate4);
+  const t3Rev = sumEarnings(tier3Nominate10);
+  const instantPayout = tier2Nominate4.length * 4 + tier3Nominate10.length * 10;
+  const instantPayoutThb = Math.round(instantPayout * 36.5);
+
+  console.log(`--- MODEL 2 SUMMARY (${tier1Protect.length} / ${tier2Nominate4.length} / ${tier3Nominate10.length}) ---`);
+  console.log(`Tier 1 Protect: ${tier1Protect.length} items (Total Revenue in DB: $${t1Rev.toFixed(2)})`);
+  console.log(`Tier 2 Nominate 1-Year $4: ${tier2Nominate4.length} items (Total Revenue in DB: $${t2Rev.toFixed(2)})`);
+  console.log(`Tier 3 Nominate Perpetual $10: ${tier3Nominate10.length} items (Total Revenue in DB: $${t3Rev.toFixed(2)})`);
+  console.log(`Instant Payout: $${instantPayout.toFixed(2)} (~${instantPayoutThb.toLocaleString('th-TH')} THB)`);
+
+  // Write new docs/nominate.md
   const mdContent = `# Adobe Stock Free Collection Nomination Strategy (Model 2: Asset Protection)
 
 **Collection Name:** Adobe Nominate 2026  
-**Strategy Type:** Asset Protection & Risk-Optimized (Model 2: 130 / 524 / 131)  
-**Total Artworks:** 785
+**Strategy Type:** Asset Protection & Risk-Optimized (Model 2: ${tier1Protect.length} / ${tier2Nominate4.length} / ${tier3Nominate10.length})  
+**Total Artworks:** ${items.length}
 
 ---
 
-## Executive Comparison: Model 1 vs Model 2
+## Executive Comparison: Model 1 vs Model 2 (Updated with 2023–2026 Lifetime Sales)
 
-| Feature | Model 1 (43 / 550 / 192) | Model 2 (130 / 524 / 131) [RECOMMENDED] |
+| Feature | Model 1 (Velocity-Only) | Model 2 (${tier1Protect.length} / ${tier2Nominate4.length} / ${tier3Nominate10.length}) [RECOMMENDED] |
 | :--- | :--- | :--- |
 | **Philosophy** | มองเฉพาะ **สถิติ 12 เดือนล่าสุด (Velocity)** | มอง **มูลค่าสะสมตลอดกาล (Lifetime $\\ge \\$10$) + ดาวรุ่ง 2026** |
-| **🛡️ Tier 1: Protect** | **43 รูป** ($380.34)<br>*เฉพาะดาวรุ่งปี 2026* | **130 รูป** ($3,248.50)<br>*คุ้มครอง Top Seller และรูปที่เคยทำเงิน $\\ge \\$10 ทุกรูป* |
-| **⭐ Tier 2: 1-Year $4.00** | **550 รูป** ($5,469.77)<br>*รวมรูปที่เคยดังแต่ปีนี้แผ่ว* | **524 รูป** ($3,212.10)<br>*เฉพาะรูปเกรด B ($3-10) ทำเงินปานกลาง* |
-| **💎 Tier 3: Perpetual $10** | **192 รูป** ($841.96) | **131 รูป** ($231.47)<br>*เฉพาะสต็อกตายสนิทจริง (< $3 ตลอดกาล)* |
-| **💵 เงินสดรับทันที** | **$4,120.00** (~150,380 บาท) | **$3,406.00** (~124,300 บาท) |
-| **ระดับความเสี่ยง** | เสี่ยงเสียรูปอดีต Best Seller ไปให้โหลดฟรี 1 ปี | **ปลอดภัย 100%** คุ้มครองรูปเกรด A ทุกรูปในพอร์ต |
+| **🛡️ Tier 1: Protect** | **43 รูป** ($380.34)<br>*เฉพาะดาวรุ่งปี 2026* | **${tier1Protect.length} รูป** ($${t1Rev.toFixed(2)})<br>*คุ้มครอง Top Seller และรูปที่เคยทำเงิน $\\ge \\$10 ทุกรูป* |
+| **⭐ Tier 2: 1-Year $4.00** | **550 รูป** ($5,469.77)<br>*รวมรูปที่เคยดังแต่ปีนี้แผ่ว* | **${tier2Nominate4.length} รูป** ($${t2Rev.toFixed(2)})<br>*เฉพาะรูปเกรด B ($3-10) ทำเงินปานกลาง* |
+| **💎 Tier 3: Perpetual $10** | **192 รูป** ($841.96) | **${tier3Nominate10.length} รูป** ($${t3Rev.toFixed(2)})<br>*เฉพาะสต็อกตายสนิทจริง (< $3 ตลอดกาล)* |
+| **💵 เงินสดรับทันที** | **$4,120.00** (~150,380 บาท) | **$${instantPayout.toFixed(2)}** (~${instantPayoutThb.toLocaleString('th-TH')} บาท) |
+| **ระดับความเสี่ยง** | เสี่ยงเสียรูปอดีต Best Seller ไปให้โหลดฟรี 1 ปี | **ปลอดภัย 100%** คุ้มครองรูปเกรด A ทุกรูปในพอร์ต ไม่เสียสิทธิ์ถาวร |
 
 ---
 
-## Comma-Separated ID Lists (Model 2: 130 / 524 / 131)
+## Comma-Separated ID Lists (Model 2: ${tier1Protect.length} / ${tier2Nominate4.length} / ${tier3Nominate10.length})
 
-### 🛡️ List 1: Protect Proven Winners & Rising Stars (130 Assets)
+### 🛡️ List 1: Protect Proven Winners & Rising Stars (${tier1Protect.length} Assets)
 \`\`\`text
 ${tier1Protect.map((it) => it.asId || it.code).join(', ')}
 \`\`\`
 
 ---
 
-### ⭐ List 2: Nominate 1-Year $4.00 (524 Assets)
+### ⭐ List 2: Nominate 1-Year $4.00 (${tier2Nominate4.length} Assets)
 \`\`\`text
 ${tier2Nominate4.map((it) => it.asId || it.code).join(', ')}
 \`\`\`
 
 ---
 
-### 💎 List 3: Nominate Perpetual $10.00 (131 Assets)
+### 💎 List 3: Nominate Perpetual $10.00 (${tier3Nominate10.length} Assets)
 \`\`\`text
 ${tier3Nominate10.map((it) => it.asId || it.code).join(', ')}
 \`\`\`
@@ -114,6 +130,73 @@ ${tier3Nominate10.map((it) => it.asId || it.code).join(', ')}
   const outputPath = path.join(__dirname, '../docs/nominate.md');
   fs.writeFileSync(outputPath, mdContent, 'utf-8');
   console.log(`Updated ${outputPath}`);
+
+  // Synchronize collections into Database inside atomic transaction
+  console.log('\n--- SYNCHRONIZING DATABASE COLLECTIONS ---');
+
+  const tier1Name = `Adobe Nominate - Tier 1: Protect (${tier1Protect.length})`;
+  const tier2Name = `Adobe Nominate - Tier 2: 1-Year $4 (${tier2Nominate4.length})`;
+  const tier3Name = `Adobe Nominate - Tier 3: Perpetual $10 (${tier3Nominate10.length})`;
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Cleanup stale 0-item legacy test collection if present
+    await tx.collection.deleteMany({
+      where: {
+        name: { in: ['Protect Proven Winners & Rising Stars (130 Assets)'] },
+      },
+    });
+
+    // Helper to upsert collection and items
+    async function syncCollection(name: string, description: string, targetItems: typeof items) {
+      let col = await tx.collection.findFirst({ where: { name } });
+      if (!col) {
+        col = await tx.collection.create({
+          data: {
+            name,
+            description,
+          },
+        });
+      } else {
+        await tx.collection.update({
+          where: { id: col.id },
+          data: { description },
+        });
+      }
+
+      // Refresh items
+      await tx.collectionItem.deleteMany({ where: { collectionId: col.id } });
+      await tx.collectionItem.createMany({
+        data: targetItems.map((it) => ({
+          collectionId: col.id,
+          imageId: it.id,
+        })),
+      });
+
+      console.log(`Synced DB Collection: "${name}" -> ${targetItems.length} items`);
+    }
+
+    await syncCollection(
+      tier1Name,
+      'Top Sellers, Cash Cows (Lifetime >= $10), and 2026 Rising Stars (Asset Protection)',
+      tier1Protect
+    );
+
+    await syncCollection(
+      tier2Name,
+      'Moderate Performers (Grade B: $3-$10 Lifetime or active LTM) nominated for 1-year free collection',
+      tier2Nominate4
+    );
+
+    await syncCollection(
+      tier3Name,
+      'Stagnant assets (Lifetime < $3) nominated for perpetual free collection ($10 buyout)',
+      tier3Nominate10
+    );
+  });
+
+  console.log('Database synchronization completed successfully.');
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());

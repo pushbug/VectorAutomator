@@ -207,6 +207,17 @@
   7. **Automated Verification:** Added unit test suites `UT-UI-PF-TAB-01`, `UT-UI-PF-ANALYTICS-01`, `UT-API-PF-BENCHMARK-01`, `UT-API-PF-BENCHMARK-FILTER-01`, and `UT-UI-PF-BENCHMARK-01` (347/347 tests pass across 53 test files with 0 TypeScript errors).
 - **Impact:** Delivers complete financial analytics directly in portfolio drawers, provides actionable benchmark context, and preserves 100% test integrity.
 
+## ADR-026: Collection Detail Multi-Attribute Instant Search, Active Filter Indicators, and E2E Hardening
+- **Date:** 2026-08-29
+- **Context:** Contributors managing large artwork collections (such as Adobe Nominate segments with 500+ assets) needed to quickly search and filter artworks within a collection by title, internal vector code, platform asset IDs (Adobe Stock, Shutterstock, Vecteezy), database ID, or keyword tags. The search needed to operate in real time, integrate seamlessly with Top Shared Keyword filters, and provide clear active badges and empty state recovery controls.
+- **Decision:**
+  1. **Multi-Attribute In-Memory Search (`CollectionDetailPage` & `TopSharedKeywordsBar`):** Integrated a responsive search input with a clear button into the collection toolbar header. Implemented real-time case-insensitive filtering in `useMemo` matching across `title`, `code`, `asId`, `ssId`, `vzId`, `id`, and `keywords`.
+  2. **Active Filter Badges & Universal Reset:** Designed an active filter strip displaying search query pills and tag filter pills with individual clear triggers and a unified `Clear All Filters` action.
+  3. **App Router Test Setup Mocking:** Enhanced `src/__tests__/setup.ts` with global `next/navigation` mocks (`useRouter`, `usePathname`, `useSearchParams`) for Next.js App Router components.
+  4. **Test Suite Hardening:** Added unit test suites `UT-UI-COLLECTION-DETAIL-03` and `UT-UI-COLLECTION-DETAIL-04` in `Collections.test.tsx` and expanded Playwright E2E suite `e2e/collections.spec.ts` (`E2E-COL-02`). All 53 test suites and 349 unit tests pass with 0 TypeScript errors.
+- **Impact:** Enables instantaneous multi-attribute artwork search in collection detail views, preserves active view modes and tag filtering, and ensures 100% test automation coverage.
+
+
 
 
 

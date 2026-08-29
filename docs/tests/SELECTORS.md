@@ -207,7 +207,8 @@ Always use `data-testid` for element selection in E2E tests.
 | `collection-card-earnings-{id}` | Total revenue metric display on collection card |
 | `collection-card-rpi-{id}` | Average RPI metric display on collection card |
 | `collection-add-btn` | Header button in Collections page to create a new collection |
-| `collection-search-input` | Search input field in Collections page toolbar |
+| `collection-search-input` | Search input field in Collections page and Collection detail toolbar |
+| `collection-search-clear-btn` | Clear button inside collection detail search input |
 | `collection-sort-select` | Sort select dropdown in Collections page toolbar |
 | `collection-view-grid-btn` | Button in Collections toolbar to switch to Grid Cards view mode |
 | `collection-view-table-btn` | Button in Collections toolbar to switch to Table List view mode |
@@ -229,8 +230,12 @@ Always use `data-testid` for element selection in E2E tests.
 | `collection-keywords-view-freq-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Frequency |
 | `collection-keywords-view-dl-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Downloads |
 | `collection-keywords-view-rev-btn` | Button in TopSharedKeywordsBar to sort and view keywords by Revenue |
+| `collection-search-filter-badge` | Active text search query pill indicator above collection artwork grid |
+| `collection-clear-search-badge-btn` | Button inside active search query pill to clear text search |
 | `collection-keyword-filter-badge` | Active keyword filter pill indicator above collection artwork grid |
 | `collection-keyword-filter-clear-btn` | Clear button inside active keyword filter indicator |
+| `collection-clear-all-filters-btn` | Button in active filter banner to clear both search and tag filters |
+| `collection-empty-clear-filters-btn` | Button in empty state card to clear active search and tag filters |
 | `collection-artwork-item` | Artwork card inside Collection detail image grid |
 | `collection-item-remove-btn-{id}` | Button to remove an artwork item from the collection |
 | `collection-set-cover-btn-{id}` | Button to set artwork item as the collection cover image |

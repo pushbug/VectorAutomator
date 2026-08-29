@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { Tag, Copy, Check, Sparkles, Layers, Download, DollarSign } from 'lucide-react';
+import { Tag, Copy, Check, Sparkles, Layers, Download, DollarSign, Search, X } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
@@ -21,6 +21,9 @@ interface TopSharedKeywordsBarProps {
   onSelectKeyword?: (keyword: string | null) => void;
   viewMode?: KeywordViewMode;
   onViewModeChange?: (mode: KeywordViewMode) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  searchPlaceholder?: string;
 }
 
 export function TopSharedKeywordsBar({
@@ -30,6 +33,9 @@ export function TopSharedKeywordsBar({
   onSelectKeyword,
   viewMode: controlledViewMode,
   onViewModeChange,
+  searchQuery,
+  onSearchChange,
+  searchPlaceholder,
 }: TopSharedKeywordsBarProps) {
   const [copied, setCopied] = useState(false);
   const [internalViewMode, setInternalViewMode] = useState<KeywordViewMode>('frequency');
@@ -67,7 +73,7 @@ export function TopSharedKeywordsBar({
     return list.slice(0, 15);
   }, [keywords, viewMode]);
 
-  if (keywords.length === 0) return null;
+  if (keywords.length === 0 && !onSearchChange) return null;
 
   const handleCopyAll = async () => {
     const text = sortedKeywords.map((k) => k.keyword).join(', ');
@@ -104,118 +110,151 @@ export function TopSharedKeywordsBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          {/* Search Input Field */}
+          {onSearchChange && (
+            <div className="relative flex items-center min-w-44 sm:min-w-56 md:min-w-64">
+              <Search size={14} className="absolute left-2.5 text-muted pointer-events-none" />
+              <input
+                type="text"
+                data-testid="collection-search-input"
+                value={searchQuery || ''}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={searchPlaceholder || 'Search name, ID, or keyword...'}
+                className="w-full pl-8 pr-7 py-1 bg-background border border-border rounded-lg text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary h-8"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  data-testid="collection-search-clear-btn"
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-2 text-muted hover:text-foreground p-0.5 rounded-full hover:bg-muted/10 transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Segmented View Mode Toggle */}
-          <div className="flex items-center p-0.5 bg-background border border-border rounded-lg text-xs">
-            <button
-              type="button"
-              data-testid="collection-keywords-view-freq-btn"
-              onClick={() => handleViewModeChange('frequency')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'frequency'
-                  ? 'bg-surface text-foreground shadow-xs font-semibold'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              <Layers size={11} />
-              <span>Frequency</span>
-            </button>
-            <button
-              type="button"
-              data-testid="collection-keywords-view-dl-btn"
-              onClick={() => handleViewModeChange('downloads')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'downloads'
-                  ? 'bg-surface text-foreground shadow-xs font-semibold'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              <Download size={11} />
-              <span>Downloads</span>
-            </button>
-            <button
-              type="button"
-              data-testid="collection-keywords-view-rev-btn"
-              onClick={() => handleViewModeChange('revenue')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'revenue'
-                  ? 'bg-surface text-foreground shadow-xs font-semibold'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              <DollarSign size={11} />
-              <span>Revenue</span>
-            </button>
-          </div>
+          {keywords.length > 0 && (
+            <div className="flex items-center p-0.5 bg-background border border-border rounded-lg text-xs">
+              <button
+                type="button"
+                data-testid="collection-keywords-view-freq-btn"
+                onClick={() => handleViewModeChange('frequency')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                  viewMode === 'frequency'
+                    ? 'bg-surface text-foreground shadow-xs font-semibold'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <Layers size={11} />
+                <span>Frequency</span>
+              </button>
+              <button
+                type="button"
+                data-testid="collection-keywords-view-dl-btn"
+                onClick={() => handleViewModeChange('downloads')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                  viewMode === 'downloads'
+                    ? 'bg-surface text-foreground shadow-xs font-semibold'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <Download size={11} />
+                <span>Downloads</span>
+              </button>
+              <button
+                type="button"
+                data-testid="collection-keywords-view-rev-btn"
+                onClick={() => handleViewModeChange('revenue')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                  viewMode === 'revenue'
+                    ? 'bg-surface text-foreground shadow-xs font-semibold'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <DollarSign size={11} />
+                <span>Revenue</span>
+              </button>
+            </div>
+          )}
 
           {/* Copy Button */}
-          <button
-            type="button"
-            data-testid="collection-copy-top-keywords-btn"
-            onClick={handleCopyAll}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer shrink-0 ${
-              copied
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                : 'bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20'
-            }`}
-          >
-            {copied ? (
-              <>
-                <Check size={13} />
-                <span>Copied {sortedKeywords.length} Tags!</span>
-              </>
-            ) : (
-              <>
-                <Copy size={13} />
-                <span>{copyButtonLabel()}</span>
-              </>
-            )}
-          </button>
+          {keywords.length > 0 && (
+            <button
+              type="button"
+              data-testid="collection-copy-top-keywords-btn"
+              onClick={handleCopyAll}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer shrink-0 ${
+                copied
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <Check size={13} />
+                  <span>Copied {sortedKeywords.length} Tags!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={13} />
+                  <span>{copyButtonLabel()}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tag Cloud */}
-      <div className="flex flex-wrap gap-1.5 pt-1">
-        {sortedKeywords.map((tag) => {
-          const isSelected = selectedKeyword?.toLowerCase() === tag.keyword.toLowerCase();
+      {sortedKeywords.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {sortedKeywords.map((tag) => {
+            const isSelected = selectedKeyword?.toLowerCase() === tag.keyword.toLowerCase();
 
-          return (
-            <button
-              key={tag.keyword}
-              type="button"
-              data-testid={`collection-top-keyword-tag-${tag.keyword}`}
-              onClick={() => onSelectKeyword?.(isSelected ? null : tag.keyword)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
-                isSelected
-                  ? 'bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20 font-semibold'
-                  : 'bg-background border-border hover:border-primary/50 text-foreground'
-              }`}
-              title={`${tag.frequency}/${totalImages} artworks (${tag.percentage}%) • ${formatNumber(tag.totalDownloads)} downloads • ${formatCurrency(tag.totalEarnings)} — Click to filter artworks`}
-            >
-              <Tag size={11} className={isSelected ? 'text-primary-foreground' : 'text-primary/70 shrink-0'} />
-              <span className="font-medium">{tag.keyword}</span>
-
-              <span
-                className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors flex items-center gap-1 ${
+            return (
+              <button
+                key={tag.keyword}
+                type="button"
+                data-testid={`collection-top-keyword-tag-${tag.keyword}`}
+                onClick={() => onSelectKeyword?.(isSelected ? null : tag.keyword)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
                   isSelected
-                    ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30'
-                    : 'bg-surface text-muted border-border'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20 font-semibold'
+                    : 'bg-background border-border hover:border-primary/50 text-foreground'
                 }`}
+                title={`${tag.frequency}/${totalImages} artworks (${tag.percentage}%) • ${formatNumber(tag.totalDownloads)} downloads • ${formatCurrency(tag.totalEarnings)} — Click to filter artworks`}
               >
-                {viewMode === 'downloads' ? (
-                  <>
-                    <Download size={10} className={isSelected ? 'text-primary-foreground' : 'text-muted shrink-0'} />
-                    <span>{formatNumber(tag.totalDownloads)}</span>
-                  </>
-                ) : viewMode === 'revenue' ? (
-                  formatCurrency(tag.totalEarnings)
-                ) : (
-                  `${tag.frequency}`
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <Tag size={11} className={isSelected ? 'text-primary-foreground' : 'text-primary/70 shrink-0'} />
+                <span className="font-medium">{tag.keyword}</span>
+
+                <span
+                  className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors flex items-center gap-1 ${
+                    isSelected
+                      ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30'
+                      : 'bg-surface text-muted border-border'
+                  }`}
+                >
+                  {viewMode === 'downloads' ? (
+                    <>
+                      <Download size={10} className={isSelected ? 'text-primary-foreground' : 'text-muted shrink-0'} />
+                      <span>{formatNumber(tag.totalDownloads)}</span>
+                    </>
+                  ) : viewMode === 'revenue' ? (
+                    formatCurrency(tag.totalEarnings)
+                  ) : (
+                    `${tag.frequency}`
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+

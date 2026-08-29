@@ -150,6 +150,33 @@ test.describe('Artwork Collections Flow (E2E-COL-01)', () => {
         await expect(freqViewBtn).toBeVisible();
         await freqViewBtn.click();
 
+        // Test Collection Detail Search input
+        const detailSearchInput = page.getByTestId('collection-search-input');
+        if (await detailSearchInput.isVisible()) {
+          await detailSearchInput.fill('vector');
+          
+          // Verify search filter badge appears
+          const searchBadge = page.getByTestId('collection-search-filter-badge');
+          if (await searchBadge.isVisible()) {
+            await expect(searchBadge).toBeVisible();
+            
+            // Clear via search badge clear button
+            const clearSearchBadgeBtn = page.getByTestId('collection-clear-search-badge-btn');
+            if (await clearSearchBadgeBtn.isVisible()) {
+              await clearSearchBadgeBtn.click();
+              await expect(searchBadge).not.toBeVisible();
+            }
+          }
+
+          // Test search input clear button
+          await detailSearchInput.fill('pattern');
+          const searchClearBtn = page.getByTestId('collection-search-clear-btn');
+          if (await searchClearBtn.isVisible()) {
+            await searchClearBtn.click();
+            await expect(detailSearchInput).toHaveValue('');
+          }
+        }
+
         // Click first keyword tag to test drill-down
         const firstTag = page.locator('[data-testid^="collection-top-keyword-tag-"]').first();
         if (await firstTag.isVisible()) {
