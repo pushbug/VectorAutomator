@@ -29,6 +29,10 @@ export default function PortfolioPage() {
     totalImages: 0,
     totalDownloads: 0,
     totalEarnings: 0,
+    top100AvgMonthlyEarnings: 0,
+    top100AvgMonthlyDownloads: 0,
+    portfolioAvgMonthlyEarnings: 0,
+    portfolioAvgMonthlyDownloads: 0,
   });
 
   // Pagination and filtering state
@@ -77,8 +81,13 @@ export default function PortfolioPage() {
           totalImages: json.summary.totalImages ?? (json.meta?.total || 0),
           totalDownloads: json.summary.totalDownloads ?? 0,
           totalEarnings: json.summary.totalEarnings ?? 0,
+          top100AvgMonthlyEarnings: json.summary.top100AvgMonthlyEarnings ?? 0,
+          top100AvgMonthlyDownloads: json.summary.top100AvgMonthlyDownloads ?? 0,
+          portfolioAvgMonthlyEarnings: json.summary.portfolioAvgMonthlyEarnings ?? 0,
+          portfolioAvgMonthlyDownloads: json.summary.portfolioAvgMonthlyDownloads ?? 0,
         });
       }
+
       
       setSelectedImage((prev: any) => {
         if (!prev) return null;
@@ -320,8 +329,15 @@ export default function PortfolioPage() {
             onLogSale={() => setIsLogSaleDrawerOpen(true)}
             onEdit={() => setIsEditDrawerOpen(true)}
             onClose={() => setSelectedImage(null)}
+            benchmarks={{
+              top100AvgMonthlyEarnings: summary.top100AvgMonthlyEarnings,
+              top100AvgMonthlyDownloads: summary.top100AvgMonthlyDownloads,
+              portfolioAvgMonthlyEarnings: summary.portfolioAvgMonthlyEarnings,
+              portfolioAvgMonthlyDownloads: summary.portfolioAvgMonthlyDownloads,
+            }}
           />
         )}
+
       </div>
 
       <PortfolioFloatingToolbar

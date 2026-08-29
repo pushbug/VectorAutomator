@@ -194,5 +194,19 @@
   6. **Automated Verification:** Added test suites `UT-API-SERP-SORT-01` and `UT-UI-SERP-TABLE-SORT-01`. All 51 test suites and 329 tests pass with 0 TypeScript errors.
 - **Impact:** Delivers responsive 100-item SERP exploration with sorting and unclipped layouts, streamlines bulk ranking import workflows, and eliminates false-positive Chrome extension warnings.
 
+## ADR-025: Dual-Tab Portfolio Analytics, Frameless Time-Series Trend Charts, and Persistent Global Benchmarks
+- **Date:** 2026-08-29
+- **Context:** Contributors needed to inspect historical sales performance, monthly trends, and performance benchmarks directly within the `PortfolioDetail` drawer without copying asset IDs and navigating away to the Sales table. Additionally, benchmark comparisons (Top 100 Best Sellers vs overall Portfolio Average) needed to remain persistent and accurate even when filtering or searching for individual assets in the Portfolio or Collection views.
+- **Decision:**
+  1. **Dual-Tab Architecture (`PortfolioDetail.tsx`):** Implemented tab switching (`Details & Info` vs `Sales & Analytics`) retaining user state and metadata editability while embedding `<PortfolioAnalyticsTab />`.
+  2. **Frameless Responsive SVG Trend Chart:** Replaced nested bordered containers with a frameless, flat SVG line and gradient-area chart spanning 100% canvas height with equidistant X-axis date labels and a dynamic Y-axis ceiling.
+  3. **Decoupled Global Portfolio Benchmarks:** Updated `GET /api/portfolio` to execute parallel global queries when search/filters are active, guaranteeing that `Top 100 Avg` and `Port Avg` reflect true portfolio baseline metrics and never collapse to 0.00.
+  4. **Single-Line Benchmark Comparison Strip:** Designed a compact 3-card metric strip (`This Image`, `Top 100 Avg`, `Port Avg`) displaying download icons and dollar amounts on a single line with reactive metric unit toggling ($ / dl).
+  5. **Collection Detail Integration:** Extended `GET /api/collections/[id]` to include artwork `stats` arrays and bound global benchmarks to `PortfolioDetail` in `CollectionDetailPage`.
+  6. **Shared Date Formatter Centralization:** Moved `formatDateSafe` into `src/lib/formatters.ts`.
+  7. **Automated Verification:** Added unit test suites `UT-UI-PF-TAB-01`, `UT-UI-PF-ANALYTICS-01`, `UT-API-PF-BENCHMARK-01`, `UT-API-PF-BENCHMARK-FILTER-01`, and `UT-UI-PF-BENCHMARK-01` (347/347 tests pass across 53 test files with 0 TypeScript errors).
+- **Impact:** Delivers complete financial analytics directly in portfolio drawers, provides actionable benchmark context, and preserves 100% test integrity.
+
+
 
 

@@ -15,6 +15,7 @@ interface DbBackupCoordinator {
   backupTimer: NodeJS.Timeout | null;
   lastMutationTimestamp: number;
   isLock: boolean;
+  processHooksRegistered: boolean;
 }
 
 const globalForBackup = globalThis as unknown as {
@@ -27,10 +28,106 @@ if (!globalForBackup.__dbBackupCoordinator) {
     backupTimer: null,
     lastMutationTimestamp: 0,
     isLock: false,
+    processHooksRegistered: false,
   };
 }
 
 const coordinator = globalForBackup.__dbBackupCoordinator;
+
+/**
+ * Checks if running inside an automated test environment.
+ */
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+
+/**
+ * Executes a synchronous SQLite WAL checkpoint (TRUNCATE) to immediately
+ * consolidate all uncommitted pages from the WAL log into the primary database file.
+ */
+export function checkpointDatabase(targetDbPath?: string): boolean {
+  try {
+    const dbPath = targetDbPath || path.resolve(process.cwd(), 'dev.db');
+    if (!fs.existsSync(dbPath) || dbPath === ':memory:') {
+      return false;
+    }
+
+    const db = new Database(dbPath);
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      return true;
+    } finally {
+      db.close();
+    }
+  } catch (error) {
+    console.warn('SQLite WAL checkpoint warning:', error);
+    return false;
+  }
+}
+
+/**
+ * Scans the backups directory and safely unlinks any orphaned temporary snapshot files.
+ */
+export function purgeOrphanSnapshots(targetBackupsDir?: string): number {
+  try {
+    const backupsDir = targetBackupsDir || path.resolve(process.cwd(), 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      return 0;
+    }
+
+    const files = fs.readdirSync(backupsDir);
+    let purgedCount = 0;
+
+    for (const file of files) {
+      if (file.startsWith('temp_snapshot_') && (file.endsWith('.db') || file.endsWith('.db-journal') || file.endsWith('-journal') || file.endsWith('-wal') || file.endsWith('-shm'))) {
+        try {
+          fs.unlinkSync(path.join(backupsDir, file));
+          purgedCount++;
+        } catch (_) {}
+      }
+    }
+
+    return purgedCount;
+  } catch (error) {
+    console.error('Failed to purge orphan snapshots:', error);
+    return 0;
+  }
+}
+
+/**
+ * Registers graceful process shutdown hooks to ensure pending WAL frames are flushed before exit.
+ */
+function registerProcessShutdownHooks(): void {
+  if (coordinator.processHooksRegistered || isTestEnv || typeof process === 'undefined') {
+    return;
+  }
+
+  const handleShutdown = () => {
+    try {
+      checkpointDatabase();
+    } catch (_) {}
+  };
+
+  process.on('SIGINT', () => {
+    handleShutdown();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    handleShutdown();
+    process.exit(0);
+  });
+
+  process.on('beforeExit', () => {
+    handleShutdown();
+  });
+
+  coordinator.processHooksRegistered = true;
+}
+
+// Auto-register lifecycle hooks and purge stale temp snapshots on module load
+registerProcessShutdownHooks();
+if (!isTestEnv) {
+  purgeOrphanSnapshots();
+}
 
 /**
  * Formats a Date object into local system timestamp YYYYMMDD_HHmmss.
@@ -47,9 +144,13 @@ function formatLocalTimestamp(date = new Date()): string {
 
 /**
  * Schedules an automated database backup after a debounced quiet window.
- * Coalesces rapid sequential mutations into a single consolidated snapshot.
+ * Executes synchronous WAL checkpoint immediately to ensure 100% write-through persistence.
  */
-export function scheduleAutoBackup(debounceMs = DEFAULT_BACKUP_DEBOUNCE_MS): void {
+export function scheduleAutoBackup(debounceMs = DEFAULT_BACKUP_DEBOUNCE_MS, targetDbPath?: string): void {
+  // 1. Immediate write-through durability: checkpoint WAL to dev.db instantly
+  checkpointDatabase(targetDbPath);
+
+  // 2. Debounced background snapshot compression
   coordinator.isDbDirty = true;
   coordinator.lastMutationTimestamp = Date.now();
 
@@ -60,7 +161,7 @@ export function scheduleAutoBackup(debounceMs = DEFAULT_BACKUP_DEBOUNCE_MS): voi
   coordinator.backupTimer = setTimeout(() => {
     coordinator.isDbDirty = false;
     coordinator.backupTimer = null;
-    createDbBackup().catch((err) => {
+    createDbBackup(10, targetDbPath).catch((err) => {
       console.error('Debounced auto backup failed:', err);
     });
   }, debounceMs);
@@ -86,30 +187,37 @@ export function cancelScheduledBackup(): void {
 
 /**
  * Automated SQLite database backup utility using native SQLite Online Backup:
- * 1. Safely merges dev.db + dev.db-wal + dev.db-shm into a consolidated standalone DB snapshot.
- * 2. Smart SHA-256 change detection (skips saving duplicate snapshot if data is unchanged).
- * 3. Lossless Gzip compression (.db.gz saving ~80% disk space).
- * 4. Local system timestamping (matching Mac clock exactly).
- * 5. Strict rolling retention cap (retaining strictly the latest maxRetained = 10 files).
+ * 1. Executes synchronous WAL checkpoint prior to snapshot.
+ * 2. Safely merges dev.db + dev.db-wal + dev.db-shm into a consolidated standalone DB snapshot.
+ * 3. Smart SHA-256 change detection (skips saving duplicate snapshot if data is unchanged).
+ * 4. Lossless Gzip compression (.db.gz saving ~80% disk space).
+ * 5. Local system timestamping (matching Mac clock exactly).
+ * 6. Strict rolling retention cap (retaining strictly the latest maxRetained = 10 files).
+ * 7. Guaranteed temp snapshot cleanup in finally block.
  */
-export async function createDbBackup(maxRetained = 10): Promise<string | null> {
+export async function createDbBackup(maxRetained = 10, targetDbPath?: string): Promise<string | null> {
   if (coordinator.isLock) {
     return null;
   }
   coordinator.isLock = true;
 
+  let tempSnapshotPath: string | null = null;
+  const backupsDir = path.resolve(process.cwd(), 'backups');
+
   try {
-    const dbPath = path.resolve(process.cwd(), 'dev.db');
-    if (!fs.existsSync(dbPath)) {
+    const dbPath = targetDbPath || path.resolve(process.cwd(), 'dev.db');
+    if (!fs.existsSync(dbPath) || dbPath === ':memory:') {
       return null;
     }
 
-    const backupsDir = path.resolve(process.cwd(), 'backups');
     if (!fs.existsSync(backupsDir)) {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
 
-    const tempSnapshotPath = path.join(backupsDir, `temp_snapshot_${Date.now()}.db`);
+    // Flush WAL pages into base DB prior to snapshot
+    checkpointDatabase(dbPath);
+
+    tempSnapshotPath = path.join(backupsDir, `temp_snapshot_${Date.now()}.db`);
 
     // 1. Native SQLite Online Backup: safely consolidates dev.db and dev.db-wal into temp file
     try {
@@ -147,9 +255,11 @@ export async function createDbBackup(maxRetained = 10): Promise<string | null> {
 
         if (currentHash === latestHash) {
           // Database content is identical to latest backup; clean up temp and return
-          try {
-            fs.unlinkSync(tempSnapshotPath);
-          } catch (_) {}
+          if (fs.existsSync(tempSnapshotPath)) {
+            try {
+              fs.unlinkSync(tempSnapshotPath);
+            } catch (_) {}
+          }
           return latestBackupFile;
         }
       } catch (_) {
@@ -164,11 +274,6 @@ export async function createDbBackup(maxRetained = 10): Promise<string | null> {
 
     const compressed = zlib.gzipSync(tempDbBuffer, { level: 9 });
     fs.writeFileSync(targetPath, compressed);
-
-    // Clean up temporary uncompressed snapshot
-    try {
-      fs.unlinkSync(tempSnapshotPath);
-    } catch (_) {}
 
     // 4. Auto-Pruning: Retain strictly the latest `maxRetained` files
     const allBackups = fs
@@ -190,21 +295,42 @@ export async function createDbBackup(maxRetained = 10): Promise<string | null> {
     console.error('Failed to create automated database backup:', error);
     return null;
   } finally {
+    if (tempSnapshotPath && fs.existsSync(tempSnapshotPath)) {
+      try {
+        fs.unlinkSync(tempSnapshotPath);
+      } catch (_) {}
+    }
+    purgeOrphanSnapshots(backupsDir);
     coordinator.isLock = false;
   }
 }
 
 /**
  * Restores the SQLite database from a selected backup file (.db or .db.gz).
+ * Atomically unlinks stale WAL and SHM files to guarantee zero header salt corruption.
  */
-export function restoreDbBackup(backupFilePath: string): boolean {
+export function restoreDbBackup(backupFilePath: string, targetDbPath?: string): boolean {
   try {
     const fullPath = path.resolve(backupFilePath);
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Backup file not found: ${fullPath}`);
     }
 
-    const dbPath = path.resolve(process.cwd(), 'dev.db');
+    const dbPath = targetDbPath || path.resolve(process.cwd(), 'dev.db');
+    const walPath = `${dbPath}-wal`;
+    const shmPath = `${dbPath}-shm`;
+
+    // Unlink stale WAL/SHM before restoring base file
+    if (fs.existsSync(walPath)) {
+      try {
+        fs.unlinkSync(walPath);
+      } catch (_) {}
+    }
+    if (fs.existsSync(shmPath)) {
+      try {
+        fs.unlinkSync(shmPath);
+      } catch (_) {}
+    }
 
     if (fullPath.endsWith('.gz')) {
       const compressed = fs.readFileSync(fullPath);
@@ -213,6 +339,20 @@ export function restoreDbBackup(backupFilePath: string): boolean {
     } else {
       fs.copyFileSync(fullPath, dbPath);
     }
+
+    // Clean up any newly triggered WAL/SHM artifacts and checkpoint clean state
+    if (fs.existsSync(walPath)) {
+      try {
+        fs.unlinkSync(walPath);
+      } catch (_) {}
+    }
+    if (fs.existsSync(shmPath)) {
+      try {
+        fs.unlinkSync(shmPath);
+      } catch (_) {}
+    }
+
+    checkpointDatabase(dbPath);
 
     return true;
   } catch (error) {

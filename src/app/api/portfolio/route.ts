@@ -259,11 +259,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [images, totalCount, allMatchingImages] = await Promise.all([
+    const isFiltered = Boolean(search || (idStatus && idStatus !== 'all') || startDate || endDate);
+
+    const [images, totalCount, allMatchingImages, globalBenchmarkImages] = await Promise.all([
       prisma.image.findMany({
         where,
         skip,
         take: limit,
+
         orderBy: orderByClause,
         include: {
           stats: {
@@ -277,13 +280,33 @@ export async function GET(request: NextRequest) {
         select: {
           ...(searchField === 'exactKeyword' ? { keywords: true } : {}),
           totalDownloads: true,
+          createdAt: true,
           stats: {
             select: {
               earnings: true,
+              downloads: true,
+              date: true,
             },
           },
         },
       }),
+      ...(isFiltered
+        ? [
+            prisma.image.findMany({
+              select: {
+                totalDownloads: true,
+                createdAt: true,
+                stats: {
+                  select: {
+                    earnings: true,
+                    downloads: true,
+                    date: true,
+                  },
+                },
+              },
+            }),
+          ]
+        : []),
     ]);
 
     let enrichedImages = images.map((img: any) => {
@@ -327,6 +350,49 @@ export async function GET(request: NextRequest) {
       0
     );
 
+    // Calculate Global Benchmarks across the full portfolio
+    const benchmarkSource = isFiltered && globalBenchmarkImages ? globalBenchmarkImages : allMatchingImages || [];
+
+    const distinctMonthsSet = new Set<string>();
+    benchmarkSource.forEach((img: any) => {
+      (img.stats || []).forEach((s: any) => {
+        if (s.date) {
+          const d = new Date(s.date);
+          if (!isNaN(d.getTime())) {
+            distinctMonthsSet.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+          }
+        }
+      });
+    });
+    const totalActiveMonths = Math.max(1, distinctMonthsSet.size);
+
+    const candidateTotals = benchmarkSource.map((img: any) => {
+      const imgEarnings = (img.stats || []).reduce((sum: number, s: any) => sum + (s.earnings || 0), 0);
+      const imgDownloads = img.totalDownloads || 0;
+      return {
+        earnings: imgEarnings,
+        downloads: imgDownloads,
+      };
+    });
+
+    const globalEarnings = candidateTotals.reduce((sum: number, c: any) => sum + c.earnings, 0);
+    const globalDownloads = candidateTotals.reduce((sum: number, c: any) => sum + c.downloads, 0);
+
+    // Sort by earnings descending to extract Top 100 Best Sellers
+    const sortedByEarnings = [...candidateTotals].sort((a, b) => b.earnings - a.earnings);
+    const top100Candidates = sortedByEarnings.slice(0, 100);
+    const top100Count = Math.max(1, top100Candidates.length);
+
+    const top100TotalEarnings = top100Candidates.reduce((sum, c) => sum + c.earnings, 0);
+    const top100TotalDownloads = top100Candidates.reduce((sum, c) => sum + c.downloads, 0);
+
+    const top100AvgMonthlyEarnings = (top100TotalEarnings / top100Count) / totalActiveMonths;
+    const top100AvgMonthlyDownloads = (top100TotalDownloads / top100Count) / totalActiveMonths;
+
+    const totalGlobalAssetCount = Math.max(1, benchmarkSource.length);
+    const portfolioAvgMonthlyEarnings = (globalEarnings / totalGlobalAssetCount) / totalActiveMonths;
+    const portfolioAvgMonthlyDownloads = (globalDownloads / totalGlobalAssetCount) / totalActiveMonths;
+
     return NextResponse.json({
       data: enrichedImages,
       meta: {
@@ -339,10 +405,15 @@ export async function GET(request: NextRequest) {
         totalImages: finalTotalCount,
         totalDownloads,
         totalEarnings,
+        top100AvgMonthlyEarnings,
+        top100AvgMonthlyDownloads,
+        portfolioAvgMonthlyEarnings,
+        portfolioAvgMonthlyDownloads,
       },
     });
   } catch (error) {
     console.error('Failed to fetch portfolio data:', error);
+
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

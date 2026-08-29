@@ -118,6 +118,18 @@ body {
   color: #34d399;
 }
 
+.pill-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 .query-display {
   font-size: 15px;
   font-weight: 600;
@@ -134,8 +146,8 @@ body {
 .btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 10px;
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
@@ -143,22 +155,43 @@ body {
   font-size: 13px;
   font-weight: 600;
   text-align: left;
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-nominate {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  padding: 11px 14px;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.btn-nominate:not(:disabled):hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #fff;
-  padding: 12px 14px;
+  padding: 11px 14px;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
-.btn-primary:hover {
+.btn-primary:not(:disabled):hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
 }
 
-.btn-primary:active {
+.btn:active {
   transform: translateY(0);
 }
 
@@ -173,7 +206,7 @@ body {
 }
 
 .btn-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #fff;
 }
@@ -181,38 +214,28 @@ body {
 .btn-subtitle {
   font-size: 10px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.secondary-btn-row {
+.tertiary-btn-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 2px;
 }
 
-.btn-secondary {
+.btn-tertiary {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--surface-border);
-  color: var(--text-main);
-  padding: 9px;
-  font-size: 11px;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.btn-outline {
-  background: transparent;
   border: 1px solid var(--surface-border);
   color: var(--text-muted);
-  padding: 9px;
+  padding: 7px 4px;
   font-size: 11px;
+  font-weight: 600;
+  justify-content: center;
 }
 
-.btn-outline:hover {
-  background: rgba(255, 255, 255, 0.05);
+.btn-tertiary:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 

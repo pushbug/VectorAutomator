@@ -144,6 +144,49 @@ describe('PortfolioGrid Component', () => {
     expect(screen.queryByTestId('portfolio-copy-platform-id-shutterstock-btn')).not.toBeInTheDocument();
   });
 
+  it('UT-UI-PORTFOLIO-DETAIL-COPY-CODE-01: copies image code to clipboard when clicking copy button next to image code badge', async () => {
+    const { PortfolioDetail } = await import('@/components/portfolio/PortfolioDetail');
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    const mockImage = {
+      id: 'img-12345',
+      code: '2608-44',
+      title: 'Infographic Concept',
+      keywords: 'infographic, vector, chart',
+      status: 'uploaded',
+      filePath: '/path/to/img.jpg',
+      ssId: null,
+      asId: null,
+      vzId: null,
+      ssDownloads: 0,
+      asDownloads: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      platformBreakdown: {},
+      createdAt: '2026-08-28T00:00:00.000Z',
+    };
+
+    render(
+      <PortfolioDetail
+        image={mockImage}
+        onClose={vi.fn()}
+      />
+    );
+
+    const copyCodeBtn = screen.getByTestId('portfolio-copy-code-btn');
+    expect(copyCodeBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(copyCodeBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledWith('2608-44');
+  });
+
   it('UT-UI-PORTFOLIO-SUMMARY-01: renders portfolio dashboard summary bar with artworks count, downloads, and revenue', async () => {
     // Mock global fetch for PortfolioPage
     global.fetch = vi.fn().mockResolvedValue({

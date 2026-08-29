@@ -17,5 +17,6 @@ Welcome to the central documentation index. All documentation should be linked h
 | SERP Ranking Intelligence | [docs/features/serp_tracking.md](file:///Users/baemon/Desktop/VectorAutomator/docs/features/serp_tracking.md) | Specification for Stock SERP Copier Chrome Extension, clipboard parser, and rank matching. |
 | Decisions Log | [docs/decisions.md](file:///Users/baemon/Desktop/VectorAutomator/docs/decisions.md) | Architectural decision records (ADRs) and durable design rationale. |
 | Testing Overview | [docs/tests/OVERVIEW.md](file:///Users/baemon/Desktop/VectorAutomator/docs/tests/OVERVIEW.md) | E2E and Unit testing strategy, and test rules. |
+| Nominate Strategy | [docs/nominate.md](file:///Users/baemon/Desktop/VectorAutomator/docs/nominate.md) | Adobe Stock Free Collection nomination analysis, criteria, and segmented ID lists. |
 
 *(Add other core or feature docs here as they are created)*

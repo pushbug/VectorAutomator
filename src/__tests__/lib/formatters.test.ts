@@ -4,7 +4,9 @@ import {
   formatNumber,
   formatTableDate,
   formatDisplayDate,
+  formatDateSafe,
   calculatePlatformBreakdown,
+
   getTodayDateString,
   getImageUrl,
 } from '@/lib/formatters';
@@ -38,6 +40,15 @@ describe('Formatters and Shared Utilities', () => {
     expect(formatDisplayDate('2026-08-20')).toContain('Aug 20, 2026');
     expect(formatDisplayDate(null)).toBe('Select date');
   });
+
+  it('formatDateSafe formats Date and ISO strings and returns None on empty', () => {
+    expect(formatDateSafe('2026-08-20T00:00:00.000Z')).toContain('Aug 20, 2026');
+    expect(formatDateSafe(new Date('2026-08-20T00:00:00.000Z'))).toContain('Aug 20, 2026');
+    expect(formatDateSafe(null)).toBe('None');
+    expect(formatDateSafe(undefined)).toBe('None');
+    expect(formatDateSafe('')).toBe('None');
+  });
+
 
   it('parseImageCode parses YYMM-Seq patterns correctly', () => {
     expect(parseImageCode('2608-12')).toEqual({ year: 2026, month: 8, seqNumber: 12 });

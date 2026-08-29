@@ -137,12 +137,73 @@ describe('Portfolio API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.summary).toEqual({
-        totalImages: 2,
-        totalDownloads: 80,
-        totalEarnings: 40.0,
-      });
+      expect(data.summary).toEqual(
+        expect.objectContaining({
+          totalImages: 2,
+          totalDownloads: 80,
+          totalEarnings: 40.0,
+          top100AvgMonthlyEarnings: 20,
+          top100AvgMonthlyDownloads: 40,
+          portfolioAvgMonthlyEarnings: 20,
+          portfolioAvgMonthlyDownloads: 40,
+        })
+      );
     });
+
+    it('UT-API-PF-BENCHMARK-01: computes dynamic Top 100 and portfolio monthly average earnings and downloads', async () => {
+      mockFindMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { totalDownloads: 100, stats: [{ earnings: 50.0, date: '2026-08-01T00:00:00.000Z' }] },
+          { totalDownloads: 20, stats: [{ earnings: 10.0, date: '2026-07-01T00:00:00.000Z' }] },
+        ]);
+      mockCount.mockResolvedValue(2);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary.totalImages).toBe(2);
+      expect(data.summary.totalEarnings).toBe(60.0);
+      expect(data.summary.totalDownloads).toBe(120);
+      // 2 distinct months -> top 100 avg monthly = (60/2)/2 = 15.0
+      expect(data.summary.top100AvgMonthlyEarnings).toBe(15.0);
+      expect(data.summary.top100AvgMonthlyDownloads).toBe(30.0);
+      expect(data.summary.portfolioAvgMonthlyEarnings).toBe(15.0);
+      expect(data.summary.portfolioAvgMonthlyDownloads).toBe(30.0);
+    });
+
+    it('UT-API-PF-BENCHMARK-FILTER-01: calculates global benchmarks from full dataset even when search filter is active', async () => {
+      mockFindMany
+        // 1. Filtered paginated items
+        .mockResolvedValueOnce([{ id: 'img-stagnant', title: 'Stagnant Artwork', totalDownloads: 2, stats: [{ earnings: 1.37 }] }])
+        // 2. Filtered matching items (for total search count & search-scoped earnings)
+        .mockResolvedValueOnce([{ totalDownloads: 2, stats: [{ earnings: 1.37, date: '2026-08-01T00:00:00.000Z' }] }])
+        // 3. Global benchmark items (for true Top 100 and Port Avg)
+        .mockResolvedValueOnce([
+          { totalDownloads: 100, stats: [{ earnings: 50.0, date: '2026-08-01T00:00:00.000Z' }] },
+          { totalDownloads: 20, stats: [{ earnings: 10.0, date: '2026-07-01T00:00:00.000Z' }] },
+        ]);
+      mockCount.mockResolvedValue(1);
+
+      const request = new NextRequest('http://localhost:3000/api/portfolio?search=2506-12');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      // Search-scoped summary
+      expect(data.summary.totalImages).toBe(1);
+      expect(data.summary.totalEarnings).toBe(1.37);
+      expect(data.summary.totalDownloads).toBe(2);
+      // Global benchmarks are NOT collapsed to 0.00 or the single item
+      expect(data.summary.top100AvgMonthlyEarnings).toBe(15.0);
+      expect(data.summary.top100AvgMonthlyDownloads).toBe(30.0);
+      expect(data.summary.portfolioAvgMonthlyEarnings).toBe(15.0);
+      expect(data.summary.portfolioAvgMonthlyDownloads).toBe(30.0);
+    });
+
+
 
     it('UT-API-PF-SEARCH-01: searches across title, keywords, tags, code, and platform asset IDs', async () => {
       mockFindMany.mockResolvedValue([{ id: '1', title: 'Infographic Timeline', asId: '569029521' }]);

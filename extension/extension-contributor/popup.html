@@ -21,29 +21,44 @@
     <section class="glass-card query-card">
       <div class="card-header-row">
         <span class="micro-label">PORTFOLIO GRID</span>
-        <span class="badge-pill badge-emerald" id="count-pill">Scanning...</span>
+        <div class="pill-group">
+          <span class="badge-pill badge-emerald" id="count-pill">Scanning...</span>
+          <span class="badge-pill badge-amber" id="nominate-pill" style="display: none;">⭐ 0 Nominate</span>
+        </div>
       </div>
       <div class="query-display" id="query-display">Adobe Contributor</div>
     </section>
 
-    <!-- Main CTA Actions Grid -->
+    <!-- Main Fast Actions Grid -->
     <section class="actions-section">
-      <button id="copy-tsv-btn" class="btn btn-primary" data-testid="contributor-copy-tsv-btn">
-        <span class="btn-icon">📋</span>
+      <!-- 1. Copy Nominate IDs -->
+      <button id="copy-nominate-ids-btn" class="btn btn-nominate" data-testid="contributor-copy-nominate-ids-btn" disabled>
+        <span class="btn-icon">⭐</span>
         <div class="btn-body">
-          <div class="btn-title">Copy Table (TSV)</div>
-          <div class="btn-subtitle">Ready to paste into VectorAutomator</div>
+          <div class="btn-title" id="nominate-btn-title">Copy Nominate IDs (0)</div>
+          <div class="btn-subtitle">Free Collection eligible only</div>
         </div>
       </button>
 
-      <div class="secondary-btn-row">
-        <button id="download-csv-btn" class="btn btn-secondary" data-testid="contributor-download-csv-btn">
-          <span class="btn-icon">📥</span>
-          <span>Download CSV</span>
+      <!-- 2. Copy All Asset IDs -->
+      <button id="copy-all-ids-btn" class="btn btn-primary" data-testid="contributor-copy-all-ids-btn" disabled>
+        <span class="btn-icon">📋</span>
+        <div class="btn-body">
+          <div class="btn-title" id="all-btn-title">Copy All Asset IDs (0)</div>
+          <div class="btn-subtitle">All artworks on this page</div>
+        </div>
+      </button>
+
+      <!-- Secondary Data Export Row -->
+      <div class="tertiary-btn-row">
+        <button id="copy-tsv-btn" class="btn btn-tertiary" data-testid="contributor-copy-tsv-btn" title="Copy full table with titles and downloads">
+          <span>📊 TSV</span>
         </button>
-        <button id="copy-json-btn" class="btn btn-outline" data-testid="contributor-copy-json-btn">
-          <span class="btn-icon">📦</span>
-          <span>Copy JSON</span>
+        <button id="download-csv-btn" class="btn btn-tertiary" data-testid="contributor-download-csv-btn" title="Download CSV file">
+          <span>📥 CSV</span>
+        </button>
+        <button id="copy-json-btn" class="btn btn-tertiary" data-testid="contributor-copy-json-btn" title="Copy raw JSON payload">
+          <span>📦 JSON</span>
         </button>
       </div>
     </section>
@@ -60,3 +75,4 @@
   <script src="popup.js"></script>
 </body>
 </html>
+

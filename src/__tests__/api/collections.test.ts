@@ -201,6 +201,10 @@ describe('Collections API Routes (UT-API-COLLECTION-01, UT-API-COLLECTION-DETAIL
       expect(json.summary.totalDownloads).toBe(30);
       expect(json.summary.totalEarnings).toBe(45.0);
       expect(json.summary.avgRpi).toBe(22.5);
+      expect(json.images[0].stats).toBeDefined();
+      expect(json.images[0].stats).toHaveLength(1);
+      expect(json.images[0].stats[0].earnings).toBe(15.0);
+
 
       // Top shared keywords check
       expect(json.topKeywords.length).toBeGreaterThan(0);
@@ -290,6 +294,37 @@ describe('Collections API Routes (UT-API-COLLECTION-01, UT-API-COLLECTION-DETAIL
       expect(json.addedCount).toBe(1);
       expect(mockCollectionItemCreateMany).toHaveBeenCalledWith({
         data: [{ collectionId: 'col-1', imageId: 'img-2' }],
+      });
+    });
+
+    it('UT-API-COLLECTION-IMPORT-ASID-01: resolves universal tokens (asIds, codes) and adds matched images', async () => {
+      mockCollectionFindUnique.mockResolvedValue({ id: 'col-1' });
+      mockImageFindMany.mockResolvedValue([
+        { id: 'img-1', asId: '972184113', code: '2308-81' },
+        { id: 'img-2', asId: '972184114', code: '2302-09' },
+      ]);
+      mockCollectionItemFindMany.mockResolvedValue([]);
+      mockCollectionItemCreateMany.mockResolvedValue({ count: 2 });
+
+      const req = new NextRequest('http://localhost:3000/api/collections/col-1/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokens: ['972184113', '2302-09', 'unknown-id'] }),
+      });
+
+      const res = await addCollectionItems(req, { params: Promise.resolve({ id: 'col-1' }) });
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.success).toBe(true);
+      expect(json.matchedCount).toBe(2);
+      expect(json.addedCount).toBe(2);
+      expect(json.notFoundCount).toBe(1);
+      expect(mockCollectionItemCreateMany).toHaveBeenCalledWith({
+        data: [
+          { collectionId: 'col-1', imageId: 'img-1' },
+          { collectionId: 'col-1', imageId: 'img-2' },
+        ],
       });
     });
 

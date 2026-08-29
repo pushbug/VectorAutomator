@@ -24,8 +24,15 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
    - Sales History Table: Paginated log with sorting and deletion.
    - Smart Paste Modal: Zero-risk clipboard importer for Adobe Stock / Shutterstock / Vecteezy tabular statements with multi-tier matching and interactive disambiguation.
 2. **Portfolio Detail Integration (`/portfolio`):**
-   - Read-only Platform Breakdown showing downloads and revenue per platform.
-   - "+ Log Sale" button to immediately open the entry drawer prefilled for the selected image.
+   - **Dual-Tab Architecture:**
+     - **Tab 1 (`Details & Info`):** Large preview thumbnail, upload date, 1-click copy for title/keywords, category, tags, notes, and Platform Breakdown cards with in-place Asset ID editing.
+     - **Tab 2 (`Sales & Analytics`):**
+       - **Momentum Health Status Badge:** Dynamic velocity scoring (`Rising Star`, `Evergreen`, `Decaying`, `Untested / New`, `Stagnant`) based on recent 6-month momentum vs annualized lifetime revenue.
+       - **Interactive Monthly Trend Chart:** Responsive SVG chart with dual metric toggle (Earnings $ vs Downloads), gradient fill, interactive hover points, frameless full-canvas display, and dynamic Y-axis scaling.
+       - **Monthly Benchmarks Comparison Strip:** Compact single-line KPI strip comparing `This Image` vs `Top 100 Avg` (amber) vs `Port Avg` (slate) monthly run-rates with reactive metric unit toggling ($ / dl). Persistent global calculations ensure benchmarks remain accurate even during filtered search queries.
+       - **Sales History Log:** Chronological transaction list of individual platform sales for the selected asset with date, platform badge, downloads, and earnings.
+   - "+ Log Sale" button to immediately open the entry drawer prefilled for the selected image from both tabs.
+
 
 ## 5. Smart Paste Tokenizer & Matching Pipeline
 - **Multi-Format Ingestion:** Extracts Asset IDs, upload dates, downloads count, and USD earnings from raw clipboard copies (TSV rows, newline token blocks, markdown links `[1929092005](url)`, commas, and currency signs).

@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check, ImageOff } from 'lucide-react';
+import { Trash2, DollarSign, Download, PlusCircle, Edit3, Copy, Check, ImageOff, Image as ImageIcon, TrendingUp } from 'lucide-react';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { PortfolioAnalyticsTab } from './PortfolioAnalyticsTab';
 import { PLATFORMS_DEFAULT, PLATFORM_THEMES } from '@/lib/platforms';
+
 import { copyToClipboard } from '@/lib/clipboard';
 import { calculatePlatformBreakdown, formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
 
@@ -41,6 +43,12 @@ interface PortfolioDetailProps {
   onLogSale?: (image: PortfolioImage) => void;
   onEdit?: (image: PortfolioImage) => void;
   onClose: () => void;
+  benchmarks?: {
+    top100AvgMonthlyEarnings?: number;
+    top100AvgMonthlyDownloads?: number;
+    portfolioAvgMonthlyEarnings?: number;
+    portfolioAvgMonthlyDownloads?: number;
+  };
   className?: string;
 }
 
@@ -51,8 +59,10 @@ export function PortfolioDetail({
   onLogSale,
   onEdit,
   onClose,
+  benchmarks,
   className,
 }: PortfolioDetailProps) {
+
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,6 +72,8 @@ export function PortfolioDetail({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [enrichedData, setEnrichedData] = useState<PortfolioImage | null>(null);
   const [hasImageError, setHasImageError] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'analytics'>('details');
+
 
   const handleCopy = async (text: string, field: string) => {
     if (!text) return;
@@ -200,11 +212,48 @@ export function PortfolioDetail({
       <div>
         <div className="flex justify-between items-center mb-3 gap-2">
           {activeImage.code ? (
-            <div
-              data-testid="portfolio-detail-code"
-              className="inline-block px-2.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-bold text-xs border border-primary/20"
-            >
-              {activeImage.code}
+            <div className="flex items-center gap-1.5">
+              <div
+                data-testid="portfolio-detail-code"
+                className="inline-block px-2.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-bold text-xs border border-primary/20"
+              >
+                {activeImage.code}
+              </div>
+              <button
+                type="button"
+                data-testid="portfolio-copy-code-btn"
+                onClick={() => handleCopy(activeImage.code!, 'code')}
+                title={copiedField === 'code' ? 'Copied!' : 'Copy Code'}
+                className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
+              >
+                {copiedField === 'code' ? (
+                  <Check size={13} className="text-emerald-500" />
+                ) : (
+                  <Copy size={13} className="text-muted hover:text-foreground" />
+                )}
+              </button>
+            </div>
+          ) : activeImage.id ? (
+            <div className="flex items-center gap-1.5">
+              <div
+                data-testid="portfolio-detail-code"
+                className="inline-block px-2.5 py-0.5 rounded bg-muted/40 text-muted font-mono font-bold text-xs border border-border"
+              >
+                #{activeImage.id.slice(0, 8)}
+              </div>
+              <button
+                type="button"
+                data-testid="portfolio-copy-code-btn"
+                onClick={() => handleCopy(activeImage.id, 'code')}
+                title={copiedField === 'code' ? 'Copied!' : 'Copy ID'}
+                className="p-0.5 rounded text-muted hover:text-foreground transition-colors cursor-pointer inline-flex items-center justify-center"
+              >
+                {copiedField === 'code' ? (
+                  <Check size={13} className="text-emerald-500" />
+                ) : (
+                  <Copy size={13} className="text-muted hover:text-foreground" />
+                )}
+              </button>
             </div>
           ) : <div />}
           <div className="flex items-center gap-1.5">
@@ -230,7 +279,40 @@ export function PortfolioDetail({
           </div>
         </div>
 
-        {!imageUrl || hasImageError ? (
+        {/* Tab Switcher */}
+        <div className="flex items-center p-1 bg-background rounded-lg border border-border mb-4">
+          <button
+            type="button"
+            data-testid="portfolio-detail-tab-info"
+            onClick={() => setActiveTab('details')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              activeTab === 'details'
+                ? 'bg-surface text-foreground shadow-2xs font-semibold'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            <ImageIcon size={14} />
+            <span>Details &amp; Info</span>
+          </button>
+          <button
+            type="button"
+            data-testid="portfolio-detail-tab-analytics"
+            onClick={() => setActiveTab('analytics')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-surface text-primary shadow-2xs font-semibold'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            <TrendingUp size={14} />
+            <span>Sales &amp; Analytics</span>
+          </button>
+        </div>
+
+        {activeTab === 'details' ? (
+          <div>
+            {!imageUrl || hasImageError ? (
+
           <div 
             data-testid="portfolio-detail-image-placeholder"
             className="relative w-full aspect-video bg-muted/40 rounded-md mb-4 overflow-hidden shrink-0 border border-border flex flex-col items-center justify-center gap-2 p-4 text-center"
@@ -503,6 +585,20 @@ export function PortfolioDetail({
           </div>
         </div>
       </div>
+      ) : (
+        <PortfolioAnalyticsTab
+          image={activeImage}
+          onLogSale={onLogSale}
+          top100AvgMonthlyEarnings={benchmarks?.top100AvgMonthlyEarnings}
+          top100AvgMonthlyDownloads={benchmarks?.top100AvgMonthlyDownloads}
+          portfolioAvgMonthlyEarnings={benchmarks?.portfolioAvgMonthlyEarnings}
+          portfolioAvgMonthlyDownloads={benchmarks?.portfolioAvgMonthlyDownloads}
+        />
+      )}
+    </div>
+
+
+
 
       {/* Delete Action at Bottom */}
       {onDelete && (

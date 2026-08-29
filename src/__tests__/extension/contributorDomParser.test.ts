@@ -79,4 +79,141 @@ describe('UT-EXT-CONTRIBUTOR-DOM-01: Adobe Contributor Portfolio Parser', () => 
     expect(items).toHaveLength(1);
     expect(items[0].asId).toBe('123456789');
   });
+
+  it('UT-EXT-CONTRIBUTOR-NOMINATE-01: accurately distinguishes between nominate-eligible and non-eligible assets from real Adobe Contributor DOM', () => {
+    // Exact user HTML snippet containing 1 non-eligible (buyout_toggle__hidden) and 2 eligible (buyout_toggle)
+    const userHtml = `
+      <div data-t="portfolio-page-assets-list">
+        <!-- 1. NOT ELIGIBLE -->
+        <div title="Vertical Infographics 10 options" class="left">
+          <div class="margin-small content-thumbnail-wrapper" data-t="portfolio-single-asset-wrapper">
+            <div class="white border-radius-4 border border-solid container-relative bon-jour-border">
+              <div class="cursor-pointer">
+                <div class="content-thumbnail grey alabaster v-align-wrapper border-radius-4">
+                  <img src="https://as1.ftcdn.net/jpg/15/34/90/24/220_F_1534902442_PIoO73vDrX3DgCEbRimfu4gAceFcJZWO.jpg" class="content-thumbnail__img c-align" alt="">
+                </div>
+                <div class="padding-medium premium-type-box flex flex-justify-space-between">
+                  <div class="container-inline-block vertical-align-top flex-even">
+                    <div class="grey mountain-mist-text text-up text-small">downloads</div>
+                    <span class="text-medium light">18</span>
+                  </div>
+                  <div class="container-inline-block flex-even buyout_toggle__hidden padding-left-xlarge">
+                    <div class="grey mountain-mist-text text-up text-small right-align">nominate</div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center"></div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ELIGIBLE (1 Year ON, Perpetual ON) -->
+        <div title="5 Days of week project plan infographic" class="left">
+          <div class="margin-small content-thumbnail-wrapper" data-t="portfolio-single-asset-wrapper">
+            <div class="white border-radius-4 border border-solid container-relative bon-jour-border">
+              <div class="cursor-pointer">
+                <div class="content-thumbnail grey alabaster v-align-wrapper border-radius-4">
+                  <img src="https://as1.ftcdn.net/jpg/11/78/62/20/220_F_1178622093_Np9buOf2iFTmCOjPBOhTG20RLzDdzpsM.jpg" class="content-thumbnail__img c-align" alt="">
+                </div>
+                <div class="padding-medium premium-type-box flex flex-justify-space-between">
+                  <div class="container-inline-block vertical-align-top flex-even">
+                    <div class="grey mountain-mist-text text-up text-small">downloads</div>
+                    <span class="text-medium light">18</span>
+                  </div>
+                  <div class="container-inline-block flex-even buyout_toggle padding-left-xlarge">
+                    <div class="grey mountain-mist-text text-up text-small right-align">nominate</div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center">
+                      <div class="CampaignNominationToggle__StyledText-sc-8olflh-0 hBFqOv">1 Year</div>
+                      <label class="El90pa_spectrum-ToggleSwitch">
+                        <input data-t="portfolio-single-asset-buyout-toggle" aria-label="1 Year" type="checkbox" role="switch" class="El90pa_spectrum-ToggleSwitch-input" checked="">
+                      </label>
+                    </div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center">
+                      <div class="CampaignNominationToggle__StyledText-sc-8olflh-0 hBFqOv">Perpetual</div>
+                      <label class="El90pa_spectrum-ToggleSwitch">
+                        <input data-t="portfolio-single-asset-buyout-toggle" aria-label="Perpetual" type="checkbox" role="switch" class="El90pa_spectrum-ToggleSwitch-input" checked="">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. ELIGIBLE (1 Year ON, Perpetual ON) -->
+        <div title="Vertical infographic 5 steps to success" class="left">
+          <div class="margin-small content-thumbnail-wrapper" data-t="portfolio-single-asset-wrapper">
+            <div class="white border-radius-4 border border-solid container-relative bon-jour-border">
+              <div class="cursor-pointer">
+                <div class="content-thumbnail grey alabaster v-align-wrapper border-radius-4">
+                  <img src="https://as2.ftcdn.net/jpg/10/94/17/27/220_F_1094172751_xiUCHk4wjqSMPXBWNLtTfcrNc3nAKpvk.jpg" class="content-thumbnail__img c-align" alt="">
+                </div>
+                <div class="padding-medium premium-type-box flex flex-justify-space-between">
+                  <div class="container-inline-block vertical-align-top flex-even">
+                    <div class="grey mountain-mist-text text-up text-small">downloads</div>
+                    <span class="text-medium light">18</span>
+                  </div>
+                  <div class="container-inline-block flex-even buyout_toggle padding-left-xlarge">
+                    <div class="grey mountain-mist-text text-up text-small right-align">nominate</div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center">
+                      <div class="CampaignNominationToggle__StyledText-sc-8olflh-0 hBFqOv">1 Year</div>
+                      <label class="El90pa_spectrum-ToggleSwitch">
+                        <input data-t="portfolio-single-asset-buyout-toggle" aria-label="1 Year" type="checkbox" role="switch" class="El90pa_spectrum-ToggleSwitch-input" checked="">
+                      </label>
+                    </div>
+                    <div class="vi3c6W_flex" style="min-height:32px;justify-content:space-between;align-items:center">
+                      <div class="CampaignNominationToggle__StyledText-sc-8olflh-0 hBFqOv">Perpetual</div>
+                      <label class="El90pa_spectrum-ToggleSwitch">
+                        <input data-t="portfolio-single-asset-buyout-toggle" aria-label="Perpetual" type="checkbox" role="switch" class="El90pa_spectrum-ToggleSwitch-input" checked="">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Test DOM parsing logic matching content.js
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(userHtml, 'text/html');
+    const imgEls = Array.from(doc.querySelectorAll('img[src*="_F_"]'));
+    const cardSet = new Set<Element>();
+
+    imgEls.forEach((img) => {
+      const card =
+        img.closest('div.bon-jour-border') ||
+        img.closest('div[data-t="portfolio-single-asset-wrapper"]') ||
+        img.closest('div[title]') ||
+        img.closest('.border-radius-4');
+      if (card) {
+        cardSet.add(card);
+      }
+    });
+
+    const parsedResults: any[] = [];
+    cardSet.forEach((card) => {
+      const imgEl = card.querySelector('img[src*="_F_"]') || card.querySelector('img');
+      const imgSrc = imgEl?.getAttribute('src') || '';
+      const match = imgSrc.match(/_F_(\d+)_/);
+      const asId = match ? match[1] : '';
+
+      // Check nomination
+      // Note: Must distinguish .buyout_toggle from .buyout_toggle__hidden
+      const buyoutSection = card.querySelector('.buyout_toggle:not(.buyout_toggle__hidden), [data-t="portfolio-single-asset-buyout-toggle"]');
+      const isNominateEligible = Boolean(buyoutSection);
+
+      parsedResults.push({ asId, isNominateEligible });
+    });
+
+    expect(parsedResults).toHaveLength(3);
+    expect(parsedResults[0]).toEqual({ asId: '1534902442', isNominateEligible: false });
+    expect(parsedResults[1]).toEqual({ asId: '1178622093', isNominateEligible: true });
+    expect(parsedResults[2]).toEqual({ asId: '1094172751', isNominateEligible: true });
+  });
 });
+

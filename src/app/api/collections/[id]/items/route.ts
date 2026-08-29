@@ -18,40 +18,80 @@ export async function POST(
     }
 
     const body = await request.json();
-    const rawIds = body.imageIds || (body.imageId ? [body.imageId] : []);
+    const rawTokens = [
+      ...(Array.isArray(body.imageIds) ? body.imageIds : body.imageId ? [body.imageId] : []),
+      ...(Array.isArray(body.asIds) ? body.asIds : body.asId ? [body.asId] : []),
+      ...(Array.isArray(body.codes) ? body.codes : body.code ? [body.code] : []),
+      ...(Array.isArray(body.identifiers) ? body.identifiers : []),
+      ...(Array.isArray(body.tokens) ? body.tokens : []),
+    ];
     
-    if (!Array.isArray(rawIds) || rawIds.length === 0) {
-      return NextResponse.json({ error: 'At least one image ID is required' }, { status: 400 });
+    const uniqueTokens = Array.from(
+      new Set(
+        rawTokens
+          .map((x) => (typeof x === 'string' || typeof x === 'number' ? String(x).trim() : ''))
+          .filter(Boolean)
+      )
+    );
+
+    if (uniqueTokens.length === 0) {
+      return NextResponse.json({ error: 'At least one image ID or identifier is required' }, { status: 400 });
     }
 
-    const imageIds = Array.from(new Set(rawIds.filter((x) => typeof x === 'string' && x.trim())));
+    // Universal resolution across CUID id, Adobe asId, Image code, Shutterstock ssId, Vecteezy vzId
+    // Chunking tokens to avoid SQLite P2029 parameter limit (max 999 host variables)
+    const CHUNK_SIZE = 100;
+    const matchedImagesMap = new Map<string, { id: string; asId: string | null; code: string | null }>();
 
-    // Check which images exist
-    const existingImages = await prisma.image.findMany({
-      where: { id: { in: imageIds } },
-      select: { id: true },
-    });
-    const validImageIds = existingImages.map((img) => img.id);
+    for (let i = 0; i < uniqueTokens.length; i += CHUNK_SIZE) {
+      const chunk = uniqueTokens.slice(i, i + CHUNK_SIZE);
+      const chunkMatches = await prisma.image.findMany({
+        where: {
+          OR: [
+            { id: { in: chunk } },
+            { asId: { in: chunk } },
+            { code: { in: chunk } },
+            { ssId: { in: chunk } },
+            { vzId: { in: chunk } },
+          ],
+        },
+        select: { id: true, asId: true, code: true },
+      });
 
-    // Get existing collection items to avoid duplicates
-    const existingItems = await prisma.collectionItem.findMany({
-      where: {
-        collectionId: id,
-        imageId: { in: validImageIds },
-      },
-      select: { imageId: true },
-    });
-    const existingSet = new Set(existingItems.map((it) => it.imageId));
+      chunkMatches.forEach((img) => {
+        matchedImagesMap.set(img.id, img);
+      });
+    }
+
+    const validImageIds = Array.from(matchedImagesMap.keys());
+
+    // Get existing collection items in chunks to avoid duplicates and SQLite parameter limits
+    const existingSet = new Set<string>();
+    for (let i = 0; i < validImageIds.length; i += CHUNK_SIZE) {
+      const chunk = validImageIds.slice(i, i + CHUNK_SIZE);
+      const existingItems = await prisma.collectionItem.findMany({
+        where: {
+          collectionId: id,
+          imageId: { in: chunk },
+        },
+        select: { imageId: true },
+      });
+      existingItems.forEach((it) => existingSet.add(it.imageId));
+    }
 
     const newImageIds = validImageIds.filter((imgId) => !existingSet.has(imgId));
 
     if (newImageIds.length > 0) {
-      await prisma.collectionItem.createMany({
-        data: newImageIds.map((imageId) => ({
-          collectionId: id,
-          imageId,
-        })),
-      });
+      // Chunk insert into CollectionItem
+      for (let i = 0; i < newImageIds.length; i += CHUNK_SIZE) {
+        const chunk = newImageIds.slice(i, i + CHUNK_SIZE);
+        await prisma.collectionItem.createMany({
+          data: chunk.map((imageId) => ({
+            collectionId: id,
+            imageId,
+          })),
+        });
+      }
 
       // Schedule debounced auto-backup after adding items
       scheduleAutoBackup();
@@ -59,7 +99,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      matchedCount: validImageIds.length,
       addedCount: newImageIds.length,
+      alreadyInCollectionCount: validImageIds.length - newImageIds.length,
+      notFoundCount: Math.max(0, uniqueTokens.length - validImageIds.length),
       collectionId: id,
     });
   } catch (error) {

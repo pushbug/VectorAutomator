@@ -53,6 +53,8 @@
 | `UT-UI-SALES-UNLINKED-FILTER-01` | Verify selecting Unlinked filter button triggers onPlatformFilterChange with unlinked and filters imageId=null | `src/__tests__/components/SalesComponents.test.tsx` |
 | `UT-UI-SALES-SMART-PASTE-LIVE-STATS-01` | Verify real-time detected items count and estimated total revenue on paste in SmartPasteModal | `src/__tests__/components/SalesComponents.test.tsx` |
 | `UT-UI-PORTFOLIO-DETAIL-EARNINGS-01` | Verify total revenue and per-platform breakdown rendering in PortfolioDetail | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-UI-PORTFOLIO-DETAIL-COPY-PLATFORM-01` | Verify platform asset ID clipboard copy action and feedback in PortfolioDetail | `src/__tests__/components/PortfolioGrid.test.tsx` |
+| `UT-UI-PORTFOLIO-DETAIL-COPY-CODE-01` | Verify image code / ID clipboard copy action and feedback in PortfolioDetail | `src/__tests__/components/PortfolioGrid.test.tsx` |
 | `UT-API-PF-SUMMARY-01` | Verify Portfolio API computes and returns totalImages, totalDownloads, and totalEarnings in summary | `src/__tests__/api/portfolio.test.ts` |
 | `UT-UI-PORTFOLIO-SUMMARY-01` | Verify PortfolioPage renders summary bar with artworks count, downloads, and revenue | `src/__tests__/components/PortfolioGrid.test.tsx` |
 | `UT-API-SALES-BATCH-01` | Verify batch delete API permanently deletes selected platformStats and syncs image rollups | `src/__tests__/api/sales_batch.test.ts` |
@@ -122,6 +124,18 @@
 | `UT-API-PORTFOLIO-AUTO-SYNC-01` | Verify GET /api/portfolio auto-syncs physical files on page 1 without search, bypasses on pagination/filter, and handles disk errors safely | `src/__tests__/api/portfolio.test.ts` |
 | `UT-EXT-SALES-TSV-01` | Verify formatSalesClipboardTsv generates valid TSV with Date headers, tabbed columns, and fallbacks | `src/__tests__/extension/salesDomParser.test.ts` |
 | `UT-EXT-SALES-AUTOCOPY-01` | Verify formatted sales TSV payload parity with stockPasteParser and statement date detection | `src/__tests__/extension/salesDomParser.test.ts` |
+| `UT-API-COLLECTION-IMPORT-ASID-01` | Verify POST /api/collections/[id]/items universal identifier resolution (asId, code, ssId, id) and deduplicated batch insertion | `src/__tests__/api/collections.test.ts` |
+| `UT-UI-COLLECTION-IMPORT-MODAL-01` | Verify ImportByIdsModal universal delimiter parsing (commas, newlines, tabs), live token count, and batch submission | `src/__tests__/components/ImportByIdsModal.test.tsx` |
+| `UT-LIB-BACKUP-WAL-01` | Verify synchronous SQLite WAL checkpointing and non-existent DB path fallback handling | `src/__tests__/lib/dbBackup.test.ts` |
+| `UT-LIB-BACKUP-PURGE-01` | Verify orphan temp snapshot purging and atomic restore with stale WAL/SHM file unlinking | `src/__tests__/lib/dbBackup.test.ts` |
+| `UT-UI-PF-TAB-01` | Verify PortfolioDetail dual-tab navigation (Details & Info vs Sales & Analytics) and tab state transitions | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
+| `UT-UI-PF-ANALYTICS-01` | Verify PortfolioAnalyticsTab monthly time-series aggregation, velocity status badge mapping, metric toggling, benchmark line, and chronological sales log rendering | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
+| `UT-API-PF-BENCHMARK-01` | Verify /api/portfolio computes dynamic Top 100 and portfolio monthly average earnings and downloads | `src/__tests__/api/portfolio.test.ts` |
+| `UT-API-PF-BENCHMARK-FILTER-01` | Verify /api/portfolio calculates global benchmarks from full dataset when search filter is active | `src/__tests__/api/portfolio.test.ts` |
+| `UT-UI-PF-BENCHMARK-01` | Verify PortfolioAnalyticsTab renders Top 100 and Portfolio Avg benchmark comparison cards with reactive metric toggle | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
+
+
+
 
 ## E2E Tests
 | Test ID | Description | Target |

@@ -59,6 +59,11 @@ Implemented in `prisma/schema.prisma` via a relational many-to-many join archite
 
 ### 3. Collection Detail & Shared Keywords (`/collections/[id]`)
 - Metric Bar: Total Artworks, Total Downloads, Total Revenue, Avg RPI.
+- **Batch Import by IDs Action (`ImportByIdsModal.tsx`):**
+  - Dedicated `[+ Import by IDs]` header action button.
+  - Universal Delimiter Parser: Tokenizes multiline text, comma-separated lists, tabbed Excel columns, or space-delimited IDs.
+  - Multi-Identifier Resolution: Automatically matches across Adobe Asset IDs (`asId`), Internal Image Codes (`code`), Shutterstock IDs (`ssId`), and CUIDs (`id`).
+  - Safe Batch Commit: Deduplicates inputs and skips assets already present in the collection, returning matched and added counts.
 - Edit Header Action: In-place pencil button opening `EditCollectionModal` to update name and description.
 - **Top 15 Shared Keywords Bar (`TopSharedKeywordsBar.tsx`):**
   - Segmented View Mode Toggle: `Frequency` (occurrence count), `Downloads` (total volume), `Revenue` (accumulated dollars).
@@ -66,10 +71,14 @@ Implemented in `prisma/schema.prisma` via a relational many-to-many join archite
   - Formatted chip badges displaying the active metric (`dl`, `$`, or count).
   - **Click-to-Filter Drill-Down:** Clicking any keyword chip filters the image grid below to show only assets containing that tag with an active filter badge and reset button.
   - Adaptive 1-click clipboard export (`Copy Top 15 Keywords`, `Copy Top 15 by Downloads`, `Copy Top 15 by Revenue`).
+- **Artwork Inspection Drawer (`PortfolioDetail.tsx`):**
+  - Clicking any artwork opens the right-hand `PortfolioDetail` drawer with full Dual-Tab functionality (`Details & Info` and `Sales & Analytics`).
+  - Automatically loads and binds global portfolio benchmarks (`Top 100 Avg`, `Port Avg`) and chronological sales logs (`stats`).
 - **Artwork Grid Actions:**
   - `⭐ Set Cover`: 1-click button on artwork card hover to set collection cover image.
   - `Cover` badge indicating the current primary cover asset.
   - `[X]` button to remove artwork item from the collection.
+
 
 ### 4. API Endpoints
 - `GET /api/collections`: List collections with computed rollups and cover previews.
@@ -77,5 +86,5 @@ Implemented in `prisma/schema.prisma` via a relational many-to-many join archite
 - `GET /api/collections/[id]`: Retrieve single collection with image list, summary metrics, and full calculated keyword rollups.
 - `PATCH /api/collections/[id]`: Update collection metadata (`name`, `description`, `coverId`).
 - `DELETE /api/collections/[id]`: Cascade-delete collection.
-- `POST /api/collections/[id]/items`: Batch add images to collection.
+- `POST /api/collections/[id]/items`: Universal batch add images to collection (accepts `tokens`, `asIds`, `codes`, `ssIds`, or `imageIds`).
 - `DELETE /api/collections/[id]/items`: Remove single image from collection.

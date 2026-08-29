@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TopSharedKeywordsBar, type KeywordViewMode } from '@/components/collections/TopSharedKeywordsBar';
 import { EditCollectionModal } from '@/components/collections/EditCollectionModal';
+import { ImportByIdsModal } from '@/components/collections/ImportByIdsModal';
 import { PortfolioDetail } from '@/components/portfolio/PortfolioDetail';
 import { DeleteConfirmDialog } from '@/components/portfolio/DeleteConfirmDialog';
 import { 
@@ -20,7 +21,8 @@ import {
   Image as ImageIcon,
   Star,
   Pencil,
-  Tag
+  Tag,
+  UploadCloud
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatDisplayDate, getImageUrl } from '@/lib/formatters';
 
@@ -37,11 +39,19 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
   const [keywordViewMode, setKeywordViewMode] = useState<KeywordViewMode>('frequency');
   const [itemToRemove, setItemToRemove] = useState<any | null>(null);
+  const [benchmarks, setBenchmarks] = useState<{
+    top100AvgMonthlyEarnings?: number;
+    top100AvgMonthlyDownloads?: number;
+    portfolioAvgMonthlyEarnings?: number;
+    portfolioAvgMonthlyDownloads?: number;
+  }>({});
 
   const images = collection?.images || [];
+
 
   const filteredImages = useMemo(() => {
     let list = images;
@@ -107,6 +117,23 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     fetchCollection();
   }, [fetchCollection]);
+
+  useEffect(() => {
+    fetch('/api/portfolio?limit=1')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.summary) {
+          setBenchmarks({
+            top100AvgMonthlyEarnings: data.summary.top100AvgMonthlyEarnings,
+            top100AvgMonthlyDownloads: data.summary.top100AvgMonthlyDownloads,
+            portfolioAvgMonthlyEarnings: data.summary.portfolioAvgMonthlyEarnings,
+            portfolioAvgMonthlyDownloads: data.summary.portfolioAvgMonthlyDownloads,
+          });
+        }
+      })
+      .catch((err) => console.error('Failed to load portfolio benchmarks:', err));
+  }, []);
+
 
   const handleSetCover = async (imageId: string) => {
     try {
@@ -231,15 +258,27 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
-          <button
-            type="button"
-            data-testid="collection-detail-delete-btn"
-            onClick={() => setIsDeletingCollection(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 border border-destructive/20 rounded-lg transition-colors cursor-pointer shrink-0"
-          >
-            <Trash2 size={14} />
-            <span className="hidden sm:inline">Delete Collection</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              data-testid="collection-import-ids-btn"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors cursor-pointer shrink-0 shadow-2xs"
+              title="Import artworks into collection by Asset IDs or Image Codes"
+            >
+              <UploadCloud size={14} />
+              <span>Import by IDs</span>
+            </button>
+            <button
+              type="button"
+              data-testid="collection-detail-delete-btn"
+              onClick={() => setIsDeletingCollection(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 border border-destructive/20 rounded-lg transition-colors cursor-pointer shrink-0"
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">Delete Collection</span>
+            </button>
+          </div>
         </div>
 
         {/* Collection Metric KPI Bar */}
@@ -459,9 +498,11 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
         {selectedImage && (
           <PortfolioDetail
             image={selectedImage}
+            benchmarks={benchmarks}
             onClose={() => setSelectedImage(null)}
           />
         )}
+
       </div>
 
       {/* Edit Collection Modal */}
@@ -482,6 +523,17 @@ export default function CollectionDetailPage({ params }: { params: Promise<{ id:
         description={`Are you sure you want to delete "${collection.name}"? This will only remove the group. All artworks will remain in your portfolio.`}
         onConfirm={handleDeleteCollection}
         onCancel={() => setIsDeletingCollection(false)}
+      />
+
+      {/* Import Artworks by IDs Modal */}
+      <ImportByIdsModal
+        isOpen={isImportModalOpen}
+        collectionId={collectionId}
+        collectionName={collection?.name}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={async (result) => {
+          await fetchCollection();
+        }}
       />
 
       {/* Remove Item from Collection Confirmation */}

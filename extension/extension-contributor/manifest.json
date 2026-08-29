@@ -5,7 +5,8 @@
   "description": "1-Click Extractor for Adobe Stock Contributor portfolio metadata, IDs, and downloads.",
   "permissions": [
     "activeTab",
-    "clipboardWrite"
+    "clipboardWrite",
+    "scripting"
   ],
   "host_permissions": [
     "*://contributor.stock.adobe.com/*"

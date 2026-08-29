@@ -86,6 +86,7 @@ export async function GET(
           asDownloads: img.asDownloads,
           totalDownloads: img.totalDownloads,
           totalEarnings: imgEarnings,
+          stats: img.stats || [],
           createdAt: img.createdAt,
           addedAt: it.addedAt,
         };

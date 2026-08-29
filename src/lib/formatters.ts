@@ -73,6 +73,23 @@ export function formatDisplayDate(dateStr: string | null | undefined): string {
   return dateStr;
 }
 
+/**
+ * Safely formats any Date object or ISO date string into standard "MMM D, YYYY" format (e.g. "Aug 20, 2026").
+ * Returns 'None' if date is null/undefined/empty.
+ */
+export function formatDateSafe(d: string | Date | null | undefined): string {
+  if (!d) return 'None';
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(dateObj.getTime())) return String(d);
+  return dateObj.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+
+
 export interface PlatformStatItem {
   platform: string;
   downloads?: number | null;

@@ -99,6 +99,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `dash-action-sales` | Quick launch link to Sales & Earnings module |
 | `dash-recent-item-{id}` | Recent vector item row in Dashboard activity grid |
 | `dash-top-item-{id}` | Top performing vector item row in Dashboard activity grid |
+| `portfolio-copy-code-btn` | Button next to Image Code/ID badge in Portfolio Detail to copy code or ID |
 | `portfolio-copy-title-btn` | Button next to Title in Portfolio Detail to copy title text |
 | `portfolio-copy-keywords-btn` | Button next to Keywords in Portfolio Detail to copy keywords text |
 | `portfolio-copy-platform-id-{platform}-btn` | Button next to Platform badge in Portfolio Detail to copy platform asset ID |
@@ -247,6 +248,16 @@ Always use `data-testid` for element selection in E2E tests.
 | `add-to-collection-modal` | Modal dialog for adding selected artworks to an existing collection |
 | `add-to-collection-select` | Destination collection select dropdown in Add to Collection modal |
 | `add-to-collection-submit-btn` | Submit button inside Add to Collection modal |
+| `collection-import-ids-btn` | Button in Collection detail header to open Import Artworks by IDs modal |
+| `collection-import-ids-modal` | Modal dialog for batch pasting and importing artworks by IDs or codes |
+| `collection-import-ids-textarea` | Textarea for pasting universal IDs/codes inside ImportByIdsModal |
+| `collection-import-ids-submit-btn` | Submit button to trigger batch import inside ImportByIdsModal |
+| `collection-import-ids-close-btn` | Close button inside ImportByIdsModal header |
+| `contributor-copy-nominate-ids-btn` | Button in Adobe Contributor Extension popup to copy only nominate-eligible Asset IDs |
+| `contributor-copy-all-ids-btn` | Button in Adobe Contributor Extension popup to copy all Asset IDs on page |
+| `contributor-copy-tsv-btn` | Button in Adobe Contributor Extension popup to copy TSV table with nominate status |
+| `contributor-download-csv-btn` | Button in Adobe Contributor Extension popup to download CSV file |
+| `contributor-copy-json-btn` | Button in Adobe Contributor Extension popup to copy JSON payload |
 | `payout-kpi-realized-thb` | The KPI card display for total realized net income (THB) in Payouts |
 | `payout-kpi-holding-usd` | The KPI card display for total USD holding in payment platforms in Payouts |
 | `payout-kpi-total-fees` | The KPI card display for total platform fees in Payouts |
@@ -300,7 +311,16 @@ Always use `data-testid` for element selection in E2E tests.
 | `portfolio-id-status-select` | The dropdown select to filter by platform ID status and image file status in portfolio dashboard |
 | `portfolio-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio grid |
 | `portfolio-detail-image-placeholder` | Graceful placeholder box rendered when artwork image is missing or corrupt in Portfolio detail |
-| `portfolio-sync-files-btn` | *(Deprecated/Removed)* Previously used to manually trigger scanning and linking of physical upload files; replaced by backend auto-sync in GET /api/portfolio |
+| `portfolio-detail-tab-info` | Button to switch to Details & Info tab in PortfolioDetail drawer |
+| `portfolio-detail-tab-analytics` | Button to switch to Sales & Analytics tab in PortfolioDetail drawer |
+| `portfolio-analytics-status-badge` | Health and velocity status badge (Rising, Evergreen, Decaying, Untested) in Tab 2 |
+| `portfolio-analytics-trend-chart` | SVG container for monthly sales and downloads trend chart in Tab 2 |
+| `portfolio-analytics-metric-toggle` | Toggle button group to switch chart between Earnings ($) and Downloads |
+| `portfolio-analytics-sales-table` | Chronological sales history log table container for the selected artwork |
+| `portfolio-analytics-benchmark-top100` | Interactive legend toggle button and reference line for Top 100 Best Sellers benchmark |
+| `portfolio-analytics-benchmark-portavg` | Interactive legend toggle button and reference line for Portfolio Average benchmark |
+
+
 
 
 

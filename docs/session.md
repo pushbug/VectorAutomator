@@ -1,29 +1,27 @@
-### Goal: SERP Table Multi-Column Sorting, 100-Item Pagination, Form Lifecycle Reset, and Extension Silent Clipboard Fallback.
+### Goal: Dual-Tab Portfolio Analytics, Frameless Time-Series Trend Charts, and Persistent Global Benchmarks.
 
 ### Status: COMPLETE
 
 ### Done:
-- Implemented multi-column sorting in `GET /api/serp` and `SerpTable` for Date, Keyword, Rank, Rank Change, Downloads, and Total Revenue with visual sort indicators (`ArrowUpDown`, `ArrowUp`, `ArrowDown`).
-- Added 100 items per page pagination support in `/serp` integrated with `PaginationCapsule` and auto-clearing row selection.
-- Fixed table header layout clipping on the ACTION column (`min-w-24`, `pr-6`) and prevented keyword column wrapping (`min-w-44`, `whitespace-nowrap`).
-- Implemented complete form lifecycle reset in `SmartSerpPasteModal` upon "Paste Another", submission completion, cancel, and backdrop dismissal.
-- Mapped `matchedImage` relation in `POST /api/serp/paste-sync` and resolved thumbnails via `getImageUrl` with `thumbnailUrl` fallback in `SerpTable` and `SmartSerpPasteModal`.
-- Refactored `copyToClipboardSafe` in `extension/extension-sales` to check `document.hasFocus()` and silently fallback to `document.execCommand('copy')` without emitting noisy `console.warn` logs.
-- Added tests `UT-API-SERP-SORT-01` and `UT-UI-SERP-TABLE-SORT-01`, verified all 51 test suites and 329 unit tests passing with 0 TypeScript errors.
-- Documented ADR-024 in `docs/decisions.md`, registered test IDs in `docs/tests/CATALOG.md`, and updated `docs/features/serp_tracking.md`.
+- Implemented Dual-Tab Architecture (`Details & Info` vs `Sales & Analytics`) in `PortfolioDetail` preserving metadata state.
+- Built frameless interactive SVG monthly trend chart with dual metric toggle (Earnings $ vs Downloads) and gradient area fill.
+- Created compact single-line Monthly Benchmarks Comparison strip comparing `This Image` vs `Top 100 Avg` (amber) vs `Port Avg` (slate) with reactive metric unit toggling ($ / dl).
+- Decoupled Top 100 and Portfolio Average calculations in `GET /api/portfolio` to query global datasets, ensuring benchmarks remain persistent during search/filter queries.
+- Integrated artwork `stats` and global benchmarks into `CollectionDetailPage` for full analytical drill-down on collection assets.
+- Centralized `formatDateSafe` helper in `src/lib/formatters.ts` and added unit test.
+- Added test suites `UT-UI-PF-TAB-01`, `UT-UI-PF-ANALYTICS-01`, `UT-API-PF-BENCHMARK-01`, `UT-API-PF-BENCHMARK-FILTER-01`, `UT-UI-PF-BENCHMARK-01`, verified all 53 test suites and 347 unit tests passing with 0 TypeScript errors.
 
 ### Next:
-- 1. Reload the Chrome extension in `chrome://extensions` and clear old history logs.
-- 2. Utilize the SERP rankings dashboard with multi-column sorting and 100-item pagination.
+- 1. View artwork performance analytics and benchmark comparisons directly within Portfolio and Collection drawers.
+- 2. Import new sales statements via Smart Paste to observe real-time benchmark updates.
 
 ### Decisions:
-- Multi-Column In-Memory and DB Sorting: Sort enriched derived metrics (revenue, rank delta) safely in-memory while preserving query limits.
-- Form Lifecycle Reset: Ingestion modals must wipe all input state upon explicit completion, paste another, or modal close to allow immediate subsequent imports.
-- Silent Extension Clipboard Fallback: Never emit `console.warn` on expected browser clipboard permission fallbacks to avoid polluting Chrome's extension error logger.
+- Global Benchmark Persistence: Performance benchmarks (Top 100 Best Sellers and Portfolio Average) must reflect true portfolio-wide baseline metrics regardless of active search queries or filters.
+- Frameless Flat Chart Canvas: Trend charts should render directly on parent background without nested outer borders to maximize visual space and focus on growth curves.
+- Single-Line KPI Badges: Display download count icon and dollar amount on a single horizontal row for optimal vertical compactness and legibility.
 
 ### Skills:
-- [`debug`](.agents/skills/debug/SKILL.md) — Root cause analysis of Chrome Extension clipboard DOMException error logs.
-- [`plan`](.agents/skills/plan/SKILL.md) — Specification and test mapping for SERP sorting, pagination, and modal reset.
-- [`coding`](.agents/skills/coding/SKILL.md) — Surgical implementation of sorting, layout balancing, lifecycle reset, and extension fallback.
+- [`plan`](.agents/skills/plan/SKILL.md) — Specification and test mapping for portfolio analytics and global benchmarks.
+- [`coding`](.agents/skills/coding/SKILL.md) — Surgical implementation of SVG trend charts, benchmark cards, and API rollups.
 - [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Deep architectural audit, code quality verification, and full regression testing.
 - [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, ADR documentation, and git synchronization.
