@@ -65,6 +65,11 @@ The **Upload & Keyword Suggestion** workflow (`/upload`) provides paired vector 
   - `DL` (`metadata-keywords-sort-dl-btn`): Sorts by total portfolio downloads (toggles High→Low ↓ vs Low→High ↑).
   - `$` (`metadata-keywords-sort-rev-btn`): Sorts by total accumulated revenue (toggles High→Low ↓ vs Low→High ↑).
   - `A-Z` (`metadata-keywords-sort-alpha-btn`): Sorts alphabetical (toggles A→Z vs Z→A).
+- **Drag-and-Drop Keyword Reordering (Original Mode Only)**:
+  - When in `Original` sort mode, each keyword row displays a vertical grip handle (`metadata-keyword-drag-handle-{keyword}`).
+  - Users can drag and drop keyword rows to custom rearrange their priority sequence before saving.
+  - On drop, the reordered array updates `activeAsset.keywords` directly, ensuring exact preservation during ExifTool EPS metadata embedding.
+  - Dragging is suppressed in dynamic metric sort modes (`Downloads`, `Earnings`, `A-Z`) to prevent conflict with auto-calculated analytics rankings.
 - **CSV Output & EXIF Contract**: Copying to clipboard and saving metadata always joins keywords using standard comma separation (`, `) respecting the active sort order.
 
 ## Key Components & Files

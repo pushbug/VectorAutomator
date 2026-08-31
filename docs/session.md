@@ -1,26 +1,25 @@
-### Goal: Collection Detail Multi-Attribute Instant Search, Active Filter Badges, and E2E Test Suite Hardening.
+### Goal: MetadataEditor Drag-and-Drop Keyword Reordering in Original Mode, E2E Stability, and Selector Parity.
 
 ### Status: COMPLETE
 
 ### Done:
-- Implemented responsive Search input in `TopSharedKeywordsBar` toolbar header with clear button and modern styling.
-- Added multi-attribute real-time client-side search filtering across Title, Code, asId, ssId, vzId, DB ID, and Keywords in `CollectionDetailPage`.
-- Built interactive filter badge strip showing distinct active search query pills and tag filter pills with individual clear actions and a unified Clear All Filters control.
-- Extended `src/__tests__/setup.ts` with global App Router `next/navigation` mocks (`useRouter`, `usePathname`, `useSearchParams`).
-- Registered all search selectors and test IDs in `docs/tests/SELECTORS.md` and `docs/tests/CATALOG.md`.
-- Expanded Playwright E2E suite `e2e/collections.spec.ts` (`E2E-COL-02`) and added unit test suites `UT-UI-COLLECTION-DETAIL-03` and `UT-UI-COLLECTION-DETAIL-04`.
-- Verified all 53 test suites (349 unit tests) pass with 0 TypeScript errors.
+- Implemented native HTML5 Drag-and-Drop keyword reordering with vertical grip handles in `src/components/upload/MetadataEditor.tsx` when `sortBy === 'original'`.
+- Guaranteed direct state mutation of `activeAsset.keywords` on drop for 1:1 preservation in ExifTool EPS embeddings and `/api/upload` batch imports.
+- Suppressed drag reordering when dynamic analytics sorting (`Downloads`, `Earnings`, `Alphabetical`) is active.
+- Registered selectors and test cases in `docs/tests/SELECTORS.md`, `docs/tests/CATALOG.md`, and documented feature in `docs/features/keyword_suggest.md`.
+- Added unit test suite `UT-UI-METADATA-KEYWORD-REORDER-01` in `src/__tests__/components/MetadataEditor.test.tsx` and updated E2E test suites `e2e/upload.spec.ts` and `e2e/serp.spec.ts`.
+- Verified all 53 test suites (350 unit tests) pass with 0 TypeScript errors.
 
 ### Next:
-- 1. Search and filter collection artworks by title, image code, platform ID, or keyword in `/collections/[id]`.
-- 2. Explore nominee collection segmentation and 1-click clipboard export for Adobe Free Collection nominations.
+- 1. Explore nominee collection segmentation and 1-click clipboard export for Adobe Free Collection nominations.
+- 2. Implement bulk batch tag editing across multiple selected assets in `/upload` queue.
 
 ### Decisions:
-- Multi-Attribute In-Memory Filter: Real-time search executes client-side on collection images in `useMemo` matching across 7 metadata attributes without additional server roundtrips.
-- Harmonized Dual Filtering: Text search and Top Shared Keyword tag filters operate cooperatively with individual badges and single-click reset.
+- Native Drag-and-Drop Isolation: Drag reordering is restricted strictly to `Original` sort mode, maintaining state consistency without conflicting with computed metric rankings.
+- Zero External Bundle Overhead: Native HTML5 drag events (`dragStart`, `dragOver`, `drop`, `dragEnd`) eliminate the need for heavy third-party DND dependencies.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Specification and selector mapping for collection search.
-- [`coding`](.agents/skills/coding/SKILL.md) — Surgical implementation of search bar, multi-attribute filter, and unit tests.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Architectural audit, selector validation, and regression testing.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session wrap-up, ADR-026 logging, and git synchronization.
+- [`plan`](.agents/skills/plan/SKILL.md) — Architectural specification, selector mapping, and risk mitigation.
+- [`coding`](.agents/skills/coding/SKILL.md) — Surgical implementation of drag-and-drop handles, splice reordering, and unit tests.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — E2E gatekeeping, canonical class audit, and full regression verification.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, ADR-027 logging, and git synchronization.

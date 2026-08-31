@@ -128,6 +128,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `metadata-keywords-sort-rev-btn` | Button in MetadataEditor to sort keywords by total earnings ($) descending |
 | `metadata-keywords-sort-alpha-btn` | Button in MetadataEditor to sort keywords alphabetically (A-Z) |
 | `metadata-keyword-row-{keyword}` | Individual numbered keyword row in MetadataEditor (#1 - #50) |
+| `metadata-keyword-drag-handle-{keyword}` | Drag handle icon button to reorder individual keyword in MetadataEditor (Original mode only) |
 | `metadata-keyword-remove-btn-{keyword}` | Button to remove specific keyword in MetadataEditor |
 | `metadata-title-input` | Textarea for editing vector title in MetadataEditor |
 | `metadata-title-error` | Validation error message displayed under title input when saving without title |
@@ -296,6 +297,7 @@ Always use `data-testid` for element selection in E2E tests.
 | `serp-smart-paste-modal` | Modal dialog for pasting and previewing SERP search ranking results |
 | `serp-smart-paste-textarea` | Textarea for pasting TSV/CSV SERP clipboard data |
 | `serp-smart-paste-date-picker` | Date picker trigger inside Smart Paste SERP modal |
+| `serp-smart-paste-close-btn` | Close/cancel button inside Smart Paste SERP modal |
 | `serp-smart-paste-submit-btn` | Confirm button inside Smart Paste SERP modal |
 | `serp-table` | Table container displaying ranked portfolio artworks |
 | `serp-kpi-keywords` | KPI card display for total tracked keywords count |

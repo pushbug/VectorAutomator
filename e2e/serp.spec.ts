@@ -78,12 +78,11 @@ test.describe('Asset Rankings & SERP Telemetry (E2E-SERP-01)', () => {
     await pasteTextarea.fill(sampleTsv);
     await expect(page.getByText(/2 items parsed/i)).toBeVisible();
 
-    // Dismiss paste modal by clicking outside
-    await page.keyboard.press('Escape').catch(() => {});
-    const closeBtn = page.getByRole('button', { name: /Close/i }).first();
-    if (await closeBtn.isVisible()) {
-      await closeBtn.click();
-    }
+    // Dismiss paste modal
+    const closeBtn = page.getByTestId('serp-smart-paste-close-btn');
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    await expect(pasteModal).not.toBeVisible();
 
     // 7. Test Artwork History Drawer (if rows exist)
     const correlationBtn = page.locator('button[title*="Inspect Rank"]').first();

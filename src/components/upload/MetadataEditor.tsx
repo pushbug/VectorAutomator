@@ -1,6 +1,6 @@
 import { Asset } from "@/context/AssetContext";
 import { useState, useEffect, useMemo, KeyboardEvent, ClipboardEvent } from "react";
-import { X, Copy, Check, Download, DollarSign, ArrowDownAZ, Star } from "lucide-react";
+import { X, Copy, Check, Download, DollarSign, ArrowDownAZ, Star, GripVertical } from "lucide-react";
 import { copyToClipboard as copyToClipboardUtil } from "@/lib/clipboard";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 
@@ -30,6 +30,8 @@ export function MetadataEditor({
   const [sortBy, setSortBy] = useState<"original" | "alphabetical" | "downloads" | "earnings">("downloads");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [internalMetrics, setInternalMetrics] = useState<Record<string, KeywordMetricInfo>>({});
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setAttemptedSave(false);
@@ -183,6 +185,44 @@ export function MetadataEditor({
         .join(", ");
       onUpdateActiveAsset({ keywords: combined });
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    if (sortBy !== "original") return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    if (sortBy !== "original") return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetIndex: number) => {
+    if (sortBy !== "original") return;
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex || draggedIndex < 0 || targetIndex < 0) {
+      handleDragEnd();
+      return;
+    }
+
+    const updated = [...rawKeywordsList];
+    const [removed] = updated.splice(draggedIndex, 1);
+    if (removed) {
+      updated.splice(targetIndex, 0, removed);
+      onUpdateActiveAsset({ keywords: updated.join(", ") });
+    }
+    handleDragEnd();
   };
 
   if (!activeAsset) {
@@ -391,6 +431,9 @@ export function MetadataEditor({
             {/* Numbered Row List View */}
             <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 p-1">
               {sortedKeywordsList.map((keyword, index) => {
+                const isOriginal = sortBy === "original";
+                const isDragging = draggedIndex === index;
+                const isDragOver = dragOverIndex === index;
                 const metrics = activeMetricsMap[keyword.toLowerCase()];
                 const hasDl = (metrics?.totalDownloads || 0) > 0;
                 const hasEarn = (metrics?.totalEarnings || 0) > 0;
@@ -399,9 +442,29 @@ export function MetadataEditor({
                   <div
                     key={`${keyword}-${index}`}
                     data-testid={`metadata-keyword-row-${keyword}`}
-                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface border border-border hover:border-border/80 transition-colors text-xs text-foreground group select-none shadow-xs"
+                    draggable={isOriginal}
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, index)}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface border transition-all text-xs text-foreground group select-none shadow-xs ${
+                      isDragging
+                        ? 'opacity-40 border-dashed border-primary bg-primary/5'
+                        : isDragOver
+                        ? 'border-primary ring-1 ring-primary/40 bg-primary/5'
+                        : 'border-border hover:border-border/80'
+                    }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {isOriginal && (
+                        <div
+                          data-testid={`metadata-keyword-drag-handle-${keyword}`}
+                          className="text-muted/60 hover:text-foreground cursor-grab active:cursor-grabbing p-0.5 -ml-1 shrink-0 transition-colors"
+                          title="Drag to reorder keyword"
+                        >
+                          <GripVertical size={13} />
+                        </div>
+                      )}
                       <span className="text-[10px] font-mono text-muted/70 w-6 shrink-0 tabular-nums font-semibold">
                         #{index + 1}
                       </span>

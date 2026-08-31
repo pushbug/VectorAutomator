@@ -150,6 +150,7 @@ export function SmartSerpPasteModal({ isOpen, onClose, onSuccess }: SmartSerpPas
             </div>
           </div>
           <button
+            data-testid="serp-smart-paste-close-btn"
             onClick={handleClose}
             className="p-2 rounded-xl text-muted hover:bg-surface-hover hover:text-foreground transition-colors cursor-pointer"
           >

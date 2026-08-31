@@ -217,6 +217,18 @@
   4. **Test Suite Hardening:** Added unit test suites `UT-UI-COLLECTION-DETAIL-03` and `UT-UI-COLLECTION-DETAIL-04` in `Collections.test.tsx` and expanded Playwright E2E suite `e2e/collections.spec.ts` (`E2E-COL-02`). All 53 test suites and 349 unit tests pass with 0 TypeScript errors.
 - **Impact:** Enables instantaneous multi-attribute artwork search in collection detail views, preserves active view modes and tag filtering, and ensures 100% test automation coverage.
 
+## ADR-027: MetadataEditor Drag-and-Drop Keyword Reordering in Original Mode
+- **Date:** 2026-08-31
+- **Context:** Contributors preparing microstock vector assets need full control over the exact sequence of keywords before embedding into EPS files or importing to Portfolio, especially to prioritize the Top 5 to Top 10 crucial keywords for microstock search algorithms (e.g. Adobe Stock, Shutterstock). While dynamic metric sorting (Downloads, Earnings, A-Z) provides analytical insights, users required a friction-free way to manually reorder their keywords in Original sort mode.
+- **Decision:**
+  1. **Native HTML5 Drag-and-Drop (`MetadataEditor.tsx`):** Implemented lightweight native HTML5 drag-and-drop on numbered keyword rows when `sortBy === 'original'`, avoiding external bundle bloat (`dnd-kit` / `react-beautiful-dnd`).
+  2. **Direct State Mutation & EXIF / Import Preservation:** On drop, the reordered array splices elements into place and updates `activeAsset.keywords` directly, ensuring exact preservation when embedding ExifTool metadata or executing batch import to portfolio (`/api/upload`).
+  3. **Conditional Drag Suppression:** Suppressed drag handles and events in metric sorting modes (`Downloads`, `Earnings`, `Alphabetical`) to prevent conflicts with computed metric order.
+  4. **Automated Verification:** Added unit test suite `UT-UI-METADATA-KEYWORD-REORDER-01` in `MetadataEditor.test.tsx` and updated E2E test suites `e2e/upload.spec.ts` and `e2e/serp.spec.ts`. All 53 test suites (350 unit tests) pass with 0 TypeScript errors.
+- **Impact:** Provides microstock contributors with intuitive drag-and-drop keyword prioritization, maintaining 100% data fidelity across EXIF embedding and portfolio imports.
+
+
+
 
 
 

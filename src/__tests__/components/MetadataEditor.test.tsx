@@ -236,4 +236,78 @@ describe('MetadataEditor Component (UT-UI-METADATA-KEYWORD-GATE-01)', () => {
     expect(alphaDescRows[2]).toHaveAttribute('data-testid', 'metadata-keyword-row-beta');
     expect(alphaDescRows[3]).toHaveAttribute('data-testid', 'metadata-keyword-row-alpha');
   });
+
+  it('UT-UI-METADATA-KEYWORD-REORDER-01: supports drag-and-drop reordering in Original mode and suppresses drag handles in other modes', () => {
+    const onUpdateMock = vi.fn();
+    const testAsset: Asset = {
+      id: 'asset-drag-test',
+      baseName: '2608-04',
+      title: 'Drag Reorder Test',
+      keywords: 'first, second, third, fourth',
+      status: 'idle',
+    };
+
+    render(
+      <MetadataEditor
+        activeAsset={testAsset}
+        onUpdateActiveAsset={onUpdateMock}
+        onEmbedExifForAsset={vi.fn()}
+      />
+    );
+
+    // By default sortBy is 'downloads', drag handle should NOT be visible
+    expect(screen.queryByTestId('metadata-keyword-drag-handle-first')).not.toBeInTheDocument();
+
+    // Switch to Original mode
+    fireEvent.click(screen.getByTestId('metadata-keywords-sort-orig-btn'));
+
+    // In Original mode, drag handles should be rendered
+    const dragHandleFirst = screen.getByTestId('metadata-keyword-drag-handle-first');
+    const dragHandleThird = screen.getByTestId('metadata-keyword-drag-handle-third');
+    expect(dragHandleFirst).toBeInTheDocument();
+    expect(dragHandleThird).toBeInTheDocument();
+
+    const rowFirst = screen.getByTestId('metadata-keyword-row-first');
+    const rowThird = screen.getByTestId('metadata-keyword-row-third');
+
+    expect(rowFirst).toHaveAttribute('draggable', 'true');
+
+    // Simulate drag start on 'first' (index 0)
+    fireEvent.dragStart(rowFirst, {
+      dataTransfer: {
+        setData: vi.fn(),
+        effectAllowed: 'move'
+      }
+    });
+
+    // Simulate drag over 'third' (index 2)
+    fireEvent.dragOver(rowThird, {
+      dataTransfer: {
+        dropEffect: 'move'
+      }
+    });
+
+    // Simulate drop on 'third' (index 2)
+    fireEvent.drop(rowThird, {
+      dataTransfer: {
+        getData: vi.fn()
+      }
+    });
+
+    // Expected order after moving index 0 to index 2: second, third, first, fourth
+    expect(onUpdateMock).toHaveBeenCalledWith({
+      keywords: 'second, third, first, fourth'
+    });
+
+    // Test dropping on the same index (index 0 to index 0)
+    onUpdateMock.mockClear();
+    fireEvent.dragStart(rowFirst, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: 'move' }
+    });
+    fireEvent.drop(rowFirst, {
+      dataTransfer: { getData: vi.fn() }
+    });
+    expect(onUpdateMock).not.toHaveBeenCalled();
+  });
 });
+

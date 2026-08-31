@@ -218,6 +218,7 @@ export function SerpTable({
           <div className="w-full sm:w-64 relative flex items-center">
             <input
               type="text"
+              data-testid="serp-search-input"
               placeholder="Search by code, title, or asset ID..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}

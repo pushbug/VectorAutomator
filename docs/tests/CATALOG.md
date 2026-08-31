@@ -41,6 +41,7 @@
 | `UT-UI-METADATA-TITLE-VALIDATION-01` | Verify MetadataEditor title required validation on Save, focusing input and rendering red border/error | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-UI-METADATA-EDITOR-SORT-01` | Verify MetadataEditor dual view modes (chips vs rows), metric badges, and dynamic sorting (Original, Downloads, Earnings, A-Z) | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-UI-METADATA-EDITOR-TIE-01` | Verify MetadataEditor tie-breaking fallback to alphabetical, zero/missing metrics handling, and ascending/descending toggles | `src/__tests__/components/MetadataEditor.test.tsx` |
+| `UT-UI-METADATA-KEYWORD-REORDER-01` | Verify drag-and-drop keyword reordering in MetadataEditor under Original sort mode and suppressed in non-Original modes | `src/__tests__/components/MetadataEditor.test.tsx` |
 | `UT-SALES-DATE-01` | Verify SmartPasteModal statement date selection and date mode toggling | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-UNMATCHED-01` | Verify /api/sales/paste-sync persists unlinked platformStats with platformAssetId | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-SALES-RECONCILE-01` | Verify auto-reconciliation updates unlinked platformStats to imageId when platform asset IDs match | `src/__tests__/lib/salesReconciler.test.ts` |

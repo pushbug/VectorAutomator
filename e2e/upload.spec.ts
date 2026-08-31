@@ -173,9 +173,9 @@ test.describe('Upload Workflow', () => {
     await applyBtn.click();
 
     // Verify keywords appear in MetadataEditor
-    await expect(page.getByText('infographic', { exact: true })).toBeVisible();
-    await expect(page.getByText('roadmap', { exact: true })).toBeVisible();
-    await expect(page.getByText('strategy', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-row-infographic')).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-row-roadmap')).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-row-strategy')).toBeVisible();
 
     // Verify Keyword Sorting in MetadataEditor:
     // 1. Sort Alphabetical (A-Z)
@@ -183,9 +183,10 @@ test.describe('Upload Workflow', () => {
     await expect(sortAlphaBtn).toBeVisible();
     await sortAlphaBtn.click();
 
-    // In alphabetical mode, 'business' should precede 'vector'
+    // In alphabetical mode, 'business' should precede 'vector' and drag handle is suppressed
     await expect(page.getByTestId('metadata-keyword-row-business')).toBeVisible();
     await expect(page.getByTestId('metadata-keyword-row-strategy')).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-drag-handle-business')).not.toBeVisible();
 
     // 2. Sort by Downloads
     const sortDlBtn = page.getByTestId('metadata-keywords-sort-dl-btn');
@@ -198,6 +199,7 @@ test.describe('Upload Workflow', () => {
     await expect(sortOrigBtn).toBeVisible();
     await sortOrigBtn.click();
     await expect(page.getByTestId('metadata-keyword-row-vector')).toBeVisible();
+    await expect(page.getByTestId('metadata-keyword-drag-handle-vector')).toBeVisible();
 
     // 4. Test Single-click Keyword Remove in row view
     const removeBtn = page.getByTestId('metadata-keyword-remove-btn-success');
