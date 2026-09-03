@@ -425,5 +425,48 @@ describe('Upload API Route', () => {
         })
       );
     });
+
+    it('UT-API-UPLOAD-BATCH-LOCK-01: handles rapid sequential batch uploads safely without lock error', async () => {
+      mockFindUnique.mockResolvedValue(null);
+      let seq = 1;
+      mockFindFirst.mockImplementation(() => Promise.resolve({ seqNumber: seq++ }));
+      mockCreate.mockImplementation(({ data }: any) =>
+        Promise.resolve({
+          id: `img-${data.code}`,
+          code: data.code,
+          title: data.title,
+          keywords: data.keywords,
+          filePath: data.filePath,
+          status: 'uploaded',
+          createdAt: new Date(),
+        })
+      );
+
+      const items = [
+        { code: '2609-10', title: 'Batch Item 1', keywords: 'tag1' },
+        { code: '2609-11', title: 'Batch Item 2', keywords: 'tag2' },
+        { code: '2609-12', title: 'Batch Item 3', keywords: 'tag3' },
+      ];
+
+      for (const item of items) {
+        const formData = new FormData();
+        formData.append('code', item.code);
+        formData.append('title', item.title);
+        formData.append('keywords', item.keywords);
+        formData.append('uploadDate', '2026-09-03');
+
+        const request = new NextRequest('http://localhost:3000/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const res = await POST(request);
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        expect(json.code).toBe(item.code);
+      }
+
+      expect(mockCreate).toHaveBeenCalledTimes(3);
+    });
   });
 });

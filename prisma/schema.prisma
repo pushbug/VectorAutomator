@@ -147,3 +147,10 @@ model SerpItem {
   @@index([isMine])
 }
 
+model Setting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

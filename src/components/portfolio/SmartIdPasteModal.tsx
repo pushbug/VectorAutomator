@@ -974,6 +974,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                         src={row.thumbnailUrl}
                                         alt={row.matchedImage.title}
                                         className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
                                         onError={(e) => {
                                           (e.target as any).style.display = 'none';
                                         }}
@@ -1048,6 +1049,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                       src={row.thumbnailUrl}
                                       alt={row.adobeTitle}
                                       className="w-full h-full object-cover"
+                                      referrerPolicy="no-referrer"
                                       onError={(e) => {
                                         (e.target as any).style.display = 'none';
                                       }}
@@ -1292,6 +1294,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                       src={quickImportRow.thumbnailUrl}
                       alt=""
                       className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         (e.target as any).style.display = 'none';
                       }}

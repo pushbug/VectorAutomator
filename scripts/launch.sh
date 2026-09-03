@@ -37,6 +37,7 @@ fi
 PORT=3000
 APP_URL="http://localhost:${PORT}"
 LOG_FILE="${PROJECT_DIR}/.server.log"
+PID_FILE="${PROJECT_DIR}/.server.pid"
 
 is_ready() {
   curl -s -f -o /dev/null -m 2 "$APP_URL"
@@ -44,12 +45,23 @@ is_ready() {
 
 # 2. Check and start local server if not running
 if ! is_ready; then
-  # Check if port 3000 is blocked by another PID
-  if lsof -i :"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo "Port $PORT is occupied. Attempting to use existing service."
-  else
-    echo "Starting VectorAutomator server in background..."
+  # Check if port 3000 is occupied by a non-responsive process
+  OCCUPIED_PID="$(lsof -i :"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -n 1)"
+  if [ -n "$OCCUPIED_PID" ]; then
+    echo "Port $PORT occupied by PID $OCCUPIED_PID. Verifying readiness..."
+    sleep 2
+    if ! is_ready; then
+      echo "Stale process detected on port $PORT (PID $OCCUPIED_PID). Gracefully stopping..."
+      kill "$OCCUPIED_PID" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+
+  if ! is_ready; then
+    echo "Starting VectorAutomator server on port $PORT in background..."
     nohup npm run dev > "$LOG_FILE" 2>&1 &
+    SERVER_PID=$!
+    echo "$SERVER_PID" > "$PID_FILE"
     
     # Wait for server readiness (up to 25 seconds)
     MAX_ATTEMPTS=25
@@ -65,7 +77,7 @@ if ! is_ready; then
   fi
 fi
 
-# 3. Open in isolated desktop window (Chrome / Edge App mode or default browser)
+# 3. Open isolated desktop window (Chrome / Edge App mode or default browser)
 if [ -d "/Applications/Google Chrome.app" ]; then
   open -na "/Applications/Google Chrome.app" --args --app="$APP_URL"
 elif [ -d "/Applications/Microsoft Edge.app" ]; then

@@ -154,4 +154,75 @@ describe('Dashboard HomePage Component (UT-UI-DASH-01)', () => {
       expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
     });
   });
+
+  it('opens monthly goal modal, validates input, and updates goal with preset selection', async () => {
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dash-goal-edit-btn')).toBeInTheDocument();
+    });
+
+    // 1. Open modal
+    fireEvent.click(screen.getByTestId('dash-goal-edit-btn'));
+    expect(screen.getByTestId('dash-goal-modal')).toBeInTheDocument();
+
+    // 2. Select preset 100
+    const preset100Btn = screen.getByTestId('dash-goal-preset-100');
+    fireEvent.click(preset100Btn);
+
+    const goalInput = screen.getByTestId('dash-goal-input') as HTMLInputElement;
+    expect(goalInput.value).toBe('100');
+
+    // 3. Test invalid input validation
+    fireEvent.change(goalInput, { target: { value: '0' } });
+    fireEvent.click(screen.getByTestId('dash-goal-save-btn'));
+    expect(screen.getByText(/Please enter an integer between 1 and 100,000/i)).toBeInTheDocument();
+
+    // 4. Change to valid 100 and submit
+    fireEvent.change(goalInput, { target: { value: '100' } });
+
+    // Mock successful PATCH /api/settings and subsequent dashboard re-fetch
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      if (typeof url === 'string' && url.includes('/api/settings') && opts?.method === 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, monthlyVectorGoal: 100 }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          ...mockDashboardResponse,
+          monthlyGoal: {
+            ...mockDashboardResponse.monthlyGoal,
+            target: 100,
+            percentage: 35,
+          },
+        }),
+      } as Response);
+    });
+
+    fireEvent.click(screen.getByTestId('dash-goal-save-btn'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('dash-goal-modal')).not.toBeInTheDocument();
+    });
+
+    // Verify optimistic / re-fetched target rendered in UI
+    expect(screen.getByText('35 / 100 (35%)')).toBeInTheDocument();
+  });
+
+  it('closes monthly goal modal when cancel button is clicked', async () => {
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dash-goal-edit-btn')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('dash-goal-edit-btn'));
+    expect(screen.getByTestId('dash-goal-modal')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('dash-goal-cancel-btn'));
+    expect(screen.queryByTestId('dash-goal-modal')).not.toBeInTheDocument();
+  });
 });

@@ -15,7 +15,8 @@ export const prisma =
   globalForPrisma.prisma &&
   'payoutTransaction' in globalForPrisma.prisma &&
   'serpQuery' in globalForPrisma.prisma &&
-  'serpItem' in globalForPrisma.prisma
+  'serpItem' in globalForPrisma.prisma &&
+  'setting' in globalForPrisma.prisma
     ? globalForPrisma.prisma
     : new PrismaClient({
         adapter,

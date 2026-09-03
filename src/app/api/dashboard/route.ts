@@ -22,6 +22,7 @@ export async function GET() {
       latestAsset,
       recentUploads,
       topPerformersQuery,
+      goalSetting,
     ] = await Promise.all([
       prisma.image.count(),
       prisma.image.count({
@@ -84,9 +85,13 @@ export async function GET() {
           createdAt: true,
         },
       }),
+      prisma.setting?.findUnique
+        ? prisma.setting.findUnique({ where: { key: 'monthly_vector_goal' } })
+        : Promise.resolve(null),
     ]);
 
-    const targetGoal = 50;
+    const parsedTarget = goalSetting?.value ? parseInt(goalSetting.value, 10) : NaN;
+    const targetGoal = !Number.isNaN(parsedTarget) && parsedTarget > 0 ? parsedTarget : 50;
     const goalPercentage = targetGoal > 0 ? Math.min(100, Math.round((monthlyVectors / targetGoal) * 100)) : 0;
     const topPerformers = topPerformersQuery.length > 0 ? topPerformersQuery : recentUploads;
 

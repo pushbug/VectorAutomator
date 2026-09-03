@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseContributorHtml } from '@/lib/contributorParser';
+import { parseContributorHtml, parseTsvString } from '@/lib/contributorParser';
 
 describe('UT-EXT-CONTRIBUTOR-DOM-01: Adobe Contributor Portfolio Parser', () => {
   it('correctly extracts asId, title, and downloads from real Adobe Contributor HTML card', () => {
@@ -214,6 +214,94 @@ describe('UT-EXT-CONTRIBUTOR-DOM-01: Adobe Contributor Portfolio Parser', () => 
     expect(parsedResults[0]).toEqual({ asId: '1534902442', isNominateEligible: false });
     expect(parsedResults[1]).toEqual({ asId: '1178622093', isNominateEligible: true });
     expect(parsedResults[2]).toEqual({ asId: '1094172751', isNominateEligible: true });
+  });
+
+  it('UT-EXT-CONTRIBUTOR-DOM-NESTED-TITLE-01: extracts full title from outer div[title].left ancestor even when inner wrapper exists', () => {
+    const nestedHtml = `
+      <div data-t="portfolio-page-assets-list">
+        <div title="Modern 3 Options Arrow Timeline Infographic Vector Template for Workflow and Marketing Strategy. Presentation, Report and Plan. Vector illustration." class="left">
+          <div class="margin-small content-thumbnail-wrapper" data-t="portfolio-single-asset-wrapper">
+            <div class="white border-radius-4 border border-solid container-relative bon-jour-border">
+              <div class="cursor-pointer">
+                <div class="content-thumbnail grey alabaster v-align-wrapper border-radius-4">
+                  <img src="https://as2.ftcdn.net/jpg/21/75/75/91/220_F_2175759142_uhgfr438cqZU8Kw6FCDUkCSJlu8feuKw.jpg" class="content-thumbnail__img c-align" alt="">
+                </div>
+                <div class="padding-medium premium-type-box flex flex-justify-space-between">
+                  <div class="container-inline-block vertical-align-top flex-even">
+                    <div class="grey mountain-mist-text text-up text-small">downloads</div>
+                    <span class="text-medium light">5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(nestedHtml, 'text/html');
+    const imgEls = Array.from(doc.querySelectorAll('img[src*="_F_"]'));
+    const cardSet = new Set<Element>();
+
+    imgEls.forEach((img) => {
+      const card =
+        img.closest('div[title].left') ||
+        img.closest('div[title]') ||
+        img.closest('div[data-t="portfolio-single-asset-wrapper"]') ||
+        img.closest('div.bon-jour-border') ||
+        img.closest('.cursor-pointer')?.parentElement;
+      if (card) {
+        cardSet.add(card);
+      }
+    });
+
+    const parsedItems: any[] = [];
+    cardSet.forEach((card) => {
+      const imgEl = card.querySelector('img[src*="_F_"]') || card.querySelector('img');
+      const imgSrc = imgEl?.getAttribute('src') || '';
+      const match = imgSrc.match(/_F_(\d+)_/);
+      const asId = match ? match[1] : '';
+
+      const title =
+        card.getAttribute('title')?.trim() ||
+        card.closest('[title]')?.getAttribute('title')?.trim() ||
+        imgEl?.closest('[title]')?.getAttribute('title')?.trim() ||
+        card.querySelector('[title]')?.getAttribute('title')?.trim() ||
+        imgEl?.getAttribute('alt')?.trim() ||
+        `Asset ${asId}`;
+
+      parsedItems.push({ asId, title });
+    });
+
+    expect(parsedItems).toHaveLength(1);
+    expect(parsedItems[0].asId).toBe('2175759142');
+    expect(parsedItems[0].title).toBe(
+      'Modern 3 Options Arrow Timeline Infographic Vector Template for Workflow and Marketing Strategy. Presentation, Report and Plan. Vector illustration.'
+    );
+  });
+
+  it('UT-EXT-CONTRIBUTOR-TSV-THUMBNAIL-01: extracts thumbnail URL from 7-column nominate TSV exports accurately', () => {
+    const tsvWithNominate = [
+      'Asset ID\tTitle\tDownloads\tNominate Eligible\t1 Year\tPerpetual\tThumbnail',
+      '2175759142\tModern 3 Options Arrow Timeline Infographic Vector Template\t12\tYes\tON\tON\thttps://as2.ftcdn.net/jpg/21/75/75/91/220_F_2175759142_uhgfr438cqZU8Kw6FCDUkCSJlu8feuKw.jpg',
+      '2175759135\t5 Steps Vertical Process Infographic Design\t0\tNo\tOFF\tOFF\thttps://as2.ftcdn.net/jpg/21/75/75/91/220_F_2175759135_HqZFwz3XMhi0p6KX3rweNLWmwDQlrXQH.jpg',
+    ].join('\n');
+
+    const items = parseTsvString(tsvWithNominate);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toEqual({
+      asId: '2175759142',
+      title: 'Modern 3 Options Arrow Timeline Infographic Vector Template',
+      downloads: 12,
+      thumbnailUrl: 'https://as2.ftcdn.net/jpg/21/75/75/91/220_F_2175759142_uhgfr438cqZU8Kw6FCDUkCSJlu8feuKw.jpg',
+    });
+    expect(items[1]).toEqual({
+      asId: '2175759135',
+      title: '5 Steps Vertical Process Infographic Design',
+      downloads: 0,
+      thumbnailUrl: 'https://as2.ftcdn.net/jpg/21/75/75/91/220_F_2175759135_HqZFwz3XMhi0p6KX3rweNLWmwDQlrXQH.jpg',
+    });
   });
 });
 

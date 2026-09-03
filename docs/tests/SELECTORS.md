@@ -99,6 +99,12 @@ Always use `data-testid` for element selection in E2E tests.
 | `dash-action-sales` | Quick launch link to Sales & Earnings module |
 | `dash-recent-item-{id}` | Recent vector item row in Dashboard activity grid |
 | `dash-top-item-{id}` | Top performing vector item row in Dashboard activity grid |
+| `dash-goal-edit-btn` | Button in MonthlyGoalCard to trigger goal setting modal dialog |
+| `dash-goal-modal` | Modal dialog container for monthly production goal configuration |
+| `dash-goal-preset-{target}` | Preset target button inside goal setting dialog (e.g. 30, 50, 100, 200) |
+| `dash-goal-input` | Numeric input field for custom monthly target inside goal dialog |
+| `dash-goal-save-btn` | Save button inside goal setting modal dialog |
+| `dash-goal-cancel-btn` | Cancel/close button inside goal setting modal dialog |
 | `portfolio-copy-code-btn` | Button next to Image Code/ID badge in Portfolio Detail to copy code or ID |
 | `portfolio-copy-title-btn` | Button next to Title in Portfolio Detail to copy title text |
 | `portfolio-copy-keywords-btn` | Button next to Keywords in Portfolio Detail to copy keywords text |

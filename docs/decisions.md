@@ -227,6 +227,17 @@
   4. **Automated Verification:** Added unit test suite `UT-UI-METADATA-KEYWORD-REORDER-01` in `MetadataEditor.test.tsx` and updated E2E test suites `e2e/upload.spec.ts` and `e2e/serp.spec.ts`. All 53 test suites (350 unit tests) pass with 0 TypeScript errors.
 - **Impact:** Provides microstock contributors with intuitive drag-and-drop keyword prioritization, maintaining 100% data fidelity across EXIF embedding and portfolio imports.
 
+## ADR-028: Dynamic Monthly Production Goal Configuration and Database Persistence
+- **Date:** 2026-09-03
+- **Context:** The Overview Dashboard previously hardcoded the monthly vector production target to `50 vectors / month` in `GET /api/dashboard`, preventing contributors with varying production capacities or aggressive monthly targets from tracking accurate pace metrics.
+- **Decision:**
+  1. **Generic Key-Value Setting Entity (`schema.prisma`):** Created a lightweight `Setting` model (`key @id, value, createdAt, updatedAt`) in SQLite to store system preferences and user configurations, initialized with `monthly_vector_goal` and protected by automated SQLite backups before schema deployment.
+  2. **Dedicated Settings API (`/api/settings`):** Implemented `GET` and `PATCH` endpoints validating positive integer bounds (1 to 100,000) with safe fallback to `50`.
+  3. **Concurrent Dashboard Integration (`/api/dashboard`):** Added dynamic setting query into `Promise.all` alongside existing count/stats queries, calculating production pace and percentages in real time without increasing response latency.
+  4. **Interactive Dashboard Modal Dialog (`MonthlyGoalCard.tsx`):** Designed an inline pencil trigger that opens an accessible modal dialog featuring 4 quick presets (30, 50, 100, 200 vectors/mo), custom integer input, keyboard Enter submission, and optimistic UI updates with background re-fetch.
+  5. **Automated Verification:** Added unit test suite `UT-API-SETTINGS-01` in `src/__tests__/api/settings.test.ts` and updated `UT-API-DASH-01` and `UT-UI-DASH-01`. All 54 test files (366 unit tests) pass with 0 TypeScript errors.
+- **Impact:** Enables contributors to dynamically customize, persist, and track their microstock vector production targets from the home dashboard with zero downtime and resilient fallbacks.
+
 
 
 

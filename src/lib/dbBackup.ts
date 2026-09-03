@@ -40,19 +40,20 @@ const coordinator = globalForBackup.__dbBackupCoordinator;
 const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
 
 /**
- * Executes a synchronous SQLite WAL checkpoint (TRUNCATE) to immediately
- * consolidate all uncommitted pages from the WAL log into the primary database file.
+ * Executes a SQLite WAL checkpoint.
+ * Defaults to PASSIVE during live operations to consolidate uncommitted pages without locking writers or readers.
+ * Uses TRUNCATE on process shutdown or offline maintenance to reset WAL file size to zero.
  */
-export function checkpointDatabase(targetDbPath?: string): boolean {
+export function checkpointDatabase(targetDbPath?: string, mode: 'PASSIVE' | 'TRUNCATE' = 'PASSIVE'): boolean {
   try {
     const dbPath = targetDbPath || path.resolve(process.cwd(), 'dev.db');
     if (!fs.existsSync(dbPath) || dbPath === ':memory:') {
       return false;
     }
 
-    const db = new Database(dbPath);
+    const db = new Database(dbPath, { timeout: 10000 });
     try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.pragma(`wal_checkpoint(${mode})`);
       return true;
     } finally {
       db.close();
@@ -102,7 +103,7 @@ function registerProcessShutdownHooks(): void {
 
   const handleShutdown = () => {
     try {
-      checkpointDatabase();
+      checkpointDatabase(undefined, 'TRUNCATE');
     } catch (_) {}
   };
 
@@ -352,7 +353,7 @@ export function restoreDbBackup(backupFilePath: string, targetDbPath?: string): 
       } catch (_) {}
     }
 
-    checkpointDatabase(dbPath);
+    checkpointDatabase(dbPath, 'TRUNCATE');
 
     return true;
   } catch (error) {

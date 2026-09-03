@@ -114,9 +114,9 @@ function scrapeContributorPageInTab() {
 
   imgEls.forEach((img) => {
     const card =
-      img.closest('div[data-t="portfolio-single-asset-wrapper"]') ||
       img.closest('div[title].left') ||
       img.closest('div[title]') ||
+      img.closest('div[data-t="portfolio-single-asset-wrapper"]') ||
       img.closest('div.bon-jour-border') ||
       img.closest('.cursor-pointer')?.parentElement;
     if (card) {
@@ -152,14 +152,13 @@ function scrapeContributorPageInTab() {
     }
     seenIds.add(asId);
 
-    let title = card.getAttribute('title')?.trim() || '';
-    if (!title) {
-      const titleEl = card.querySelector('[title]');
-      title = titleEl?.getAttribute('title')?.trim() || '';
-    }
-    if (!title) {
-      title = imgEl?.getAttribute('alt')?.trim() || `Asset ${asId}`;
-    }
+    let title =
+      card.getAttribute('title')?.trim() ||
+      card.closest('[title]')?.getAttribute('title')?.trim() ||
+      imgEl?.closest('[title]')?.getAttribute('title')?.trim() ||
+      card.querySelector('[title]')?.getAttribute('title')?.trim() ||
+      imgEl?.getAttribute('alt')?.trim() ||
+      `Asset ${asId}`;
 
     let downloads = 0;
     const dlEl = card.querySelector('.text-medium.light, span.text-medium, .downloads-count');

@@ -29,6 +29,7 @@
 | `UT-SALES-PASTE-05` | Verify /api/sales/paste-sync proximity matching within ±7 days and candidate disambiguation | `src/__tests__/api/sales_paste.test.ts` |
 | `UT-IMPORT-QUEUE-01` | Verify AssetQueue selection toggling and batch importing to portfolio with queue clearing | `src/__tests__/useAssetProcessor.test.ts` |
 | `UT-API-DASH-01` | Verify dashboard API aggregated metrics calculations, zero-data safety, and error handling | `src/__tests__/api/dashboard.test.ts` |
+| `UT-API-SETTINGS-01` | Verify settings API GET/PATCH validation, range bounds (1-100,000), and database upsert | `src/__tests__/api/settings.test.ts` |
 | `UT-UI-DASH-01` | Verify Dashboard HomePage KPI rendering, monthly goal pace, quick action routes, and copy trigger | `src/__tests__/components/Dashboard.test.tsx` |
 | `UT-LIB-KEYWORD-ANALYTICS-01` | Verify keyword extraction, deduplication, accumulated downloads/earnings, and Top-5 primary flags | `src/__tests__/lib/keywordAnalytics.test.ts` |
 | `UT-UI-KEYWORD-SUGGEST-01` | Verify KeywordSuggester portfolio search, sort toggle, image selection, tag badges, and injection | `src/__tests__/components/KeywordSuggester.test.tsx` |
@@ -102,6 +103,8 @@
 | `UT-SERP-RECONCILE-02` | Verify two-way auto-reconciliation across multi-platform asset IDs (asId, ssId, vzId) on paste-sync and proactive GET query triggers | `src/__tests__/api/serp.test.ts` |
 | `UT-LIB-BACKUP-01` | Verify debounced auto-backup scheduler, dirty-flag state, timer coalescing, and clean cancellation | `src/__tests__/lib/dbBackup.test.ts` |
 | `UT-EXT-CONTRIBUTOR-DOM-01` | Verify Adobe Contributor DOM parsing: extracting title, asId from thumbnail URL, and downloads count | `src/__tests__/extension/contributorDomParser.test.ts` |
+| `UT-EXT-CONTRIBUTOR-DOM-NESTED-TITLE-01` | Verify Adobe Contributor nested DOM title extraction from outer div[title].left ancestor container | `src/__tests__/extension/contributorDomParser.test.ts` |
+| `UT-EXT-CONTRIBUTOR-TSV-THUMBNAIL-01` | Verify dynamic thumbnail URL extraction in parseTsvString across multi-column exports (including 7-column nominate TSV) | `src/__tests__/extension/contributorDomParser.test.ts` |
 | `UT-API-PORTFOLIO-SYNC-ID-01` | Verify /api/portfolio/paste-sync title matching (exact + normalized), asId assignment, downloads sync, and backup trigger | `src/__tests__/api/portfolio_paste_sync.test.ts` |
 | `UT-API-PORTFOLIO-FUZZY-SYNC-01` | Verify /api/portfolio/paste-sync 3-tier matching: exact auto-match, fuzzy candidate suggestion (>= 70%), and manual link confirmation | `src/__tests__/api/portfolio_paste_sync.test.ts` |
 | `UT-UI-PORTFOLIO-SYNC-MODAL-01` | Verify SmartIdPasteModal rendering, live clipboard parsing, match preview table, and bulk submission | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
@@ -136,6 +139,7 @@
 | `UT-UI-PF-BENCHMARK-01` | Verify PortfolioAnalyticsTab renders Top 100 and Portfolio Avg benchmark comparison cards with reactive metric toggle | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
 | `UT-UI-COLLECTION-DETAIL-03` | Verify TopSharedKeywordsBar search input rendering, query changes, and clear button triggers | `src/__tests__/components/Collections.test.tsx` |
 | `UT-UI-COLLECTION-DETAIL-04` | Verify CollectionDetailPage multi-attribute search filtering (title, code, asId, ssId, vzId, DB ID, keywords) and active badges | `src/__tests__/components/Collections.test.tsx` |
+| `UT-API-UPLOAD-BATCH-LOCK-01` | Verify /api/upload handles rapid sequential batch uploads safely without lock error and triggers auto-backup | `src/__tests__/api/upload.test.ts` |
 
 
 

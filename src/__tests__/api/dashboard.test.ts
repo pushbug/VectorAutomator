@@ -7,6 +7,7 @@ const {
   mockImageFindFirst,
   mockImageFindMany,
   mockPlatformStatsAggregate,
+  mockSettingFindUnique,
 } = vi.hoisted(() => {
   return {
     mockImageCount: vi.fn(),
@@ -14,6 +15,7 @@ const {
     mockImageFindFirst: vi.fn(),
     mockImageFindMany: vi.fn(),
     mockPlatformStatsAggregate: vi.fn(),
+    mockSettingFindUnique: vi.fn(),
   };
 });
 
@@ -28,6 +30,9 @@ vi.mock('@/generated/prisma/client', () => {
       };
       platformStats = {
         aggregate: mockPlatformStatsAggregate,
+      };
+      setting = {
+        findUnique: mockSettingFindUnique,
       };
     },
   };
@@ -140,5 +145,25 @@ describe('Dashboard API Route', () => {
 
     expect(res.status).toBe(500);
     expect(data.error).toBe('Failed to fetch dashboard metrics');
+  });
+
+  it('should use custom monthly goal from Setting model when available', async () => {
+    mockImageCount.mockResolvedValue(40);
+    mockImageAggregate.mockResolvedValue({ _sum: { totalDownloads: 100 } });
+    mockPlatformStatsAggregate.mockResolvedValue({ _sum: { earnings: 50, downloads: 100 } });
+    mockImageFindFirst.mockResolvedValue({ code: '2608-40' });
+    mockImageFindMany.mockResolvedValue([]);
+    mockSettingFindUnique.mockResolvedValueOnce({
+      key: 'monthly_vector_goal',
+      value: '80',
+    });
+
+    const res = await GET();
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.monthlyGoal.target).toBe(80);
+    expect(data.monthlyGoal.current).toBe(40);
+    expect(data.monthlyGoal.percentage).toBe(50); // 40/80 = 50%
   });
 });

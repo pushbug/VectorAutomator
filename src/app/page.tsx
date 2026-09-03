@@ -56,6 +56,23 @@ export default function HomePage() {
     fetchDashboardData();
   }, []);
 
+  const handleTargetUpdated = (newTarget: number) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const percentage =
+        newTarget > 0 ? Math.min(100, Math.round((prev.monthlyGoal.current / newTarget) * 100)) : 0;
+      return {
+        ...prev,
+        monthlyGoal: {
+          ...prev.monthlyGoal,
+          target: newTarget,
+          percentage,
+        },
+      };
+    });
+    fetchDashboardData();
+  };
+
   return (
     <div className="flex-1 w-full p-4 sm:p-6 lg:p-8 max-w-370 mx-auto space-y-6">
       {loading ? (
@@ -121,6 +138,7 @@ export default function HomePage() {
             percentage={data.monthlyGoal.percentage}
             daysRemaining={data.monthlyGoal.daysRemaining}
             monthName={data.monthlyGoal.currentMonthName}
+            onTargetUpdated={handleTargetUpdated}
           />
 
           {/* Quick Launch Hub */}

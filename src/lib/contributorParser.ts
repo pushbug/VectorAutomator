@@ -91,32 +91,36 @@ export function parseTsvString(tsv: string): SyncInputItem[] {
     let downloads = 0;
     let thumbnailUrl = '';
 
-    // Standard format: Col 0 is numeric Asset ID (Asset ID, Title, Downloads, Thumbnail)
+    // Dynamically locate any token representing an image URL (http... or ftcdn.net)
+    const foundUrl = parts
+      .map((p) => p.trim().replace(/^["']|["']$/g, ''))
+      .find((clean) => clean.startsWith('http') || clean.includes('ftcdn.net'));
+    if (foundUrl) {
+      thumbnailUrl = foundUrl;
+    }
+
+    // Standard format: Col 0 is numeric Asset ID (Asset ID, Title, Downloads, ...)
     if (/^\d{6,15}$/.test(col0)) {
       asId = col0;
       title = col1;
       if (col2 && !isNaN(Number(col2.replace(/,/g, '')))) {
         downloads = parseInt(col2.replace(/,/g, ''), 10);
       }
-      if (col3 && (col3.startsWith('http') || col3.includes('ftcdn.net'))) {
-        thumbnailUrl = col3;
-      }
     }
     // SERP table format (Keyword, Page, Rank, Asset ID, Author, Title, Thumbnail)
     else if (parts.length >= 6 && /^\d{6,15}$/.test(parts[3]?.trim())) {
       asId = parts[3].trim();
       title = parts[5]?.trim() || '';
-      if (parts[6]?.startsWith('http')) thumbnailUrl = parts[6].trim();
+      if (!thumbnailUrl && parts[6]?.startsWith('http')) {
+        thumbnailUrl = parts[6].trim();
+      }
     }
-    // Reverse format (Title, Asset ID, Downloads, Thumbnail)
+    // Reverse format (Title, Asset ID, Downloads, ...)
     else if (/^\d{6,15}$/.test(col1)) {
       title = col0;
       asId = col1;
       if (col2 && !isNaN(Number(col2.replace(/,/g, '')))) {
         downloads = parseInt(col2.replace(/,/g, ''), 10);
-      }
-      if (col3 && col3.startsWith('http')) {
-        thumbnailUrl = col3;
       }
     }
 

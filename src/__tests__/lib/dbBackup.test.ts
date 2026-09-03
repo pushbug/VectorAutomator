@@ -91,6 +91,13 @@ describe('Database WAL Checkpointing & Durability (UT-LIB-BACKUP-WAL-01)', () =>
     const row = checkDb.prepare('SELECT val FROM items WHERE id = ?').get('1') as { val: string };
     expect(row.val).toBe('hello');
     checkDb.close();
+
+    // Verify explicit PASSIVE and TRUNCATE modes
+    const passiveSuccess = checkpointDatabase(testDbPath, 'PASSIVE');
+    expect(passiveSuccess).toBe(true);
+
+    const truncateSuccess = checkpointDatabase(testDbPath, 'TRUNCATE');
+    expect(truncateSuccess).toBe(true);
   });
 
   it('returns false gracefully when database file does not exist', () => {
