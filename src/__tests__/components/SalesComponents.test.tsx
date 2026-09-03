@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SalesSummaryCards } from '@/components/sales/SalesSummaryCards';
 import { SalesTable, SaleItem } from '@/components/sales/SalesTable';
@@ -604,7 +604,129 @@ describe('Sales Components (UT-UI-SALES-01)', () => {
       expect(warningAlert).toHaveTextContent('Existing Records Detected:');
       expect(warningAlert).toHaveTextContent('13 items, $13.11');
     });
+
+    it('UT-UI-SMART-SALES-UNSAVED-01: triggers discard confirmation dialog when closing with uncommitted parsed sales', async () => {
+      const mockOnClose = vi.fn();
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          rows: [
+            {
+              assetId: '1905258292',
+              dateStr: '2026-05-01',
+              dateDisplay: '5/1/2026',
+              earnings: 1.91,
+              downloads: 1,
+              matchType: 'exact_id',
+              matchedImage: null,
+              candidates: [],
+            },
+          ],
+        }),
+      });
+
+      render(
+        <SmartPasteModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSuccess={() => {}}
+        />
+      );
+
+      const textarea = screen.getByTestId('smart-paste-textarea');
+      fireEvent.change(textarea, { target: { value: '1905258292 Vectors 5/1/2026 $1.91' } });
+
+      fireEvent.click(screen.getByTestId('smart-paste-parse-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('smart-paste-submit-btn')).toBeInTheDocument();
+      });
+
+      // Try closing via close button in header
+      const closeBtn = screen.getByTestId('smart-paste-close-btn');
+      fireEvent.click(closeBtn);
+
+      // Discard dialog should appear
+      expect(screen.getByTestId('smart-sales-discard-dialog')).toBeInTheDocument();
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      // Click Discard & Exit
+      const discardBtn = screen.getByTestId('smart-sales-discard-confirm-btn');
+      fireEvent.click(discardBtn);
+
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('UT-UI-SMART-SALES-UNSAVED-SAVE-01: clicking Save & Close in discard dialog triggers sales commit', async () => {
+      const mockOnSuccess = vi.fn();
+      // 1. Mock parse response
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          rows: [
+            {
+              assetId: '1905258292',
+              dateStr: '2026-05-01',
+              dateDisplay: '5/1/2026',
+              earnings: 1.91,
+              downloads: 1,
+              matchType: 'exact_id',
+              matchedImage: null,
+              candidates: [],
+            },
+          ],
+        }),
+      });
+
+      // 2. Mock commit response
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          createdCount: 1,
+        }),
+      });
+
+      render(
+        <SmartPasteModal
+          isOpen={true}
+          onClose={() => {}}
+          onSuccess={mockOnSuccess}
+        />
+      );
+
+      const textarea = screen.getByTestId('smart-paste-textarea');
+      fireEvent.change(textarea, { target: { value: '1905258292 Vectors 5/1/2026 $1.91' } });
+      fireEvent.click(screen.getByTestId('smart-paste-parse-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('smart-paste-submit-btn')).toBeInTheDocument();
+      });
+
+      // Trigger close
+      const closeBtn = screen.getByTestId('smart-paste-close-btn');
+      fireEvent.click(closeBtn);
+
+      expect(screen.getByTestId('smart-sales-discard-dialog')).toBeInTheDocument();
+
+      // Click Save & Close
+      const saveBtn = screen.getByTestId('smart-sales-discard-save-btn');
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/sales/paste-sync',
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"action":"commit"'),
+          })
+        );
+        expect(mockOnSuccess).toHaveBeenCalled();
+      });
+    });
   });
 });
+
+
 
 

@@ -332,17 +332,14 @@ Always use `data-testid` for element selection in E2E tests.
 | `portfolio-analytics-sales-table` | Chronological sales history log table container for the selected artwork |
 | `portfolio-analytics-benchmark-top100` | Interactive legend toggle button and reference line for Top 100 Best Sellers benchmark |
 | `portfolio-analytics-benchmark-portavg` | Interactive legend toggle button and reference line for Portfolio Average benchmark |
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+| `sidebar-new-window-btn` | Button in sidebar to spawn a new desktop window on port 3000 |
+| `smart-id-discard-dialog` | Confirmation dialog when closing Smart ID modal with unsaved staged rows |
+| `smart-id-discard-save-btn` | Save & Close button inside Smart ID discard confirmation dialog |
+| `smart-id-discard-confirm-btn` | Discard & Exit button inside Smart ID discard confirmation dialog |
+| `smart-sales-discard-dialog` | Confirmation dialog when closing Smart Sales modal with unsaved parsed rows |
+| `smart-sales-discard-save-btn` | Save & Close button inside Smart Sales discard confirmation dialog |
+| `smart-sales-discard-confirm-btn` | Discard & Exit button inside Smart Sales discard confirmation dialog |
+| `sidebar-quit-app-btn` | Button in sidebar to trigger application shutdown and free port 3000 |
+| `quit-app-confirm-dialog` | Modal dialog confirming application shutdown |
+| `quit-app-confirm-btn` | Button confirming immediate server shutdown |
+| `quit-app-cancel-btn` | Button cancelling application shutdown dialog |

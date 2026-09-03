@@ -4,6 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AssetProvider } from "@/context/AssetContext";
+import { ServerHeartbeat } from "@/components/common/ServerHeartbeat";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} flex min-h-screen antialiased selection:bg-primary/30`} suppressHydrationWarning>
         <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <ServerHeartbeat />
           <AssetProvider>
             <Sidebar />
             <main className="flex-1 flex flex-col h-screen overflow-hidden bg-background">

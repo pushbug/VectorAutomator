@@ -481,6 +481,162 @@ describe('UT-UI-PORTFOLIO-MANUAL-LINK-01: Manual Search and 1-by-1 Commit', () =
       expect(screen.getByTestId('quick-import-date-picker-done-btn')).toBeInTheDocument();
     });
   });
+
+  it('UT-UI-SMART-ID-UNSAVED-01: triggers discard confirmation dialog when closing with uncommitted staged rows', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        preview: true,
+        totalParsed: 1,
+        exactCount: 1,
+        fuzzyCount: 0,
+        unmatchedCount: 0,
+        rows: [
+          {
+            asId: '111222333',
+            adobeTitle: 'Business Process Flow',
+            downloads: 10,
+            thumbnailUrl: '',
+            status: 'exact',
+            confidence: 1.0,
+            isAlreadySynced: false,
+            isOverwrite: false,
+            existingAsId: null,
+            matchedImage: {
+              id: 'img-1',
+              code: '2608-01',
+              title: 'Business Process Flow',
+              filePath: '/uploads/2608-01.jpg',
+              asId: null,
+              asDownloads: 0,
+            },
+            candidates: [],
+          },
+        ],
+      }),
+    });
+
+    render(
+      <SmartIdPasteModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const textarea = screen.getByTestId('sync-paste-textarea');
+    fireEvent.change(textarea, {
+      target: { value: '111222333\tBusiness Process Flow\t10' },
+    });
+    fireEvent.click(screen.getByTestId('submit-sync-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('apply-bulk-sync-btn')).toBeInTheDocument();
+    });
+
+    // Try closing via close button in header
+    const closeBtn = screen.getByTestId('close-sync-modal-btn');
+    fireEvent.click(closeBtn);
+
+    // Discard confirmation dialog should appear instead of immediate close
+    expect(screen.getByTestId('smart-id-discard-dialog')).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
+
+    // Click Discard & Exit
+    const discardBtn = screen.getByTestId('smart-id-discard-confirm-btn');
+    fireEvent.click(discardBtn);
+
+    expect(mockOnClose).toHaveBeenCalled();
+  });
+
+  it('UT-UI-SMART-ID-UNSAVED-SAVE-01: clicking Save & Close in discard dialog triggers bulk commit', async () => {
+    // 1. Mock dry-run analyze response
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        preview: true,
+        totalParsed: 1,
+        exactCount: 1,
+        fuzzyCount: 0,
+        unmatchedCount: 0,
+        rows: [
+          {
+            asId: '777888999',
+            adobeTitle: 'Cyber Security Abstract',
+            downloads: 5,
+            thumbnailUrl: '',
+            status: 'exact',
+            confidence: 1.0,
+            isAlreadySynced: false,
+            isOverwrite: false,
+            existingAsId: null,
+            matchedImage: {
+              id: 'img-cyber',
+              code: '2608-99',
+              title: 'Cyber Security Abstract',
+              filePath: '/uploads/2608-99.jpg',
+              asId: null,
+              asDownloads: 0,
+            },
+            candidates: [],
+          },
+        ],
+      }),
+    });
+
+    // 2. Mock commit response
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        committedCount: 1,
+        items: [{ asId: '777888999', imageId: 'img-cyber' }],
+      }),
+    });
+
+    render(
+      <SmartIdPasteModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const textarea = screen.getByTestId('sync-paste-textarea');
+    fireEvent.change(textarea, {
+      target: { value: '777888999\tCyber Security Abstract\t5' },
+    });
+    fireEvent.click(screen.getByTestId('submit-sync-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('apply-bulk-sync-btn')).toBeInTheDocument();
+    });
+
+    // Trigger close to show discard modal
+    const closeBtn = screen.getByTestId('close-sync-modal-btn');
+    fireEvent.click(closeBtn);
+
+    expect(screen.getByTestId('smart-id-discard-dialog')).toBeInTheDocument();
+
+    // Click Save & Close
+    const saveBtn = screen.getByTestId('smart-id-discard-save-btn');
+    fireEvent.click(saveBtn);
+
+    // Should call commit fetch with action: 'commit'
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/portfolio/paste-sync',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"action":"commit"'),
+        })
+      );
+      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+  });
 });
+
 
 

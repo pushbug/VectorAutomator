@@ -44,7 +44,9 @@ is_ready() {
 }
 
 # 2. Check and start local server if not running
-if ! is_ready; then
+if is_ready; then
+  echo "VectorAutomator server is already running on port $PORT. Spawning additional window..."
+else
   # Check if port 3000 is occupied by a non-responsive process
   OCCUPIED_PID="$(lsof -i :"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -n 1)"
   if [ -n "$OCCUPIED_PID" ]; then
@@ -59,7 +61,7 @@ if ! is_ready; then
 
   if ! is_ready; then
     echo "Starting VectorAutomator server on port $PORT in background..."
-    nohup npm run dev > "$LOG_FILE" 2>&1 &
+    nohup npx next dev -p "$PORT" > "$LOG_FILE" 2>&1 &
     SERVER_PID=$!
     echo "$SERVER_PID" > "$PID_FILE"
     
@@ -74,6 +76,7 @@ if ! is_ready; then
         exit 1
       fi
     done
+    echo "VectorAutomator server ready on port $PORT."
   fi
 fi
 

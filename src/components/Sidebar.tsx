@@ -15,7 +15,9 @@ import {
   TrendingUp,
   Menu,
   Moon,
-  Sun
+  Sun,
+  ExternalLink,
+  Power
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -23,7 +25,20 @@ export default function Sidebar() {
   const { theme, setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [isQuitting, setIsQuitting] = useState(false);
 
+  // Global shortcut (Cmd+Shift+N) to spawn sibling desktop window on same port
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "N" || e.key === "n")) {
+        e.preventDefault();
+        window.open(window.location.href, "_blank", "width=1280,height=800");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Prevent hydration mismatch for theme toggle
   useEffect(() => {
@@ -83,20 +98,48 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Theme Toggle & Footer */}
-      <div className="mt-auto p-4 border-t border-border flex flex-col gap-4">
+      {/* Actions & Theme Toggle */}
+      <div className="mt-auto p-4 border-t border-border flex flex-col gap-2">
+        <button
+          data-testid="sidebar-new-window-btn"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.open(pathname || "/", "_blank", "width=1280,height=800");
+            }
+          }}
+          title="Open New Window (Cmd+Shift+N)"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:bg-surface-hover hover:text-foreground transition-all cursor-pointer ${
+            isCollapsed ? "justify-center" : ""
+          }`}
+        >
+          <ExternalLink size={20} className="text-primary shrink-0" />
+          {!isCollapsed && <span className="font-medium text-foreground text-sm truncate">New Window</span>}
+        </button>
+
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             title="Toggle Theme"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg text-muted hover:bg-surface-hover hover:text-foreground transition-all ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:bg-surface-hover hover:text-foreground transition-all cursor-pointer ${
               isCollapsed ? "justify-center" : ""
             }`}
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-            {!isCollapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+            {!isCollapsed && <span className="text-sm">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
           </button>
         )}
+
+        <button
+          data-testid="sidebar-quit-app-btn"
+          onClick={() => setShowQuitConfirm(true)}
+          title="Quit App & Free Port 3000 (ปิดระบบและคืนพอร์ต)"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer ${
+            isCollapsed ? "justify-center" : ""
+          }`}
+        >
+          <Power size={20} className="shrink-0" />
+          {!isCollapsed && <span className="font-medium text-sm truncate">Quit App</span>}
+        </button>
         
         {!isCollapsed && (
           <div className="p-4 bg-surface-hover rounded-xl">
@@ -106,6 +149,68 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Quit App Confirmation Dialog */}
+      {showQuitConfirm && (
+        <div
+          data-testid="quit-app-confirm-dialog"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+        >
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                <Power size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Quit VectorAutomator?
+                </h3>
+                <p className="text-xs text-muted">
+                  Stop server and release port 3000
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-foreground/80">
+              This will checkpoint the database, shut down the background server, and free port 3000 for your other projects.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                data-testid="quit-app-cancel-btn"
+                onClick={() => setShowQuitConfirm(false)}
+                disabled={isQuitting}
+                className="px-3.5 py-2 text-xs font-medium text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="quit-app-confirm-btn"
+                disabled={isQuitting}
+                onClick={async () => {
+                  setIsQuitting(true);
+                  try {
+                    await fetch('/api/system/quit', { method: 'POST' });
+                  } catch {
+                    // Ignore network error on instant server termination
+                  }
+                  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+                    window.close();
+                    try {
+                      window.location.href = 'about:blank';
+                    } catch {
+                      // Ignored
+                    }
+                  }
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isQuitting ? 'Stopping...' : 'Quit & Release Port'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

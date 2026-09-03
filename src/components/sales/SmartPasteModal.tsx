@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check, Trash2 } from 'lucide-react';
+import { X, Sparkles, AlertCircle, ArrowLeft, Loader2, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { SingleDatePicker } from '../portfolio/SingleDatePicker';
 import { parseStockPaste, extractStatementDate } from '@/lib/stockPasteParser';
 import { SUPPORTED_PLATFORMS, PlatformType } from '@/lib/platforms';
@@ -57,6 +57,15 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  const handleRequestClose = () => {
+    if (step === 'preview' && rows.length > 0) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    onClose();
+  };
 
   const quickStats = React.useMemo(() => {
     if (!rawText.trim()) return { count: 0, total: 0 };
@@ -242,7 +251,7 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
           <button
             type="button"
             data-testid="smart-paste-close-btn"
-            onClick={onClose}
+            onClick={handleRequestClose}
             className="text-muted hover:text-foreground transition-colors p-1 rounded-lg hover:bg-muted/10 cursor-pointer"
           >
             <X size={20} />
@@ -571,6 +580,64 @@ export function SmartPasteModal({ isOpen, onClose, onSuccess }: SmartPasteModalP
           )}
         </div>
       </div>
+
+      {/* Unsaved Sales Discard Confirmation Dialog */}
+      {showDiscardConfirm && (
+        <div
+          data-testid="smart-sales-discard-dialog"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+        >
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Unsaved Sales Statements
+                </h3>
+                <p className="text-xs text-muted">
+                  You have {rows.length} parsed sales records (${totalParsedEarnings.toFixed(2)}) not yet saved.
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-foreground/80">
+              Closing this modal will discard all parsed sales without saving them to SQLite. Do you want to sync them now?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscardConfirm(false)}
+                className="px-3.5 py-2 text-xs font-medium text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
+              >
+                Keep Editing
+              </button>
+              <button
+                type="button"
+                data-testid="smart-sales-discard-confirm-btn"
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  onClose();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+              >
+                Discard & Exit
+              </button>
+              <button
+                type="button"
+                data-testid="smart-sales-discard-save-btn"
+                onClick={async () => {
+                  setShowDiscardConfirm(false);
+                  await handleCommit();
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

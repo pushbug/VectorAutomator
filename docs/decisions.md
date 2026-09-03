@@ -238,9 +238,15 @@
   5. **Automated Verification:** Added unit test suite `UT-API-SETTINGS-01` in `src/__tests__/api/settings.test.ts` and updated `UT-API-DASH-01` and `UT-UI-DASH-01`. All 54 test files (366 unit tests) pass with 0 TypeScript errors.
 - **Impact:** Enables contributors to dynamically customize, persist, and track their microstock vector production targets from the home dashboard with zero downtime and resilient fallbacks.
 
-
-
-
-
-
-
+## ADR-029: Multi-Window Concurrency, Tab-Agnostic Watchdog Auto-Shutdown, and Staged Modal Exit Loss Guards
+- **Date:** 2026-09-03
+- **Context:** Contributors using `VectorAutomator.app` (macOS launcher) needed concurrent multi-window capability to view distinct screens side-by-side (e.g. Portfolio on one window, Sales on another). Chrome's isolated `--app` mode lacks native tabs and new window shortcuts, forcing users into terminal `npm run dev` where port 3000 collisions (`EADDRINUSE`) and session fragmentation occurred. Furthermore, background Next.js daemons remained active indefinitely in RAM after closing the desktop window, blocking port 3000 from other projects. Additionally, staged clipboard modals risked silent data discard if closed before explicit commit.
+- **Decision:**
+  1. **Multi-Window Desktop Trigger & Global Shortcut (`Sidebar.tsx`):** Added a "New Window" action button (`sidebar-new-window-btn`) and a global `Cmd+Shift+N` keydown listener dispatching `window.open(pathname, '_blank')`, spawning independent desktop windows connected to the single port 3000 server and shared SQLite database.
+  2. **Non-Intrusive macOS Launcher (`scripts/launch.sh`):** Updated readiness detection to spawn sibling Chrome app windows when invoked while the server is already active, eliminating duplicate background daemons.
+  3. **Terminal Collision Guard (`scripts/dev.sh` & `scripts/stop.sh`):** Wrapped `npm run dev` with collision detection displaying Thai/English guidance rather than raw crashes, and added `npm run app:stop` issuing graceful `SIGTERM` with `wal_checkpoint(TRUNCATE)`.
+  4. **Tab-Agnostic Client Heartbeat & Server Watchdog (`ServerHeartbeat.tsx` & `serverWatchdog.ts`):** Implemented client pings every 5s across all open tabs/windows with disconnect beacons. The server watchdog maintains a 60s boot grace period and a 25s inactivity threshold; when all tabs/windows are closed, the watchdog checkpoints SQLite WAL and shuts down the process, freeing port 3000 automatically.
+  5. **Explicit UI Exit (`Sidebar.tsx`):** Added a "Quit App" button with confirmation modal calling `/api/system/quit` for instant 1-click shutdown and port release.
+  6. **Staged Modal Exit Loss Guards (`SmartIdPasteModal.tsx` & `SmartPasteModal.tsx`):** Added uncommitted item counter banners, pulsing CTAs, and discard confirmation modals with "Save & Close" and "Discard & Exit" buttons.
+  7. **Comprehensive Automated Verification:** Added 10 new unit tests (`UT-UI-SIDEBAR-NEW-WINDOW-01`, `UT-UI-SIDEBAR-SHORTCUT-01`, `UT-UI-SIDEBAR-QUIT-01`, `UT-API-SYSTEM-HEARTBEAT-01`, `UT-API-SYSTEM-WATCHDOG-01`, `UT-UI-HEARTBEAT-BEACON-01`, `UT-UI-SMART-ID-UNSAVED-01`, `UT-UI-SMART-ID-UNSAVED-SAVE-01`, `UT-UI-SMART-SALES-UNSAVED-01`, `UT-UI-SMART-SALES-UNSAVED-SAVE-01`). All 58 test files and 376 unit tests pass with 0 TypeScript errors.
+- **Impact:** Delivers seamless multi-window side-by-side productivity, prevents port collisions and lingering daemon processes, guarantees zero accidental data loss, and maintains 100% database persistence.

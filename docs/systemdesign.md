@@ -81,4 +81,15 @@ Always write modern canonical Tailwind v4 utilities. Never use legacy/deprecated
 | `h-[24px]`, `w-[24px]`, `p-[24px]` | `h-6`, `w-6`, `p-6` (6 * 4px = 24px) |
 | `h-[32px]`, `w-[32px]`, `p-[32px]` | `h-8`, `w-8`, `p-8` (8 * 4px = 32px) |
 
+## Server Process Lifecycle & Multi-Window Architecture
 
+### Multi-Window Concurrency
+- `VectorAutomator.app` launches on `http://localhost:3000`.
+- Users can open concurrent sibling windows via the "New Window" action button (`sidebar-new-window-btn`) or `Cmd+Shift+N`.
+- All open windows share the same singleton SQLite instance (`dev.db`) in WAL mode with zero data fragmentation.
+
+### Watchdog Auto-Shutdown & Port Release
+- **Client Heartbeat:** `<ServerHeartbeat />` in RootLayout emits a 5-second beacon (`POST /api/system/heartbeat`) and a `pagehide` disconnect beacon.
+- **Server Watchdog:** `src/lib/serverWatchdog.ts` maintains a 60-second boot grace period and a 25-second inactivity threshold.
+- **Auto-Shutdown:** If all browser tabs and desktop windows are closed for >25s, the watchdog executes `checkpointDatabase(undefined, 'TRUNCATE')`, unlinks `.server.pid`, and calls `process.exit(0)` to immediately release port 3000 for other development projects.
+- **Explicit Exit:** Clicking "Quit App" (`sidebar-quit-app-btn`) triggers `POST /api/system/quit` for instant shutdown and port release.

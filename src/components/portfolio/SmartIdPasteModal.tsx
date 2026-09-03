@@ -133,6 +133,8 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
   const [isSearchingDb, setIsSearchingDb] = useState(false);
   const [dbSearchResults, setDbSearchResults] = useState<MatchedImageCandidate[]>([]);
 
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
   const handleReset = () => {
     setStep('input');
     setInputText('');
@@ -143,11 +145,20 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
     setLinkingAsId(null);
     setSearchQuery('');
     setDbSearchResults([]);
+    setShowDiscardConfirm(false);
   };
 
   const handleClose = () => {
     handleReset();
     onClose();
+  };
+
+  const handleRequestClose = () => {
+    if (uncommittedSelectedCount > 0) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    handleClose();
   };
 
   // Step 1: Trigger Live Analysis & Dry-Run Preview
@@ -570,7 +581,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
           <button
             type="button"
             data-testid="close-sync-modal-btn"
-            onClick={handleClose}
+            onClick={handleRequestClose}
             className="p-1.5 text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
           >
             <X size={18} />
@@ -621,11 +632,11 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
             <div className="space-y-4 flex-1 flex flex-col min-h-0" data-testid="sync-preview-grid">
               {/* Staged Preview Alert Banner */}
               {uncommittedSelectedCount > 0 && (
-                <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs rounded-xl shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={15} className="shrink-0 text-blue-500 animate-pulse" />
+                <div className="flex items-center justify-between p-3.5 bg-amber-500/15 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs rounded-xl shrink-0 shadow-xs animate-pulse">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle size={18} className="shrink-0 text-amber-500" />
                     <span>
-                      <strong>Staged Preview (Not Yet Saved):</strong> {uncommittedSelectedCount} artworks matched. Click <strong className="underline font-semibold">"Apply {uncommittedSelectedCount} Checked Artworks"</strong> below to persist to database.
+                      <strong className="font-bold text-amber-600 dark:text-amber-400">⚠️ ยังไม่บันทึกลงฐานข้อมูล (Staged Only):</strong> มี {uncommittedSelectedCount} รายการที่จับคู่แล้วแต่ยังไม่เซฟลง SQLite — กรุณากดปุ่ม <strong className="underline font-semibold text-foreground">"Apply {uncommittedSelectedCount} Checked Artworks"</strong> ด้านล่างเพื่อบันทึก
                     </span>
                   </div>
                 </div>
@@ -1219,7 +1230,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={handleClose}
+                  onClick={handleRequestClose}
                   className="px-4 py-2 text-sm font-medium text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
                 >
                   Done
@@ -1229,7 +1240,11 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                   data-testid="apply-bulk-sync-btn"
                   onClick={handleBulkCommit}
                   disabled={isCommitting || uncommittedSelectedCount === 0}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-40"
+                  className={`flex items-center gap-1.5 px-5 py-2 text-white text-sm font-semibold rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-40 ${
+                    uncommittedSelectedCount > 0
+                      ? "bg-indigo-600 hover:bg-indigo-700 ring-2 ring-indigo-400 ring-offset-2 ring-offset-surface animate-pulse"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
                 >
                   {isCommitting ? (
                     <>
@@ -1248,6 +1263,64 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Unsaved Staged Artworks Discard Confirmation Dialog */}
+      {showDiscardConfirm && (
+        <div
+          data-testid="smart-id-discard-dialog"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+        >
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Unsaved Matched Artworks
+                </h3>
+                <p className="text-xs text-muted">
+                  You have {uncommittedSelectedCount} matched artworks not yet saved.
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-foreground/80">
+              Closing now will discard these matches without writing them to your database. Do you want to save them before exiting?
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscardConfirm(false)}
+                className="px-3.5 py-2 text-xs font-medium text-muted hover:text-foreground rounded-lg hover:bg-surface transition-colors cursor-pointer"
+              >
+                Keep Editing
+              </button>
+              <button
+                type="button"
+                data-testid="smart-id-discard-confirm-btn"
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  handleClose();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+              >
+                Discard & Exit
+              </button>
+              <button
+                type="button"
+                data-testid="smart-id-discard-save-btn"
+                onClick={async () => {
+                  setShowDiscardConfirm(false);
+                  await handleBulkCommit();
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Import Dialog Modal */}
       {quickImportRow && (

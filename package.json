@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "bash scripts/dev.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "app:start": "bash scripts/launch.sh",
+    "app:stop": "bash scripts/stop.sh",
+    "app:restart": "bash scripts/stop.sh && bash scripts/launch.sh",
     "app:bundle": "bash scripts/create-mac-app.sh"
   },
   "dependencies": {

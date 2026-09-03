@@ -140,9 +140,16 @@
 | `UT-UI-COLLECTION-DETAIL-03` | Verify TopSharedKeywordsBar search input rendering, query changes, and clear button triggers | `src/__tests__/components/Collections.test.tsx` |
 | `UT-UI-COLLECTION-DETAIL-04` | Verify CollectionDetailPage multi-attribute search filtering (title, code, asId, ssId, vzId, DB ID, keywords) and active badges | `src/__tests__/components/Collections.test.tsx` |
 | `UT-API-UPLOAD-BATCH-LOCK-01` | Verify /api/upload handles rapid sequential batch uploads safely without lock error and triggers auto-backup | `src/__tests__/api/upload.test.ts` |
-
-
-
+| `UT-UI-SIDEBAR-NEW-WINDOW-01` | Verify Sidebar New Window button renders and executes window.open for multi-window support | `src/__tests__/components/Sidebar.test.tsx` |
+| `UT-UI-SMART-ID-UNSAVED-01` | Verify SmartIdPasteModal triggers discard confirmation dialog when closing with uncommitted staged rows | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
+| `UT-UI-SMART-SALES-UNSAVED-01` | Verify SmartPasteModal triggers discard confirmation dialog when closing with uncommitted parsed sales | `src/__tests__/components/SmartPasteModal.test.tsx` |
+| `UT-API-SYSTEM-HEARTBEAT-01` | Verify POST /api/system/heartbeat updates watchdog lastHeartbeat and tracks active tab IDs | `src/__tests__/api/system_lifecycle.test.ts` |
+| `UT-API-SYSTEM-WATCHDOG-01` | Verify serverWatchdog correctly respects boot grace period, checks inactivity threshold, and unregisters disconnected tabs | `src/__tests__/api/system_lifecycle.test.ts` |
+| `UT-UI-SIDEBAR-QUIT-01` | Verify Sidebar renders Quit App button, opens confirm dialog, and triggers /api/system/quit | `src/__tests__/components/SidebarQuit.test.tsx` |
+| `UT-UI-SIDEBAR-SHORTCUT-01` | Verify Cmd+Shift+N keydown shortcut invokes window.open for desktop window spawning | `src/__tests__/components/Sidebar.test.tsx` |
+| `UT-UI-SMART-ID-UNSAVED-SAVE-01` | Verify clicking Save & Close in discard dialog triggers bulk commit and saves staged artworks | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
+| `UT-UI-SMART-SALES-UNSAVED-SAVE-01` | Verify clicking Save & Close in discard dialog triggers sales commit and saves parsed sales | `src/__tests__/components/SalesComponents.test.tsx` |
+| `UT-UI-HEARTBEAT-BEACON-01` | Verify ServerHeartbeat emits periodic pings on mount and dispatches unload disconnect beacon | `src/__tests__/components/ServerHeartbeat.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
