@@ -63,5 +63,6 @@ dev.db*
 
 # user assets & private files
 portfolio_archive/
+tmp_uploads/
 /public/uploads/*
 !/public/uploads/.gitkeep

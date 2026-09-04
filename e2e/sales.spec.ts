@@ -92,8 +92,12 @@ $207.04
     await expect(page.getByTestId('smart-paste-summary-revenue')).toContainText('$207.04');
     await expect(modal.getByText('#1929092005')).toBeVisible();
 
-    // Close modal
+    // Close modal (confirm discard when preview has uncommitted rows)
     await page.getByTestId('smart-paste-close-btn').click();
+    const discardConfirmBtn = page.getByTestId('smart-sales-discard-confirm-btn');
+    if (await discardConfirmBtn.isVisible()) {
+      await discardConfirmBtn.click();
+    }
     await expect(modal).not.toBeVisible();
   });
 

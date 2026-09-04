@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET, PATCH, DEFAULT_MONTHLY_GOAL } from '@/app/api/settings/route';
 
-const { mockSettingFindUnique, mockSettingUpsert } = vi.hoisted(() => {
+const { mockSettingFindUnique, mockSettingUpsert, mockScheduleAutoBackup } = vi.hoisted(() => {
   return {
     mockSettingFindUnique: vi.fn(),
     mockSettingUpsert: vi.fn(),
+    mockScheduleAutoBackup: vi.fn(),
   };
 });
+
+vi.mock('@/lib/dbBackup', () => ({
+  scheduleAutoBackup: mockScheduleAutoBackup,
+}));
 
 vi.mock('@/generated/prisma/client', () => {
   return {
@@ -99,6 +104,7 @@ describe('Settings API Route (UT-API-SETTINGS-01)', () => {
         update: { value: '100' },
         create: { key: 'monthly_vector_goal', value: '100' },
       });
+      expect(mockScheduleAutoBackup).toHaveBeenCalledTimes(1);
     });
 
     it('rejects update when monthlyVectorGoal is missing', async () => {
@@ -113,6 +119,7 @@ describe('Settings API Route (UT-API-SETTINGS-01)', () => {
       expect(res.status).toBe(400);
       expect(data.error).toBe('monthlyVectorGoal is required');
       expect(mockSettingUpsert).not.toHaveBeenCalled();
+      expect(mockScheduleAutoBackup).not.toHaveBeenCalled();
     });
 
     it('rejects zero or negative monthlyVectorGoal', async () => {

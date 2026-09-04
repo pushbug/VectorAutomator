@@ -4,10 +4,12 @@ import { promisify } from "util";
 import path from "path";
 import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import { randomBytes } from "crypto";
+import { touchServerActivity } from "@/lib/serverWatchdog";
 
 const execAsync = promisify(exec);
 
 export async function POST(req: NextRequest) {
+  touchServerActivity();
   try {
     const formData = await req.formData();
     const epsFile = formData.get("eps") as File;
@@ -36,6 +38,7 @@ export async function POST(req: NextRequest) {
     const cmd = `magick -colorspace sRGB -density 300 "${inputPath}" -resize 1000x -quality 100 "${outputPath}"`;
     
     await execAsync(cmd);
+    touchServerActivity();
 
     // Read the converted JPG
     const jpgBuffer = await readFile(outputPath);

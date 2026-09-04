@@ -132,6 +132,7 @@
 | `UT-UI-COLLECTION-IMPORT-MODAL-01` | Verify ImportByIdsModal universal delimiter parsing (commas, newlines, tabs), live token count, and batch submission | `src/__tests__/components/ImportByIdsModal.test.tsx` |
 | `UT-LIB-BACKUP-WAL-01` | Verify synchronous SQLite WAL checkpointing and non-existent DB path fallback handling | `src/__tests__/lib/dbBackup.test.ts` |
 | `UT-LIB-BACKUP-PURGE-01` | Verify orphan temp snapshot purging and atomic restore with stale WAL/SHM file unlinking | `src/__tests__/lib/dbBackup.test.ts` |
+| `UT-LIB-BACKUP-RESTORE-EXIT-01` | Verify restoreDbBackup calls process.exit(0) in non-test env to force clean server restart | `src/__tests__/lib/dbBackup.test.ts` |
 | `UT-UI-PF-TAB-01` | Verify PortfolioDetail dual-tab navigation (Details & Info vs Sales & Analytics) and tab state transitions | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
 | `UT-UI-PF-ANALYTICS-01` | Verify PortfolioAnalyticsTab monthly time-series aggregation, velocity status badge mapping, metric toggling, benchmark line, and chronological sales log rendering | `src/__tests__/components/PortfolioAnalyticsTab.test.tsx` |
 | `UT-API-PF-BENCHMARK-01` | Verify /api/portfolio computes dynamic Top 100 and portfolio monthly average earnings and downloads | `src/__tests__/api/portfolio.test.ts` |

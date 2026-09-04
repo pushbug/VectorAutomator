@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { scheduleAutoBackup } from '@/lib/dbBackup';
 
 export const DEFAULT_MONTHLY_GOAL = 50;
 export const MIN_GOAL = 1;
@@ -54,6 +55,8 @@ export async function PATCH(req: NextRequest) {
       update: { value: String(goal) },
       create: { key: 'monthly_vector_goal', value: String(goal) },
     });
+
+    scheduleAutoBackup();
 
     return NextResponse.json({
       success: true,

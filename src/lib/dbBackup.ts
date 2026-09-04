@@ -37,7 +37,9 @@ const coordinator = globalForBackup.__dbBackupCoordinator;
 /**
  * Checks if running inside an automated test environment.
  */
-const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+export function isTestEnv(): boolean {
+  return process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+}
 
 /**
  * Executes a SQLite WAL checkpoint.
@@ -53,7 +55,11 @@ export function checkpointDatabase(targetDbPath?: string, mode: 'PASSIVE' | 'TRU
 
     const db = new Database(dbPath, { timeout: 10000 });
     try {
-      db.pragma(`wal_checkpoint(${mode})`);
+      const result = db.pragma(`wal_checkpoint(${mode})`) as any;
+      if (Array.isArray(result) && result.length > 0 && result[0]?.busy !== 0) {
+        console.warn(`[dbBackup] SQLite WAL checkpoint(${mode}) busy: ${result[0].busy}, log: ${result[0].log}`);
+        return false;
+      }
       return true;
     } finally {
       db.close();
@@ -97,7 +103,7 @@ export function purgeOrphanSnapshots(targetBackupsDir?: string): number {
  * Registers graceful process shutdown hooks to ensure pending WAL frames are flushed before exit.
  */
 function registerProcessShutdownHooks(): void {
-  if (coordinator.processHooksRegistered || isTestEnv || typeof process === 'undefined') {
+  if (coordinator.processHooksRegistered || isTestEnv() || typeof process === 'undefined') {
     return;
   }
 
@@ -126,7 +132,7 @@ function registerProcessShutdownHooks(): void {
 
 // Auto-register lifecycle hooks and purge stale temp snapshots on module load
 registerProcessShutdownHooks();
-if (!isTestEnv) {
+if (!isTestEnv()) {
   purgeOrphanSnapshots();
 }
 
@@ -216,7 +222,7 @@ export async function createDbBackup(maxRetained = 10, targetDbPath?: string): P
     }
 
     // Flush WAL pages into base DB prior to snapshot
-    checkpointDatabase(dbPath);
+    checkpointDatabase(dbPath, 'TRUNCATE');
 
     tempSnapshotPath = path.join(backupsDir, `temp_snapshot_${Date.now()}.db`);
 
@@ -354,6 +360,11 @@ export function restoreDbBackup(backupFilePath: string, targetDbPath?: string): 
     }
 
     checkpointDatabase(dbPath, 'TRUNCATE');
+
+    console.log('[dbBackup] Database restored successfully. Restarting server to refresh database connections...');
+    if (!isTestEnv()) {
+      process.exit(0);
+    }
 
     return true;
   } catch (error) {

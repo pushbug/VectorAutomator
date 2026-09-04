@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { checkpointDatabase } from './dbBackup';
+import { prisma } from './prisma';
 
 interface WatchdogState {
   bootTime: number;
@@ -79,14 +80,23 @@ export function getWatchdogStatus(): {
 }
 
 /**
- * Safely checkpoints SQLite WAL and shuts down the process.
+ * Safely checkpoints SQLite WAL, flushes pending state, and shuts down the process.
  */
 export async function shutdownServer(reason: string = 'manual'): Promise<boolean> {
   try {
-    // 1. Commit all SQLite WAL frames to dev.db
-    checkpointDatabase(undefined, 'TRUNCATE');
+    // 1. Commit all SQLite WAL frames to dev.db and disconnect Prisma cleanly
+    try {
+      if (process.env.NODE_ENV !== 'test' && prisma && typeof (prisma as any).$queryRawUnsafe === 'function') {
+        await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);');
+        await prisma.$disconnect();
+      } else {
+        checkpointDatabase(undefined, 'TRUNCATE');
+      }
+    } catch {
+      checkpointDatabase(undefined, 'TRUNCATE');
+    }
 
-    // 2. Remove .server.pid
+    // 3. Remove .server.pid
     if (fs.existsSync(PID_FILE_PATH)) {
       try {
         fs.unlinkSync(PID_FILE_PATH);
@@ -95,16 +105,25 @@ export async function shutdownServer(reason: string = 'manual'): Promise<boolean
       }
     }
 
-    // 3. Terminate process (disabled during test suite)
+    // 4. Terminate process (disabled during test suite)
     if (process.env.NODE_ENV !== 'test') {
       setTimeout(() => {
         process.exit(0);
       }, 200);
     }
     return true;
-  } catch {
+  } catch (error) {
+    console.error('shutdownServer error:', error);
     return false;
   }
+}
+
+/**
+ * Touch or refresh the server activity timestamp during active server operations.
+ */
+export function touchServerActivity(): void {
+  const state = getWatchdogState();
+  state.lastHeartbeat = Date.now();
 }
 
 /**
@@ -124,12 +143,17 @@ export function checkWatchdog(): boolean {
     return false;
   }
 
+  // Tab-aware inactivity threshold:
+  // When activeTabs === 0 (all tabs explicitly closed/disconnected): 25s threshold
+  // When activeTabs > 0 (windows open/backgrounded): 180s threshold (accounts for background tab throttling)
+  const thresholdMs = state.activeTabs.size === 0 ? state.inactivityThresholdMs : 180_000;
+
   // Inactivity threshold exceeded
-  if (now - state.lastHeartbeat > state.inactivityThresholdMs) {
+  if (now - state.lastHeartbeat > thresholdMs) {
     console.log(
       `[Watchdog] No active client windows/tabs detected for ${Math.round(
         (now - state.lastHeartbeat) / 1000
-      )}s. Auto-shutting down to free port.`
+      )}s (activeTabs: ${state.activeTabs.size}). Auto-shutting down to free port.`
     );
     shutdownServer('auto_shutdown_inactivity');
     return true;

@@ -100,6 +100,24 @@ describe('Database WAL Checkpointing & Durability (UT-LIB-BACKUP-WAL-01)', () =>
     expect(truncateSuccess).toBe(true);
   });
 
+  it('UT-LIB-BACKUP-WAL-02: returns false gracefully when wal_checkpoint encounters busy lock', () => {
+    const db = new Database(testDbPath);
+    db.pragma('journal_mode = WAL');
+    db.close();
+
+    const pragmaSpy = vi.spyOn(Database.prototype, 'pragma').mockImplementation((sql: any) => {
+      if (typeof sql === 'string' && sql.includes('wal_checkpoint')) {
+        return [{ busy: 1, log: 10, checkpointed: 0 }];
+      }
+      return [];
+    });
+
+    const success = checkpointDatabase(testDbPath, 'TRUNCATE');
+    expect(success).toBe(false);
+
+    pragmaSpy.mockRestore();
+  });
+
   it('returns false gracefully when database file does not exist', () => {
     const success = checkpointDatabase('/non/existent/path/db.sqlite');
     expect(success).toBe(false);
@@ -149,12 +167,44 @@ describe('Orphan Snapshot Purging & Restore Synchronization (UT-LIB-BACKUP-PURGE
     fs.writeFileSync(walPath, 'stale wal');
     fs.writeFileSync(shmPath, 'stale shm');
 
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+
     const restored = restoreDbBackup(backupPath, testDbPath);
     expect(restored).toBe(true);
+    expect(exitSpy).not.toHaveBeenCalled();
 
     const verifyDb = new Database(testDbPath);
     const row = verifyDb.prepare('SELECT name FROM test').get() as { name: string };
     expect(row.name).toBe('restored_data');
     verifyDb.close();
+    exitSpy.mockRestore();
+  });
+
+  it('UT-LIB-BACKUP-RESTORE-EXIT-01: terminates process with exit(0) post-restore in non-test environment to force clean reconnect', () => {
+    const testDbPath = path.join(testDir, 'exit_test.db');
+    const backupPath = path.join(testDir, 'exit_backup.db');
+
+    // Create backup db
+    const bdb = new Database(backupPath);
+    bdb.exec("CREATE TABLE test (name TEXT); INSERT INTO test VALUES ('restored_exit_data');");
+    bdb.close();
+
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+    const originalVitest = process.env.VITEST;
+    const originalNodeEnv = process.env.NODE_ENV;
+
+    try {
+      // Simulate production runtime outside test environment
+      delete process.env.VITEST;
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+
+      const restored = restoreDbBackup(backupPath, testDbPath);
+      expect(restored).toBe(true);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    } finally {
+      process.env.VITEST = originalVitest;
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
+      exitSpy.mockRestore();
+    }
   });
 });

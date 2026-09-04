@@ -1,28 +1,27 @@
-### Goal: Multi-Window Concurrency, Tab-Agnostic Watchdog Auto-Shutdown, and Staged Modal Exit Loss Guards.
+### Goal: Harden SQLite persistence layer to prevent data loss across backup/restore and close all write-path audit gaps.
 
 ### Status: COMPLETE
 
 ### Done:
-- Added multi-window desktop trigger (`sidebar-new-window-btn`) and `Cmd+Shift+N` global keydown listener in `src/components/Sidebar.tsx`.
-- Implemented client heartbeat telemetry (`src/components/common/ServerHeartbeat.tsx`) and global mount in `src/app/layout.tsx`.
-- Created server watchdog (`src/lib/serverWatchdog.ts`) with 60s boot grace period and 25s idle threshold, auto-closing server and checkpointing SQLite WAL to free port 3000.
-- Implemented explicit exit (`sidebar-quit-app-btn` & `/api/system/quit`) and safe terminal wrappers (`scripts/dev.sh`, `scripts/stop.sh`, `npm run app:stop`).
-- Added staged exit loss confirmation dialogs and pulsing banners in `SmartIdPasteModal.tsx` and `SmartPasteModal.tsx`.
-- Registered ADR-029 in `docs/decisions.md` and updated `docs/systemdesign.md`, `docs/tests/CATALOG.md`, and `docs/tests/SELECTORS.md`.
-- Verified all 58 test files (376 unit tests) pass with 0 TypeScript errors.
+- Upgraded SQLite pre-snapshot checkpoint from PASSIVE to TRUNCATE in `src/lib/dbBackup.ts`.
+- Implemented forced process exit (`process.exit(0)`) post-restore in `src/lib/dbBackup.ts` to ensure clean reconnection.
+- Made `isTestEnv()` a dynamic function in `src/lib/dbBackup.ts` to support safe isolated testing.
+- Added `scheduleAutoBackup()` to `/api/settings` PATCH in `src/app/api/settings/route.ts`.
+- Added unit test `UT-LIB-BACKUP-RESTORE-EXIT-01` in `src/__tests__/lib/dbBackup.test.ts` and registered in `docs/tests/CATALOG.md`.
+- Extended `UT-API-SETTINGS-01` in `src/__tests__/api/settings.test.ts` with auto-backup assertion.
+- Logged ADR-030 in `docs/decisions.md` and verified all 343 unit tests pass with 0 TypeScript errors.
 
 ### Next:
-- 1. User may import or paste 2021 historical statements and Adobe Image IDs into the reinforced staged modals.
-- 2. Explore bulk batch tag editing across multiple selected assets in `/upload` queue.
+- 1. User may continue regular artwork uploads and sales tracking with full persistence durability.
+- 2. Optionally test manual restore flows in `playground/` to observe clean auto-restart behavior.
 
 ### Decisions:
-- Tab-Agnostic Heartbeat Watchdog: Server tracks active tabs via 5s pings; stays alive while ANY tab or window is open, and auto-shuts down cleanly after 25s of zero active tabs.
-- Multi-Window Concurrency: Enabled via `window.open` on the single port 3000 instance to prevent port drift, session fragmentation, and terminal EADDRINUSE collisions.
+- Clean Process Exit on Restore: `restoreDbBackup` forces `process.exit(0)` in production so supervisor auto-restarts with fresh DB file handles, preventing stale Prisma connection data loss.
+- Universal Auto-Backup Parity: All database mutation routes across the system now trigger `scheduleAutoBackup()` with 30s debounce.
 
 ### Skills:
-- [`debug`](.agents/skills/debug/SKILL.md) — Root cause analysis of EADDRINUSE port collision and daemon process lingering.
-- [`consult`](.agents/skills/consult/SKILL.md) — Database audit and clarification of staged preview vs. uncommitted data loss.
-- [`plan`](.agents/skills/plan/SKILL.md) — Multi-window and watchdog auto-shutdown architecture planning.
-- [`coding`](.agents/skills/coding/SKILL.md) — Implementation of ServerHeartbeat, serverWatchdog, Sidebar triggers, and modal exit guards.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Gatekeeper audit, WAL persistence reassurance, and test hardening.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, ADR-029 documentation, and git synchronization.
+- [`consult`](.agents/skills/consult/SKILL.md) — Comprehensive database write-path and persistence audit across 15+ API routes.
+- [`plan`](.agents/skills/plan/SKILL.md) — TDD-Lite specification and plan formulation in `docs/current_plan.md`.
+- [`coding`](.agents/skills/coding/SKILL.md) — Minimal, surgical implementation of TRUNCATE checkpoints, restore exits, and settings auto-backup.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Gatekeeper validation, regression audit, and concurrency verification for web vs launch app.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Session closure, ADR-030 documentation, plan eviction, and git sync.

@@ -632,11 +632,19 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
             <div className="space-y-4 flex-1 flex flex-col min-h-0" data-testid="sync-preview-grid">
               {/* Staged Preview Alert Banner */}
               {uncommittedSelectedCount > 0 && (
-                <div className="flex items-center justify-between p-3.5 bg-amber-500/15 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs rounded-xl shrink-0 shadow-xs animate-pulse">
+                <div
+                  data-testid="smart-id-staged-alert-banner"
+                  className="flex items-center justify-between p-3.5 bg-amber-300 dark:bg-amber-400 border-2 border-amber-500 text-black text-xs rounded-xl shrink-0 shadow-xs"
+                >
                   <div className="flex items-center gap-2.5">
-                    <AlertTriangle size={18} className="shrink-0 text-amber-500" />
-                    <span>
-                      <strong className="font-bold text-amber-600 dark:text-amber-400">⚠️ ยังไม่บันทึกลงฐานข้อมูล (Staged Only):</strong> มี {uncommittedSelectedCount} รายการที่จับคู่แล้วแต่ยังไม่เซฟลง SQLite — กรุณากดปุ่ม <strong className="underline font-semibold text-foreground">"Apply {uncommittedSelectedCount} Checked Artworks"</strong> ด้านล่างเพื่อบันทึก
+                    <AlertTriangle size={18} className="shrink-0 text-black" />
+                    <span className="text-black font-medium leading-relaxed">
+                      <strong className="font-bold text-black">⚠️ ยังไม่บันทึกลงฐานข้อมูล (Staged Only):</strong>{' '}
+                      มี {uncommittedSelectedCount} รายการที่จับคู่แล้วแต่ยังไม่เซฟลง SQLite — กรุณากดปุ่ม{' '}
+                      <strong className="underline font-bold text-black">
+                        &quot;Apply {uncommittedSelectedCount} Checked Artworks&quot;
+                      </strong>{' '}
+                      ด้านล่างเพื่อบันทึก
                     </span>
                   </div>
                 </div>

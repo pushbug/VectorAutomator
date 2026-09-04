@@ -107,9 +107,10 @@ describe('UT-UI-PORTFOLIO-SYNC-MODAL-01: SmartIdPasteModal Staged Visual Preview
     const submitBtn = screen.getByTestId('submit-sync-btn');
     fireEvent.click(submitBtn);
 
-    // Verify transition to preview grid
+    // Verify transition to preview grid and staged alert banner
     await waitFor(() => {
       expect(screen.getByTestId('sync-preview-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('smart-id-staged-alert-banner')).toBeInTheDocument();
     });
 
     expect(screen.getByText(/569029521/)).toBeInTheDocument();

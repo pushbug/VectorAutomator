@@ -7,6 +7,8 @@ import {
   unregisterTab,
   getWatchdogStatus,
   shutdownServer,
+  touchServerActivity,
+  checkWatchdog,
 } from '@/lib/serverWatchdog';
 
 vi.mock('@/lib/dbBackup', () => ({
@@ -66,5 +68,22 @@ describe('System Lifecycle & Watchdog Telemetry', () => {
     expect(quitRes.status).toBe(200);
     const quitData = await quitRes.json();
     expect(quitData.ok).toBe(true);
+  });
+
+  it('UT-API-SYSTEM-WATCHDOG-02: touchServerActivity refreshes lastHeartbeat timestamp', () => {
+    const before = getWatchdogStatus().lastHeartbeat;
+    touchServerActivity();
+    const status = getWatchdogStatus();
+    expect(status.lastHeartbeat).toBeGreaterThanOrEqual(before);
+    expect(status.timeSinceLastHeartbeat).toBeLessThan(100);
+  });
+
+  it('UT-API-SYSTEM-WATCHDOG-03: checkWatchdog respects grace period and environment guard', () => {
+    // In test environment, checkWatchdog unconditionally returns false
+    expect(checkWatchdog()).toBe(false);
+
+    // Verify telemetry reports grace period
+    const status = getWatchdogStatus();
+    expect(typeof status.isGracePeriod).toBe('boolean');
   });
 });

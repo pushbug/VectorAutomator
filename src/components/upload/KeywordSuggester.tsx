@@ -70,7 +70,7 @@ export function KeywordSuggester({
           }
         }
       } catch (err) {
-        console.error("Failed to fetch portfolio suggestions:", err);
+        console.warn("Failed to fetch portfolio suggestions:", err);
       } finally {
         if (!isCancelled) setIsLoading(false);
       }

@@ -6,6 +6,29 @@ import {
   deleteMultipleStagingAssets
 } from "@/lib/stagingQueueStorage";
 
+// Module-level bounded conversion queue ensuring max 2 concurrent ImageMagick conversions
+// across rapid, repeated drop events to preserve browser socket pool and prevent CPU saturation.
+interface ConvertTask {
+  id: string;
+  file: File;
+}
+
+const conversionQueue: ConvertTask[] = [];
+let activeConversionWorkers = 0;
+const MAX_CONCURRENT_CONVERSIONS = 2;
+
+function drainConversionQueue(convertFn: (id: string, file: File) => Promise<void>) {
+  while (activeConversionWorkers < MAX_CONCURRENT_CONVERSIONS && conversionQueue.length > 0) {
+    const task = conversionQueue.shift();
+    if (!task) break;
+    activeConversionWorkers++;
+    convertFn(task.id, task.file).finally(() => {
+      activeConversionWorkers--;
+      drainConversionQueue(convertFn);
+    });
+  }
+}
+
 export function useAssetProcessor() {
   const { assets, setAssets, activeAssetId, setActiveAssetId, isHydrated } = useAssets();
   const assetList = Object.values(assets);
@@ -67,8 +90,9 @@ export function useAssetProcessor() {
       });
 
       if (assetsToConvert.length > 0) {
+        conversionQueue.push(...assetsToConvert);
         setTimeout(() => {
-          assetsToConvert.forEach(({ id, file }) => convertEpsToJpg(id, file));
+          drainConversionQueue(convertEpsToJpg);
         }, 0);
       }
       
