@@ -69,3 +69,13 @@ The Sales & Earnings Tracking module provides a transaction-based recording syst
 - **Duplicate Sales Warning Alert:** Preview mode queries `PlatformStats` on target date and returns `existingSalesWarning`, rendering an amber warning banner if records exist for that platform and date.
 - **In-Payload Asset Deduplication & Clean Paste UX:** `parseStockPaste` enforces Set-based `assetId` deduplication across Strategy 1 (single-line) and Strategy 2 (stream tokens), preventing double-pasted text from inflating earnings or counts. Textarea auto-replaces on statement paste and includes a 1-click `Clear` button (`smart-paste-clear-btn`).
 
+## 9. Dual-Platform Contributor Catalog Extractor (`extension/extension-contributor/`)
+- **Supported Domains:** `contributor.stock.adobe.com` and `submit.shutterstock.com`.
+- **100% Ban-Safe Zero-Network Scraping:** Client-side DOM scraping directly inside the user's active browser session. Zero background HTTP requests or automated headless scrapers to avoid Cloudflare/Akamai bot bans.
+- **Shutterstock Card Extraction (`extractShutterstockCatalog`):** Extracts `ssId` from DOM card or image source, un-truncated full filename from `input[data-testid="asset-checkbox"][aria-label="select asset <filename>"]` (bypassing ellipsis), approval status, and thumbnails.
+- **3-Tier Discrimination & Ingestion:**
+  - Signature header auto-detection (`Shutterstock ID` vs `Asset ID`).
+  - Segmented platform toggle in `SmartIdPasteModal.tsx` (`smart-id-paste-platform-select`).
+  - Backend route `/api/portfolio/paste-sync` updates `Image.ssId` and triggers automated sales reconciliation via `reconcileImageSales(prisma, { id, ssId })`.
+
+

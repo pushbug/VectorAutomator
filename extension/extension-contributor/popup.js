@@ -1,4 +1,4 @@
-// Adobe Contributor Portfolio Extractor - Popup Controller
+// Stock Contributor Portfolio Extractor - Popup Controller (Adobe Stock & Shutterstock)
 
 let currentData = null;
 
@@ -27,7 +27,7 @@ async function copyToClipboardSafe(text) {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // Fallback silently without emitting console.warn
+      // Fallback silently
     }
   }
 
@@ -62,10 +62,25 @@ async function copyToClipboardSafe(text) {
 }
 
 function formatTsv(data) {
+  if (data?.platform === 'Shutterstock') {
+    const header = ['Shutterstock ID', 'Title / Filename', 'Status', 'Media Type', 'Thumbnail URL'].join('\t');
+    const rows = (data.items || []).map((item) => {
+      return [
+        item.ssId || item.asId || item.id || '',
+        (item.title || '').replace(/\t|\r?\n/g, ' '),
+        item.status || 'Approved',
+        item.mediaType || 'Illustration',
+        item.thumbnailUrl || '',
+      ].join('\t');
+    });
+    return [header, ...rows].join('\n');
+  }
+
+  // Default: Adobe Stock
   const header = ['Asset ID', 'Title', 'Downloads', 'Nominate Eligible', '1 Year', 'Perpetual', 'Thumbnail'].join('\t');
   const rows = (data.items || []).map((item) => {
     return [
-      item.asId || '',
+      item.asId || item.id || '',
       (item.title || '').replace(/\t|\r?\n/g, ' '),
       item.downloads || 0,
       item.isNominateEligible ? 'Yes' : 'No',
@@ -79,10 +94,26 @@ function formatTsv(data) {
 
 function formatCsv(data) {
   const escapeCsv = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
+
+  if (data?.platform === 'Shutterstock') {
+    const header = ['Shutterstock ID', 'Title / Filename', 'Status', 'Media Type', 'Thumbnail URL'].map(escapeCsv).join(',');
+    const rows = (data.items || []).map((item) => {
+      return [
+        item.ssId || item.asId || item.id || '',
+        item.title || '',
+        item.status || 'Approved',
+        item.mediaType || 'Illustration',
+        item.thumbnailUrl || '',
+      ].map(escapeCsv).join(',');
+    });
+    return '\uFEFF' + [header, ...rows].join('\n');
+  }
+
+  // Default: Adobe Stock
   const header = ['Asset ID', 'Title', 'Downloads', 'Nominate Eligible', '1 Year', 'Perpetual', 'Thumbnail'].map(escapeCsv).join(',');
   const rows = (data.items || []).map((item) => {
     return [
-      item.asId || '',
+      item.asId || item.id || '',
       item.title || '',
       item.downloads || 0,
       item.isNominateEligible ? 'Yes' : 'No',
@@ -100,15 +131,96 @@ function downloadCsv(data) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `adobe_contributor_portfolio_${Date.now()}.csv`;
+  const platformPrefix = data?.platform === 'Shutterstock' ? 'shutterstock_catalog' : 'adobe_contributor_portfolio';
+  a.download = `${platformPrefix}_${Date.now()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-// Scraper function executed directly in the tab context
+// Scraper function executed directly in tab context if content script is unavailable
 function scrapeContributorPageInTab() {
+  const isShutterstock = window.location.hostname.includes('shutterstock.com');
+
+  if (isShutterstock) {
+    const cards = Array.from(document.querySelectorAll('div[data-testid="asset-card"]'));
+    const items = [];
+    const seenIds = new Set();
+
+    cards.forEach((card) => {
+      let ssId = '';
+      const typographyEl = card.querySelector('.MuiTypography-bodyStaticMd, .MuiCardContent-root .MuiTypography-root');
+      if (typographyEl && typographyEl.textContent) {
+        const match = typographyEl.textContent.trim().match(/^(\d{7,12})\b/);
+        if (match) ssId = match[1];
+      }
+
+      const imgEl = card.querySelector('img.MuiCardMedia-media') || card.querySelector('img');
+      const imgSrc = imgEl?.src || imgEl?.getAttribute('src') || '';
+      if (!ssId && imgSrc) {
+        const imgMatch = imgSrc.match(/-(\d{7,12})\.jpg/i);
+        if (imgMatch) ssId = imgMatch[1];
+      }
+
+      if (!ssId || seenIds.has(ssId)) return;
+      seenIds.add(ssId);
+
+      let title = '';
+      const checkboxInput = card.querySelector('input[data-testid="asset-checkbox"], input[type="checkbox"]');
+      if (checkboxInput) {
+        const ariaLabel = checkboxInput.getAttribute('aria-label') || '';
+        if (ariaLabel) title = ariaLabel.replace(/^select\s+asset\s+/i, '').trim();
+      }
+
+      if (!title && imgEl) {
+        const dataTestId = imgEl.getAttribute('data-testid') || '';
+        if (dataTestId.startsWith('card-media-')) {
+          title = dataTestId.replace(/^card-media-/, '').trim();
+        } else {
+          title = imgEl.getAttribute('alt')?.trim() || '';
+        }
+      }
+
+      if (!title && typographyEl) {
+        title = typographyEl.textContent?.replace(/^\d+\s*-\s*/, '').trim() || `Asset ${ssId}`;
+      }
+
+      let status = 'Approved';
+      let mediaType = 'Illustration';
+      const badges = Array.from(card.querySelectorAll('.MuiCardContent-root p.MuiTypography-bodyStaticXs, .MuiCardContent-root p'));
+      if (badges.length > 0) {
+        const badgeTexts = badges.map((b) => (b.textContent || '').trim()).filter(Boolean);
+        if (badgeTexts.length >= 1) status = badgeTexts[0];
+        if (badgeTexts.length >= 2) mediaType = badgeTexts[1];
+      }
+
+      items.push({
+        asId: ssId,
+        ssId,
+        id: ssId,
+        title,
+        status,
+        mediaType,
+        downloads: 0,
+        thumbnailUrl: imgSrc,
+        isNominateEligible: false,
+        nominate1Year: false,
+        nominatePerpetual: false,
+      });
+    });
+
+    return {
+      isContributorPage: true,
+      platform: 'Shutterstock',
+      totalItems: items.length,
+      nominateItemsCount: 0,
+      items,
+      url: window.location.href,
+    };
+  }
+
+  // Adobe Stock scraper
   const imgEls = Array.from(document.querySelectorAll('img[src*="_F_"]'));
   const cardSet = new Set();
 
@@ -119,9 +231,7 @@ function scrapeContributorPageInTab() {
       img.closest('div[data-t="portfolio-single-asset-wrapper"]') ||
       img.closest('div.bon-jour-border') ||
       img.closest('.cursor-pointer')?.parentElement;
-    if (card) {
-      cardSet.add(card);
-    }
+    if (card) cardSet.add(card);
   });
 
   if (cardSet.size === 0) {
@@ -147,9 +257,7 @@ function scrapeContributorPageInTab() {
       if (altMatch) asId = altMatch[1];
     }
 
-    if (!asId || seenIds.has(asId)) {
-      return;
-    }
+    if (!asId || seenIds.has(asId)) return;
     seenIds.add(asId);
 
     let title =
@@ -167,17 +275,14 @@ function scrapeContributorPageInTab() {
       if (!isNaN(parsed)) downloads = parsed;
     }
 
-    // 1. Check for switch toggle inputs
     const toggleInputs = Array.from(
       card.querySelectorAll(
         'input[data-t="portfolio-single-asset-buyout-toggle"], input[aria-label*="Year"], input[aria-label*="Perpetual"], input[role="switch"]'
       )
     );
 
-    // 2. Check for active buyout_toggle container (not hidden)
     const activeBuyoutToggle = card.querySelector('.buyout_toggle:not(.buyout_toggle__hidden)');
 
-    // 3. Check for nomination labels text (1 Year / Perpetual)
     const nominationLabels = Array.from(
       card.querySelectorAll('.CampaignNominationToggle__StyledText-sc-8olflh-0, .buyout_toggle div, .buyout_toggle span')
     ).filter((el) => {
@@ -212,6 +317,7 @@ function scrapeContributorPageInTab() {
 
     items.push({
       asId,
+      id: asId,
       title,
       downloads,
       thumbnailUrl: imgSrc,
@@ -225,6 +331,7 @@ function scrapeContributorPageInTab() {
 
   return {
     isContributorPage: true,
+    platform: 'Adobe Stock',
     totalItems: items.length,
     nominateItemsCount,
     items,
@@ -236,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const queryDisplay = document.getElementById('query-display');
   const countPill = document.getElementById('count-pill');
   const nominatePill = document.getElementById('nominate-pill');
+  const platformCapsule = document.getElementById('platform-capsule');
 
   const copyNominateIdsBtn = document.getElementById('copy-nominate-ids-btn');
   const nominateBtnTitle = document.getElementById('nominate-btn-title');
@@ -250,22 +358,37 @@ document.addEventListener('DOMContentLoaded', () => {
     currentData = data;
     const total = data?.totalItems || 0;
     const nominateCount = data?.nominateItemsCount || 0;
+    const isShutterstock = data?.platform === 'Shutterstock';
 
-    if (queryDisplay) queryDisplay.textContent = 'My Portfolio Catalog';
-    if (countPill) countPill.textContent = `${total} Assets`;
-
-    if (nominatePill) {
-      if (nominateCount > 0) {
-        nominatePill.textContent = `⭐ ${nominateCount} Nominate`;
-        nominatePill.style.display = 'inline-block';
-      } else {
-        nominatePill.style.display = 'none';
-      }
+    if (platformCapsule) {
+      platformCapsule.textContent = isShutterstock ? 'Shutterstock' : 'Adobe Stock';
     }
 
-    if (copyNominateIdsBtn) {
-      copyNominateIdsBtn.disabled = nominateCount === 0;
-      if (nominateBtnTitle) nominateBtnTitle.textContent = `Copy Nominate IDs (${nominateCount})`;
+    if (queryDisplay) {
+      queryDisplay.textContent = isShutterstock ? 'Shutterstock Catalog' : 'Adobe Contributor';
+    }
+
+    if (countPill) {
+      countPill.textContent = `${total} Artworks`;
+    }
+
+    if (isShutterstock) {
+      if (nominatePill) nominatePill.style.display = 'none';
+      if (copyNominateIdsBtn) copyNominateIdsBtn.style.display = 'none';
+    } else {
+      if (copyNominateIdsBtn) copyNominateIdsBtn.style.display = 'flex';
+      if (nominatePill) {
+        if (nominateCount > 0) {
+          nominatePill.textContent = `⭐ ${nominateCount} Nominate`;
+          nominatePill.style.display = 'inline-block';
+        } else {
+          nominatePill.style.display = 'none';
+        }
+      }
+      if (copyNominateIdsBtn) {
+        copyNominateIdsBtn.disabled = nominateCount === 0;
+        if (nominateBtnTitle) nominateBtnTitle.textContent = `Copy Nominate IDs (${nominateCount})`;
+      }
     }
 
     if (copyAllIdsBtn) {
@@ -282,14 +405,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (!activeTab.url || !activeTab.url.includes('contributor.stock.adobe.com')) {
-        if (queryDisplay) queryDisplay.textContent = 'Open contributor.stock.adobe.com';
+      const url = activeTab.url || '';
+      const isAdobe = url.includes('contributor.stock.adobe.com');
+      const isShutterstock = url.includes('submit.shutterstock.com');
+
+      if (!isAdobe && !isShutterstock) {
+        if (queryDisplay) queryDisplay.textContent = 'Open Adobe or Shutterstock';
         if (countPill) countPill.textContent = '0 Assets';
         return;
       }
 
       function queryContributorData() {
-        // Direct script execution inside active tab to ensure fresh DOM scraping with zero cache
         if (chrome.scripting && chrome.scripting.executeScript) {
           chrome.scripting.executeScript(
             {
@@ -298,7 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             (results) => {
               if (chrome.runtime.lastError || !results || !results[0] || !results[0].result) {
-                // Fallback to messaging
                 chrome.tabs.sendMessage(activeTab.id, { action: 'GET_CONTRIBUTOR_DATA' }, (response) => {
                   if (response) {
                     updateUi(response);
@@ -333,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const nominateIds = currentData.items
       .filter((it) => it.isNominateEligible)
-      .map((it) => it.asId);
+      .map((it) => it.asId || it.id);
 
     if (nominateIds.length === 0) {
       showToast('No nominate-eligible assets on page');
@@ -355,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('No assets found');
       return;
     }
-    const allIds = currentData.items.map((it) => it.asId);
+    const allIds = currentData.items.map((it) => it.ssId || it.asId || it.id);
     const text = allIds.join('\n');
     const success = await copyToClipboardSafe(text);
     if (success) {

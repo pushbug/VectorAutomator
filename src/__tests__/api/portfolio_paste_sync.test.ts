@@ -544,4 +544,103 @@ describe('UT-API-PORTFOLIO-FUZZY-SYNC-01: Fuzzy Matching & Ambiguity Handling', 
       }),
     });
   });
+
+  describe('UT-API-PF-PASTE-SYNC-SSID-01: Shutterstock ssId Matching and Reconciliation', () => {
+    it('previews Shutterstock TSV matching filename against filePath and title, returning ssId and platform', async () => {
+      mockImageFindMany.mockResolvedValue([
+        {
+          id: 'ss-img-1',
+          code: '2609-01',
+          title: 'Minimalist Milestone Infographic Banner',
+          filePath: '/images/2026/09/2837128969.jpg',
+          asId: null,
+          ssId: null,
+          asDownloads: 0,
+          ssDownloads: 0,
+          totalDownloads: 0,
+        },
+        {
+          id: 'ss-img-2',
+          code: '2609-02',
+          title: 'Loop Process Infographic',
+          filePath: '/uploads/vectors/282.eps',
+          asId: null,
+          ssId: null,
+          asDownloads: 0,
+          ssDownloads: 0,
+          totalDownloads: 0,
+        },
+      ]);
+
+      const tsvData = [
+        'Shutterstock ID\tTitle / Filename\tStatus\tMedia Type\tThumbnail URL',
+        '2837128969\tMinimalist Milestone Infographic Banner\tApproved\tIllustration\thttps://image.shutterstock.com/2837128969.jpg',
+        '2831847607\t282.eps\tApproved\tIllustration\thttps://image.shutterstock.com/2831847607.jpg',
+      ].join('\n');
+
+      const req = new NextRequest('http://localhost:3000/api/portfolio/paste-sync', {
+        method: 'POST',
+        body: JSON.stringify({ text: tsvData, platform: 'Shutterstock' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await postPortfolioPasteSync(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.success).toBe(true);
+      expect(json.platform).toBe('Shutterstock');
+      expect(json.exactCount).toBe(2);
+
+      expect(json.rows[0].ssId).toBe('2837128969');
+      expect(json.rows[0].status).toBe('exact');
+      expect(json.rows[0].matchedImage.id).toBe('ss-img-1');
+
+      // Filename 282.eps matches filePath /uploads/vectors/282.eps
+      expect(json.rows[1].ssId).toBe('2831847607');
+      expect(json.rows[1].status).toBe('exact');
+      expect(json.rows[1].matchedImage.id).toBe('ss-img-2');
+    });
+
+    it('commits Shutterstock items updating Image.ssId and triggering sales reconciler', async () => {
+      mockImageFindUnique.mockResolvedValue({ id: 'ss-img-1' });
+      mockImageUpdate.mockResolvedValue({ id: 'ss-img-1', ssId: '2837128969' });
+
+      const req = new NextRequest('http://localhost:3000/api/portfolio/paste-sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'commit',
+          platform: 'Shutterstock',
+          items: [
+            {
+              imageId: 'ss-img-1',
+              ssId: '2837128969',
+              status: 'Approved',
+            },
+          ],
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await postPortfolioPasteSync(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.success).toBe(true);
+      expect(json.committedCount).toBe(1);
+
+      expect(mockImageUpdate).toHaveBeenCalledWith({
+        where: { id: 'ss-img-1' },
+        data: {
+          ssId: '2837128969',
+          status: 'published',
+        },
+      });
+
+      expect(mockReconcileImageSales).toHaveBeenCalledWith(
+        expect.anything(),
+        { id: 'ss-img-1', ssId: '2837128969' }
+      );
+    });
+  });
 });

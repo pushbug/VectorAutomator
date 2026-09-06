@@ -1,6 +1,6 @@
-// Adobe Contributor Portfolio Extractor - Resilient DOM Scraper
+// Stock Contributor Portfolio Extractor - Dual Platform DOM Scraper (Adobe Stock & Shutterstock)
 
-function extractContributorPortfolio() {
+function extractAdobeContributor() {
   // Find all asset cards via multiple potential selectors in Adobe Contributor React SPA
   const imgEls = Array.from(document.querySelectorAll('img[src*="_F_"]'));
   const cardSet = new Set();
@@ -63,17 +63,14 @@ function extractContributorPortfolio() {
     }
 
     // Detect Free Collection Nomination Toggles
-    // 1. Check for switch toggle inputs
     const toggleInputs = Array.from(
       card.querySelectorAll(
         'input[data-t="portfolio-single-asset-buyout-toggle"], input[aria-label*="Year"], input[aria-label*="Perpetual"], input[role="switch"]'
       )
     );
 
-    // 2. Check for active buyout_toggle container (not hidden)
     const activeBuyoutToggle = card.querySelector('.buyout_toggle:not(.buyout_toggle__hidden)');
 
-    // 3. Check for nomination labels text (1 Year / Perpetual)
     const nominationLabels = Array.from(
       card.querySelectorAll('.CampaignNominationToggle__StyledText-sc-8olflh-0, .buyout_toggle div, .buyout_toggle span')
     ).filter((el) => {
@@ -97,19 +94,18 @@ function extractContributorPortfolio() {
         }
       });
 
-      // Positional fallback if aria-labels are missing
       if (toggleInputs.length >= 2 && !nominate1Year && !nominatePerpetual) {
         nominate1Year = Boolean(toggleInputs[0].checked);
         nominatePerpetual = Boolean(toggleInputs[1].checked);
       }
     } else if (isNominateEligible) {
-      // Default to ON if eligible
       nominate1Year = true;
       nominatePerpetual = true;
     }
 
     items.push({
       asId,
+      id: asId,
       title,
       downloads,
       thumbnailUrl: imgSrc,
@@ -123,11 +119,106 @@ function extractContributorPortfolio() {
 
   return {
     isContributorPage: true,
+    platform: 'Adobe Stock',
     totalItems: items.length,
     nominateItemsCount,
     items,
     url: window.location.href,
   };
+}
+
+function extractShutterstockCatalog() {
+  const cards = Array.from(document.querySelectorAll('div[data-testid="asset-card"]'));
+  const items = [];
+  const seenIds = new Set();
+
+  cards.forEach((card) => {
+    // 1. Extract Asset ID (ssId)
+    let ssId = '';
+    const typographyEl = card.querySelector('.MuiTypography-bodyStaticMd, .MuiCardContent-root .MuiTypography-root');
+    if (typographyEl && typographyEl.textContent) {
+      const match = typographyEl.textContent.trim().match(/^(\d{7,12})\b/);
+      if (match) {
+        ssId = match[1];
+      }
+    }
+
+    // Fallback: extract from image src (e.g. "...-250nw-2837128969.jpg")
+    const imgEl = card.querySelector('img.MuiCardMedia-media') || card.querySelector('img');
+    const imgSrc = imgEl?.src || imgEl?.getAttribute('src') || '';
+    if (!ssId && imgSrc) {
+      const imgMatch = imgSrc.match(/-(\d{7,12})\.jpg/i);
+      if (imgMatch) {
+        ssId = imgMatch[1];
+      }
+    }
+
+    if (!ssId || seenIds.has(ssId)) return;
+    seenIds.add(ssId);
+
+    // 2. Extract Full un-truncated Filename / Title
+    let title = '';
+    const checkboxInput = card.querySelector('input[data-testid="asset-checkbox"], input[type="checkbox"]');
+    if (checkboxInput) {
+      const ariaLabel = checkboxInput.getAttribute('aria-label') || '';
+      if (ariaLabel) {
+        title = ariaLabel.replace(/^select\s+asset\s+/i, '').trim();
+      }
+    }
+
+    if (!title && imgEl) {
+      const dataTestId = imgEl.getAttribute('data-testid') || '';
+      if (dataTestId.startsWith('card-media-')) {
+        title = dataTestId.replace(/^card-media-/, '').trim();
+      } else {
+        title = imgEl.getAttribute('alt')?.trim() || '';
+      }
+    }
+
+    if (!title && typographyEl) {
+      title = typographyEl.textContent?.replace(/^\d+\s*-\s*/, '').trim() || `Asset ${ssId}`;
+    }
+
+    // 3. Status and Media Type badges
+    let status = 'Approved';
+    let mediaType = 'Illustration';
+    const badges = Array.from(card.querySelectorAll('.MuiCardContent-root p.MuiTypography-bodyStaticXs, .MuiCardContent-root p'));
+    if (badges.length > 0) {
+      const badgeTexts = badges.map((b) => (b.textContent || '').trim()).filter(Boolean);
+      if (badgeTexts.length >= 1) status = badgeTexts[0];
+      if (badgeTexts.length >= 2) mediaType = badgeTexts[1];
+    }
+
+    items.push({
+      asId: ssId, // For common id accessor
+      ssId,
+      id: ssId,
+      title,
+      status,
+      mediaType,
+      downloads: 0,
+      thumbnailUrl: imgSrc,
+      isNominateEligible: false,
+      nominate1Year: false,
+      nominatePerpetual: false,
+    });
+  });
+
+  return {
+    isContributorPage: true,
+    platform: 'Shutterstock',
+    totalItems: items.length,
+    nominateItemsCount: 0,
+    items,
+    url: window.location.href,
+  };
+}
+
+function extractContributorPortfolio() {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('shutterstock.com')) {
+    return extractShutterstockCatalog();
+  }
+  return extractAdobeContributor();
 }
 
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {

@@ -151,6 +151,9 @@
 | `UT-UI-SMART-ID-UNSAVED-SAVE-01` | Verify clicking Save & Close in discard dialog triggers bulk commit and saves staged artworks | `src/__tests__/components/PortfolioSyncModal.test.tsx` |
 | `UT-UI-SMART-SALES-UNSAVED-SAVE-01` | Verify clicking Save & Close in discard dialog triggers sales commit and saves parsed sales | `src/__tests__/components/SalesComponents.test.tsx` |
 | `UT-UI-HEARTBEAT-BEACON-01` | Verify ServerHeartbeat emits periodic pings on mount and dispatches unload disconnect beacon | `src/__tests__/components/ServerHeartbeat.test.tsx` |
+| `UT-PARSER-SHUTTERSTOCK-CATALOG-01` | Verify contributorParser auto-detects Shutterstock header signature and parses TSV/CSV with columns (Shutterstock ID, Title / Filename, Status, Media Type, Thumbnail URL) | `src/__tests__/lib/contributorParser.test.ts` |
+| `UT-API-PF-PASTE-SYNC-SSID-01` | Verify /api/portfolio/paste-sync previews and matches Shutterstock artworks against Image.filePath / Image.title, commits Image.ssId, and invokes sales reconciler | `src/__tests__/api/portfolio_paste_sync.test.ts` |
+| `UT-UI-SMART-PASTE-PLATFORM-01` | Verify SmartIdPasteModal toggles between Adobe and Shutterstock modes, auto-switches platform on paste, and renders ssId linking | `src/__tests__/components/SmartIdPasteModal.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |
@@ -161,6 +164,7 @@
 | `E2E-PF-01` | Happy path: Portfolio rendering, filtering, sorting, pagination, and download update | `e2e/portfolio.spec.ts` |
 | `E2E-PF-02` | Verify Image Code auto-suggest, duplicate validation, and image deletion with confirm modal | `e2e/portfolio.spec.ts` |
 | `E2E-PF-03` | Verify Sync Adobe IDs button opens SmartIdPasteModal, accepts clipboard TSV, and validates modal controls | `e2e/portfolio.spec.ts` |
+| `E2E-PF-04` | Verify SmartIdPasteModal Shutterstock segmented platform toggle, title switching, and auto-switch on paste | `e2e/portfolio.spec.ts` |
 | `E2E-SALES-01` | Verify logging sales transactions, summary KPI metrics, and portfolio breakdown reflections | `e2e/sales.spec.ts` |
 | `E2E-SALES-02` | Verify opening Smart Paste modal, real-time live stats, preview header, and submission | `e2e/sales.spec.ts` |
 | `E2E-SALES-03` | Verify Unlinked artwork filter button and sales table pagination controls | `e2e/sales.spec.ts` |

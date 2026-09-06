@@ -343,3 +343,9 @@ Always use `data-testid` for element selection in E2E tests.
 | `quit-app-confirm-dialog` | Modal dialog confirming application shutdown |
 | `quit-app-confirm-btn` | Button confirming immediate server shutdown |
 | `quit-app-cancel-btn` | Button cancelling application shutdown dialog |
+| `smart-id-paste-modal` | Modal card container for Smart ID Matcher (Adobe & Shutterstock) |
+| `smart-id-paste-platform-select` | Segmented platform toggle container in Smart ID Matcher modal |
+| `smart-id-paste-platform-adobe` | Adobe Stock toggle button in Smart ID Matcher modal |
+| `smart-id-paste-platform-shutterstock` | Shutterstock toggle button in Smart ID Matcher modal |
+| `smart-id-paste-analyze-btn` | Analyze and preview button inside Smart ID Matcher modal |
+| `smart-id-paste-commit-btn` | Apply and commit checked artworks button inside Smart ID Matcher modal |

@@ -261,3 +261,17 @@
   4. **Dynamic Test Environment Detection (`src/lib/dbBackup.ts`):** Replaced static module-level `isTestEnv` constant with dynamic function `export function isTestEnv(): boolean`, enabling unit tests to verify production exit mechanics without prematurely terminating Vitest runner.
   5. **Automated Verification:** Added unit test `UT-LIB-BACKUP-RESTORE-EXIT-01` in `src/__tests__/lib/dbBackup.test.ts` and extended `UT-API-SETTINGS-01` in `src/__tests__/api/settings.test.ts`. All 343 unit and integration tests pass with 0 TypeScript errors.
 - **Impact:** Eliminates data loss vulnerabilities across SQLite WAL lifecycle, guarantees 100% durability across all API write operations, and ensures complete database consistency after backups and restores.
+
+## ADR-031: Client-Side Dual-Platform Contributor Catalog Extraction (Adobe Stock & Shutterstock)
+- **Date:** 2026-09-06
+- **Context:** Contributors uploading vectors across multiple stock agencies require their published Asset IDs (`asId` for Adobe Stock, `ssId` for Shutterstock) to be recorded in VectorAutomator to reconcile sales telemetry and map analytics. While Adobe Stock ID syncing was already supported, contributors needed a corresponding workflow for Shutterstock. Direct server-side scraping or automated HTTP requests against Shutterstock contributor endpoints risk instant account bans via Cloudflare/Akamai bot detection. Furthermore, pasted catalog data must strictly prevent cross-platform contamination (e.g. accidentally saving Shutterstock ID to `asId`).
+- **Decision:**
+  1. **100% Ban-Safe Air-Gapped Chrome Extension:** Extended `extension/extension-contributor` to support `submit.shutterstock.com/dashboard/catalog` via client-side DOM scraping (`[data-testid="asset-card"]`). Extracted un-truncated filenames from checkbox `aria-label="select asset <filename>"` (bypassing DOM ellipsis truncation) and extracted `ssId`, status, and thumbnails directly in the user's active browser.
+  2. **3-Tier Platform Discrimination:**
+     - Tier 1: TSV signature header auto-detection (`Shutterstock ID \t Title / Filename \t Status ...` vs `Asset ID \t ...`) in `contributorParser.ts`.
+     - Tier 2: Segmented UI platform toggle (`smart-id-paste-platform-select`) with auto-switch on paste in `SmartIdPasteModal.tsx`.
+     - Tier 3: Strict backend partitioning in `/api/portfolio/paste-sync` writing to `Image.ssId` when `body.platform === 'Shutterstock'` and triggering `reconcileImageSales(prisma, { id, ssId })`.
+  3. **Backward Compatibility Preservation:** Preserved exact payload format for legacy Adobe Stock callers and existing tests.
+  4. **Automated Verification:** Added unit tests `UT-PARSER-SHUTTERSTOCK-CATALOG-01`, `UT-API-PF-PASTE-SYNC-SSID-01`, `UT-UI-SMART-PASTE-PLATFORM-01`, and Playwright E2E test `E2E-PF-04`. All 60 test files (389 tests) and 4 Playwright E2E tests pass with 0 errors.
+- **Impact:** Delivers ban-safe, 1-click clipboard extraction and ingestion for Shutterstock catalog items with zero risk of cross-platform ID contamination and automated sales link reconciliation.
+

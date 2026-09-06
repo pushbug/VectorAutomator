@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { SingleDatePicker } from './SingleDatePicker';
 import { getTodayDateString, getImageUrl } from '@/lib/formatters';
-
+import { detectContributorPlatform } from '@/lib/contributorParser';
 
 interface SmartIdPasteModalProps {
   isOpen: boolean;
@@ -35,12 +35,15 @@ export interface MatchedImageCandidate {
   title: string;
   filePath: string;
   asId: string | null;
+  ssId?: string | null;
   asDownloads: number;
   similarity?: number;
 }
 
 export interface PreviewRow {
   asId: string;
+  ssId?: string;
+  platform?: 'Adobe Stock' | 'Shutterstock';
   adobeTitle: string;
   downloads: number;
   thumbnailUrl: string;
@@ -116,6 +119,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
 }) => {
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [inputText, setInputText] = useState('');
+  const [platform, setPlatform] = useState<'Adobe Stock' | 'Shutterstock'>('Adobe Stock');
   const [isLoading, setIsLoading] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,9 +139,20 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
+  const handleInputTextChange = (val: string) => {
+    setInputText(val);
+    if (val.trim()) {
+      const detected = detectContributorPlatform(val);
+      if (detected) {
+        setPlatform(detected);
+      }
+    }
+  };
+
   const handleReset = () => {
     setStep('input');
     setInputText('');
+    setPlatform('Adobe Stock');
     setError(null);
     setRows([]);
     setSelectedAsIds(new Set());
@@ -164,7 +179,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
   // Step 1: Trigger Live Analysis & Dry-Run Preview
   const handleAnalyze = async () => {
     if (!inputText.trim()) {
-      setError('Please paste TSV data or HTML content from Adobe Stock Contributor');
+      setError(`Please paste TSV data or HTML content from ${platform === 'Shutterstock' ? 'Shutterstock' : 'Adobe Stock'} Contributor`);
       return;
     }
 
@@ -175,13 +190,16 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
       const res = await fetch('/api/portfolio/paste-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText }),
+        body: JSON.stringify({
+          text: inputText,
+          ...(platform === 'Shutterstock' ? { platform: 'Shutterstock' } : {}),
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze Adobe Contributor data');
+        throw new Error(data.error || `Failed to analyze ${platform} Contributor data`);
       }
 
       const receivedRows: PreviewRow[] = data.rows || [];
@@ -261,6 +279,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
             title: img.title,
             filePath: img.filePath,
             asId: img.asId,
+            ssId: img.ssId,
             asDownloads: img.asDownloads || 0,
           }))
         );
@@ -328,10 +347,12 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'commit',
+          ...(platform === 'Shutterstock' ? { platform: 'Shutterstock' } : {}),
           items: [
             {
               imageId: row.matchedImage.id,
               asId: row.asId,
+              ...(platform === 'Shutterstock' ? { ssId: row.ssId || row.asId } : {}),
             },
           ],
         }),
@@ -409,11 +430,13 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'commit',
+          ...(platform === 'Shutterstock' ? { platform: 'Shutterstock' } : {}),
           items: [
             {
               action: 'create_placeholder',
               title: quickImportTitle.trim(),
               asId: quickImportRow.asId,
+              ...(platform === 'Shutterstock' ? { ssId: quickImportRow.ssId || quickImportRow.asId } : {}),
               date: quickImportDate,
               code: quickImportCode.trim() || undefined,
               keywords: quickImportKeywords.trim(),
@@ -482,6 +505,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
       .map((r) => ({
         imageId: r.matchedImage!.id,
         asId: r.asId,
+        ...(platform === 'Shutterstock' ? { ssId: r.ssId || r.asId } : {}),
       }));
 
     if (itemsToCommit.length === 0) return;
@@ -493,6 +517,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'commit',
+          ...(platform === 'Shutterstock' ? { platform: 'Shutterstock' } : {}),
           items: itemsToCommit,
         }),
       });
@@ -565,16 +590,25 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
       data-testid="smart-id-sync-modal"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="bg-background border border-border w-full max-w-6xl rounded-2xl shadow-2xl flex flex-col h-[92vh] max-h-[92vh] overflow-hidden">
+      <div
+        data-testid="smart-id-paste-modal"
+        className="bg-background border border-border w-full max-w-6xl rounded-2xl shadow-2xl flex flex-col h-[92vh] max-h-[92vh] overflow-hidden"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface/50 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                platform === 'Shutterstock'
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'bg-primary/10 text-primary'
+              }`}
+            >
               <Sparkles size={18} />
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">
-                Smart Adobe Contributor ID Matcher
+                Smart {platform === 'Shutterstock' ? 'Shutterstock' : 'Adobe'} Contributor ID Matcher
               </h2>
             </div>
           </div>
@@ -600,29 +634,66 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
           {step === 'input' ? (
             /* STEP 1: INPUT VIEW */
             <div className="space-y-4 flex-1 flex flex-col">
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span className="font-medium flex items-center gap-1.5 text-foreground">
-                  <FileSpreadsheet size={14} className="text-primary" />
-                  Paste TSV or HTML from Extension
-                </span>
-                <span className="text-muted/80">Format: Asset ID &bull; Title &bull; Downloads &bull; Thumbnail</span>
+              {/* Segmented Platform Toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div
+                  data-testid="smart-id-paste-platform-select"
+                  className="flex items-center p-1 bg-surface border border-border rounded-xl text-xs gap-1 self-start"
+                >
+                  <button
+                    type="button"
+                    data-testid="smart-id-paste-platform-adobe"
+                    onClick={() => setPlatform('Adobe Stock')}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                      platform === 'Adobe Stock'
+                        ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Adobe Stock
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="smart-id-paste-platform-shutterstock"
+                    onClick={() => setPlatform('Shutterstock')}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                      platform === 'Shutterstock'
+                        ? 'bg-rose-600 text-white font-semibold shadow-xs'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Shutterstock
+                  </button>
+                </div>
+                <div className="text-xs text-muted flex items-center gap-1.5">
+                  <FileSpreadsheet size={14} className={platform === 'Shutterstock' ? 'text-rose-500' : 'text-primary'} />
+                  <span>
+                    {platform === 'Shutterstock'
+                      ? 'Format: Shutterstock ID • Title / Filename • Status • Media Type • Thumbnail'
+                      : 'Format: Asset ID • Title • Downloads • Thumbnail'}
+                  </span>
+                </div>
               </div>
 
               <textarea
                 data-testid="sync-paste-textarea"
                 rows={12}
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Click 'Copy Table (TSV)' in the Adobe Contributor extension or paste raw HTML here..."
+                onChange={(e) => handleInputTextChange(e.target.value)}
+                placeholder={
+                  platform === 'Shutterstock'
+                    ? "Click 'Copy Table (TSV)' in the Shutterstock Contributor extension or paste raw HTML here..."
+                    : "Click 'Copy Table (TSV)' in the Adobe Contributor extension or paste raw HTML here..."
+                }
                 className="w-full p-4 bg-surface/50 border border-border rounded-xl text-xs font-mono text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y flex-1"
               />
 
               <div className="p-3.5 bg-surface/30 border border-border/60 rounded-xl text-xs text-muted space-y-1.5">
                 <p className="font-semibold text-foreground flex items-center gap-1.5">
-                  <HelpCircle size={14} className="text-primary" />
-                  How Staged Verification Works:
+                  <HelpCircle size={14} className={platform === 'Shutterstock' ? 'text-rose-500' : 'text-primary'} />
+                  How Staged Verification Works ({platform}):
                 </p>
-                <p>1. Copy your portfolio table from the extension on Adobe Contributor.</p>
+                <p>1. Copy your portfolio table from the extension on {platform === 'Shutterstock' ? 'Shutterstock Contributor' : 'Adobe Contributor'}.</p>
                 <p>2. Paste here and click <strong>Analyze &amp; Preview Artworks</strong> (no changes written to DB yet).</p>
                 <p>3. Compare thumbnails &amp; titles side-by-side, tick/untick artworks, and click <strong>Apply Checked</strong>.</p>
               </div>
@@ -847,7 +918,9 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                         <span className="sr-only">Select Row</span>
                       </th>
                       <th className="p-3 w-[43%]">Local Database Artwork</th>
-                      <th className="p-3 w-[39%]">Adobe Contributor Live</th>
+                      <th className="p-3 w-[39%]">
+                        {platform === 'Shutterstock' ? 'Shutterstock Contributor Live' : 'Adobe Contributor Live'}
+                      </th>
                       <th className="p-3 w-[18%] text-right">Match &amp; Action</th>
                     </tr>
                   </thead>
@@ -1082,7 +1155,7 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                                 <div className="min-w-0 flex-1 space-y-0.5">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-mono text-2xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300/80 dark:border-slate-700 rounded font-bold text-slate-800 dark:text-slate-200">
-                                      AS ID: {row.asId}
+                                      {platform === 'Shutterstock' ? `SS ID: ${row.ssId || row.asId}` : `AS ID: ${row.asId}`}
                                     </span>
                                   </div>
                                   <p className="text-muted line-clamp-2 leading-tight text-xs">
@@ -1212,17 +1285,19 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                 disabled={isLoading || !inputText.trim()}
                 className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isLoading ? (
-                  <>
-                    <RefreshCw size={15} className="animate-spin" />
-                    <span>Analyzing &amp; Matching...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={15} />
-                    <span>Analyze &amp; Preview Artworks</span>
-                  </>
-                )}
+                <span data-testid="smart-id-paste-analyze-btn" className="flex items-center gap-1.5">
+                  {isLoading ? (
+                    <>
+                      <RefreshCw size={15} className="animate-spin" />
+                      <span>Analyzing &amp; Matching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={15} />
+                      <span>Analyze &amp; Preview Artworks</span>
+                    </>
+                  )}
+                </span>
               </button>
             </>
           ) : (
@@ -1254,17 +1329,19 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                       : "bg-indigo-600 hover:bg-indigo-700"
                   }`}
                 >
-                  {isCommitting ? (
-                    <>
-                      <RefreshCw size={15} className="animate-spin" />
-                      <span>Applying Updates...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={16} />
-                      <span>Apply {uncommittedSelectedCount} Checked Artworks</span>
-                    </>
-                  )}
+                  <span data-testid="smart-id-paste-commit-btn" className="flex items-center gap-1.5">
+                    {isCommitting ? (
+                      <>
+                        <RefreshCw size={15} className="animate-spin" />
+                        <span>Applying Updates...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>Apply {uncommittedSelectedCount} Checked Artworks</span>
+                      </>
+                    )}
+                  </span>
                 </button>
               </div>
             </>
@@ -1388,9 +1465,11 @@ export const SmartIdPasteModal: React.FC<SmartIdPasteModalProps> = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className="font-mono text-3xs font-bold text-muted uppercase">Adobe Stock Asset</span>
+                    <span className="font-mono text-3xs font-bold text-muted uppercase">
+                      {platform === 'Shutterstock' ? 'Shutterstock Asset' : 'Adobe Stock Asset'}
+                    </span>
                     <span className="font-mono text-3xs px-1.5 py-0.5 bg-background border border-border rounded font-bold text-foreground">
-                      AS ID: {quickImportRow.asId}
+                      {platform === 'Shutterstock' ? `SS ID: ${quickImportRow.ssId || quickImportRow.asId}` : `AS ID: ${quickImportRow.asId}`}
                     </span>
                   </div>
                   <p className="text-xs text-muted truncate">{quickImportRow.adobeTitle}</p>

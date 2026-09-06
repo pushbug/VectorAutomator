@@ -154,5 +154,49 @@ test.describe('Portfolio Dashboard', () => {
 
     await expect(modal).not.toBeVisible();
   });
+
+  test('E2E-PF-04: opens Smart ID Matcher modal, tests Shutterstock platform toggle and auto-switch on paste', async ({ page }) => {
+    await page.goto('/portfolio');
+    await expect(page.getByTestId('portfolio-layout')).toBeVisible();
+
+    // 1. Open Smart ID Matcher modal
+    const syncBtn = page.getByTestId('portfolio-sync-ids-btn');
+    await expect(syncBtn).toBeVisible();
+    await syncBtn.click();
+
+    const modal = page.getByTestId('smart-id-sync-modal');
+    await expect(modal).toBeVisible();
+
+    // 2. Verify platform toggle exists and defaults to Adobe Stock
+    const platformSelect = page.getByTestId('smart-id-paste-platform-select');
+    const adobeBtn = page.getByTestId('smart-id-paste-platform-adobe');
+    const shutterstockBtn = page.getByTestId('smart-id-paste-platform-shutterstock');
+
+    await expect(platformSelect).toBeVisible();
+    await expect(adobeBtn).toBeVisible();
+    await expect(shutterstockBtn).toBeVisible();
+    await expect(modal.getByText('Smart Adobe Contributor ID Matcher')).toBeVisible();
+
+    // 3. Test manual switch to Shutterstock
+    await shutterstockBtn.click();
+    await expect(modal.getByText('Smart Shutterstock Contributor ID Matcher')).toBeVisible();
+
+    // 4. Switch back to Adobe and test auto-switch upon pasting Shutterstock TSV
+    await adobeBtn.click();
+    await expect(modal.getByText('Smart Adobe Contributor ID Matcher')).toBeVisible();
+
+    const textarea = page.getByTestId('sync-paste-textarea');
+    await textarea.fill(
+      'Shutterstock ID\tTitle / Filename\tStatus\tMedia Type\tThumbnail URL\n2837128969\tMinimalist Milestone Infographic Banner.eps\tApproved\tIllustration\thttps://image.shutterstock.com/thumb.jpg'
+    );
+
+    // Auto-detection triggers and switches title to Shutterstock
+    await expect(modal.getByText('Smart Shutterstock Contributor ID Matcher')).toBeVisible();
+
+    // 5. Dismiss modal
+    const cancelBtn = page.getByTestId('cancel-sync-btn');
+    await cancelBtn.click();
+    await expect(modal).not.toBeVisible();
+  });
 });
 

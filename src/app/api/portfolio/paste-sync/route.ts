@@ -6,6 +6,7 @@ import { reconcileImageSales } from '@/lib/salesReconciler';
 import {
   parseContributorHtml,
   parseTsvString,
+  detectContributorPlatform,
   cleanSuffixes,
   normalizeTitle,
   tokenize,
@@ -19,12 +20,20 @@ export {
   tokenize,
   computeSimilarity,
   parseTsvString,
+  detectContributorPlatform,
   type SyncInputItem,
 };
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    const rawPlatform = body.platform ? String(body.platform).trim() : '';
+    const platform: 'Adobe Stock' | 'Shutterstock' =
+      rawPlatform === 'Shutterstock' || rawPlatform === 'Adobe Stock'
+        ? rawPlatform
+        : detectContributorPlatform(body.text || body.tsv || body.html || '');
+    const isShutterstock = platform === 'Shutterstock';
 
     // ─────────────────────────────────────────────────────────────────────────
     // ACTION: COMMIT (Execution)
@@ -44,13 +53,17 @@ export async function POST(request: NextRequest) {
         code: string;
         title: string;
         filePath: string;
-        asId: string;
+        asId: string | null;
+        ssId: string | null;
         asDownloads: number;
+        ssDownloads: number;
       }> = [];
 
       for (const item of itemsToCommit) {
-        // Handle Action: Create Placeholder Artwork in Portfolio (Metadata-Only, no file required)
-        if (item.action === 'create_placeholder' || (!item.imageId && item.asId && item.title)) {
+        const targetId = String(item.ssId || item.asId || item.id || '').trim();
+
+        // Handle Action: Create Placeholder Artwork in Portfolio
+        if (item.action === 'create_placeholder' || (!item.imageId && targetId && item.title)) {
           let targetDate = new Date();
           if (item.date || item.createdAt) {
             const rawDateStr = String(item.date || item.createdAt).trim();
@@ -77,22 +90,28 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          const createData: Record<string, any> = {
+            code: finalCode,
+            year: finalYear,
+            month: finalMonth,
+            seqNumber: finalSeqNumber,
+            title: String(item.title).trim(),
+            asId: isShutterstock ? null : targetId,
+            asDownloads: 0,
+            totalDownloads: 0,
+            keywords: typeof item.keywords === 'string' ? item.keywords.trim() : (item.keywords || ''),
+            category: typeof item.category === 'string' && item.category.trim().length > 0 ? item.category.trim() : null,
+            filePath: '',
+            status: isShutterstock && item.status === 'Approved' ? 'published' : 'pending',
+            createdAt: targetDate,
+          };
+          if (isShutterstock) {
+            createData.ssId = targetId;
+            createData.ssDownloads = 0;
+          }
+
           const created = await prisma.image.create({
-            data: {
-              code: finalCode,
-              year: finalYear,
-              month: finalMonth,
-              seqNumber: finalSeqNumber,
-              title: String(item.title).trim(),
-              asId: String(item.asId).trim(),
-              asDownloads: 0,
-              totalDownloads: 0,
-              keywords: typeof item.keywords === 'string' ? item.keywords.trim() : (item.keywords || ''),
-              category: typeof item.category === 'string' && item.category.trim().length > 0 ? item.category.trim() : null,
-              filePath: '',
-              status: 'pending',
-              createdAt: targetDate,
-            },
+            data: createData as any,
           });
 
           createdItems.push({
@@ -100,27 +119,30 @@ export async function POST(request: NextRequest) {
             code: created.code || 'NO-CODE',
             title: created.title,
             filePath: created.filePath,
-            asId: created.asId || String(item.asId).trim(),
+            asId: created.asId,
+            ssId: created.ssId,
             asDownloads: created.asDownloads,
+            ssDownloads: created.ssDownloads,
           });
 
-          // Reconcile unlinked sales from PlatformStats if any match this asId
-          await reconcileImageSales(prisma, { id: created.id, asId: String(item.asId) });
-
-          // Two-way reconciliation with SERP database
-          await prisma.serpItem.updateMany({
-            where: { assetId: String(item.asId) },
-            data: {
-              isMine: true,
-              matchedImageId: created.id,
-            },
-          });
+          if (isShutterstock) {
+            await reconcileImageSales(prisma, { id: created.id, ssId: targetId });
+          } else {
+            await reconcileImageSales(prisma, { id: created.id, asId: targetId });
+            await prisma.serpItem.updateMany({
+              where: { assetId: targetId },
+              data: {
+                isMine: true,
+                matchedImageId: created.id,
+              },
+            });
+          }
 
           committedCount++;
           continue;
         }
 
-        if (!item.imageId || !item.asId) continue;
+        if (!item.imageId || !targetId) continue;
 
         const img = await prisma.image.findUnique({
           where: { id: item.imageId },
@@ -129,25 +151,31 @@ export async function POST(request: NextRequest) {
 
         if (!img) continue;
 
-        // Update Image Asset ID strictly (do NOT mutate asDownloads/totalDownloads from contributor metadata)
-        await prisma.image.update({
-          where: { id: img.id },
-          data: {
-            asId: String(item.asId),
-          },
-        });
-
-        // Reconcile unlinked sales from PlatformStats if any match this asId
-        await reconcileImageSales(prisma, { id: img.id, asId: String(item.asId) });
-
-        // Two-way reconciliation with SERP database
-        await prisma.serpItem.updateMany({
-          where: { assetId: String(item.asId) },
-          data: {
-            isMine: true,
-            matchedImageId: img.id,
-          },
-        });
+        if (isShutterstock) {
+          await prisma.image.update({
+            where: { id: img.id },
+            data: {
+              ssId: targetId,
+              status: item.status === 'Approved' ? 'published' : undefined,
+            },
+          });
+          await reconcileImageSales(prisma, { id: img.id, ssId: targetId });
+        } else {
+          await prisma.image.update({
+            where: { id: img.id },
+            data: {
+              asId: targetId,
+            },
+          });
+          await reconcileImageSales(prisma, { id: img.id, asId: targetId });
+          await prisma.serpItem.updateMany({
+            where: { assetId: targetId },
+            data: {
+              isMine: true,
+              matchedImageId: img.id,
+            },
+          });
+        }
 
         committedCount++;
       }
@@ -174,17 +202,17 @@ export async function POST(request: NextRequest) {
 
     if (Array.isArray(body.items)) {
       candidateItems = body.items.filter(
-        (item: any) => item && typeof item.asId === 'string' && typeof item.title === 'string'
+        (item: any) => item && typeof (item.ssId || item.asId) === 'string' && typeof item.title === 'string'
       );
     } else if (typeof body.html === 'string' && body.html.trim().length > 0) {
       candidateItems = parseContributorHtml(body.html);
     } else if (typeof body.tsv === 'string' && body.tsv.trim().length > 0) {
-      candidateItems = parseTsvString(body.tsv);
+      candidateItems = parseTsvString(body.tsv, platform);
     } else if (typeof body.text === 'string' && body.text.trim().length > 0) {
       if (body.text.includes('<div') || body.text.includes('<img')) {
         candidateItems = parseContributorHtml(body.text);
       } else {
-        candidateItems = parseTsvString(body.text);
+        candidateItems = parseTsvString(body.text, platform);
       }
     }
 
@@ -206,21 +234,23 @@ export async function POST(request: NextRequest) {
         title: true,
         filePath: true,
         asId: true,
+        ssId: true,
         asDownloads: true,
         ssDownloads: true,
         totalDownloads: true,
       },
     });
 
-    // Group images by asId for Top Priority exact matching (Already Synced)
-    const asIdImageMap = new Map<string, typeof allImages[0]>();
+    // Group images by platform asset ID for Top Priority exact matching
+    const idImageMap = new Map<string, typeof allImages[0]>();
     for (const img of allImages) {
-      if (img.asId && img.asId.trim().length > 0) {
-        asIdImageMap.set(img.asId.trim(), img);
+      const activeId = isShutterstock ? img.ssId : img.asId;
+      if (activeId && activeId.trim().length > 0) {
+        idImageMap.set(activeId.trim(), img);
       }
     }
 
-    // Group images by normalized title to detect potential title duplicates
+    // Group images by normalized title & normalized filename to detect matches
     const normImageMap = new Map<string, typeof allImages>();
 
     for (const img of allImages) {
@@ -232,15 +262,26 @@ export async function POST(request: NextRequest) {
           normImageMap.set(norm, list);
         }
       }
+
+      // Also index filename from filePath for exact EPS filename matching
+      if (img.filePath) {
+        const filename = img.filePath.split(/[/\\]/).pop() || '';
+        const normFile = normalizeTitle(filename);
+        if (normFile && normFile !== normalizeTitle(img.title)) {
+          const list = normImageMap.get(normFile) || [];
+          list.push(img);
+          normImageMap.set(normFile, list);
+        }
+      }
     }
 
-    // Pre-collect exact match claims in this batch to prevent duplicate candidate claims
+    // Pre-collect exact match claims in this batch
     const claimedExactImageIds = new Set<string>();
     for (const item of candidateItems) {
-      const cleanAsId = item.asId.trim();
-      const matchedByAsId = asIdImageMap.get(cleanAsId);
-      if (matchedByAsId) {
-        claimedExactImageIds.add(matchedByAsId.id);
+      const cleanId = (item.ssId || item.asId || '').trim();
+      const matchedById = idImageMap.get(cleanId);
+      if (matchedById) {
+        claimedExactImageIds.add(matchedById.id);
         continue;
       }
 
@@ -253,123 +294,138 @@ export async function POST(request: NextRequest) {
     }
 
     const previewRows = candidateItems.map((item) => {
-      const cleanAsId = item.asId.trim();
+      const cleanId = (item.ssId || item.asId || '').trim();
       const cleanTitle = item.title.trim();
       const normCandidate = normalizeTitle(cleanTitle);
+
+      // Helper to build matched Image candidate
+      const formatCandidate = (img: typeof allImages[0], similarity = 1.0) => ({
+        id: img.id,
+        code: img.code || 'NO-CODE',
+        title: img.title,
+        filePath: img.filePath,
+        asId: img.asId,
+        ssId: img.ssId,
+        asDownloads: img.asDownloads,
+        ssDownloads: img.ssDownloads,
+        similarity,
+      });
 
       // ───────────────────────────────────────────────────────────────────────
       // PRIORITY 1: Direct Asset ID Match (Already Synced / Verified)
       // ───────────────────────────────────────────────────────────────────────
-      const matchedByAsId = asIdImageMap.get(cleanAsId);
-      if (matchedByAsId) {
+      const matchedById = idImageMap.get(cleanId);
+      if (matchedById) {
+        const existingId = isShutterstock ? matchedById.ssId : matchedById.asId;
         return {
-          asId: item.asId,
+          platform,
+          asId: cleanId,
+          ssId: isShutterstock ? cleanId : undefined,
           adobeTitle: cleanTitle,
+          displayTitle: cleanTitle,
           downloads: Number(item.downloads || 0),
+          statusLabel: item.status || 'Approved',
+          mediaType: item.mediaType || 'Illustration',
           thumbnailUrl: item.thumbnailUrl || '',
           status: 'exact' as const,
           confidence: 1.0,
           isAlreadySynced: true,
           isOverwrite: false,
-          existingAsId: matchedByAsId.asId || null,
-          matchedImage: {
-            id: matchedByAsId.id,
-            code: matchedByAsId.code || 'NO-CODE',
-            title: matchedByAsId.title,
-            filePath: matchedByAsId.filePath,
-            asId: matchedByAsId.asId,
-            asDownloads: matchedByAsId.asDownloads,
-          },
+          existingId: existingId || null,
+          existingAsId: existingId || null,
+          matchedImage: formatCandidate(matchedById, 1.0),
           candidates: [],
         };
       }
 
       // ───────────────────────────────────────────────────────────────────────
-      // PRIORITY 2: Exact Title Match
+      // PRIORITY 2: Exact Title or Filename Match
       // ───────────────────────────────────────────────────────────────────────
       const exactMatches = normImageMap.get(normCandidate) || [];
 
       if (exactMatches.length === 1) {
         const matched = exactMatches[0];
-        const isAlreadySynced = Boolean(matched.asId && matched.asId === item.asId);
-        const isOverwrite = Boolean(matched.asId && matched.asId !== item.asId);
+        const existingId = isShutterstock ? matched.ssId : matched.asId;
+        const isAlreadySynced = Boolean(existingId && existingId === cleanId);
+        const isOverwrite = Boolean(existingId && existingId !== cleanId);
         return {
-          asId: item.asId,
+          platform,
+          asId: cleanId,
+          ssId: isShutterstock ? cleanId : undefined,
           adobeTitle: cleanTitle,
+          displayTitle: cleanTitle,
           downloads: Number(item.downloads || 0),
+          statusLabel: item.status || 'Approved',
+          mediaType: item.mediaType || 'Illustration',
           thumbnailUrl: item.thumbnailUrl || '',
           status: 'exact' as const,
           confidence: 1.0,
           isAlreadySynced,
           isOverwrite,
-          existingAsId: matched.asId || null,
-          matchedImage: {
-            id: matched.id,
-            code: matched.code || 'NO-CODE',
-            title: matched.title,
-            filePath: matched.filePath,
-            asId: matched.asId,
-            asDownloads: matched.asDownloads,
-          },
+          existingId: existingId || null,
+          existingAsId: existingId || null,
+          matchedImage: formatCandidate(matched, 1.0),
           candidates: [],
         };
       } else if (exactMatches.length > 1) {
-        const alreadyMatchedCand = exactMatches.find((cand) => cand.asId === item.asId);
+        const alreadyMatchedCand = exactMatches.find((cand) => {
+          const cid = isShutterstock ? cand.ssId : cand.asId;
+          return cid === cleanId;
+        });
+
         if (alreadyMatchedCand) {
+          const existingId = isShutterstock ? alreadyMatchedCand.ssId : alreadyMatchedCand.asId;
           return {
-            asId: item.asId,
+            platform,
+            asId: cleanId,
+            ssId: isShutterstock ? cleanId : undefined,
             adobeTitle: cleanTitle,
+            displayTitle: cleanTitle,
             downloads: Number(item.downloads || 0),
+            statusLabel: item.status || 'Approved',
+            mediaType: item.mediaType || 'Illustration',
             thumbnailUrl: item.thumbnailUrl || '',
             status: 'exact' as const,
             confidence: 1.0,
             isAlreadySynced: true,
             isOverwrite: false,
-            existingAsId: alreadyMatchedCand.asId || null,
-            matchedImage: {
-              id: alreadyMatchedCand.id,
-              code: alreadyMatchedCand.code || 'NO-CODE',
-              title: alreadyMatchedCand.title,
-              filePath: alreadyMatchedCand.filePath,
-              asId: alreadyMatchedCand.asId,
-              asDownloads: alreadyMatchedCand.asDownloads,
-            },
+            existingId: existingId || null,
+            existingAsId: existingId || null,
+            matchedImage: formatCandidate(alreadyMatchedCand, 1.0),
             candidates: [],
           };
         }
 
         return {
-          asId: item.asId,
+          platform,
+          asId: cleanId,
+          ssId: isShutterstock ? cleanId : undefined,
           adobeTitle: cleanTitle,
+          displayTitle: cleanTitle,
           downloads: Number(item.downloads || 0),
+          statusLabel: item.status || 'Approved',
+          mediaType: item.mediaType || 'Illustration',
           thumbnailUrl: item.thumbnailUrl || '',
           status: 'ambiguous' as const,
           confidence: 0.95,
           isAlreadySynced: false,
           isOverwrite: false,
+          existingId: null,
           existingAsId: null,
           matchedImage: null,
-          candidates: exactMatches.map((img) => ({
-            id: img.id,
-            code: img.code || 'NO-CODE',
-            title: img.title,
-            filePath: img.filePath,
-            asId: img.asId,
-            asDownloads: img.asDownloads,
-            similarity: 1.0,
-          })),
+          candidates: exactMatches.map((img) => formatCandidate(img, 1.0)),
         };
       }
 
       // ───────────────────────────────────────────────────────────────────────
       // PRIORITY 3: Fuzzy Similarity Search
-      // STRICT SAFETY: Exclude images that ALREADY have a DIFFERENT assigned asId or are claimed by exact matches in this batch
       // ───────────────────────────────────────────────────────────────────────
       let bestImage: typeof allImages[0] | null = null;
       let bestScore = 0;
 
       for (const img of allImages) {
-        if (img.asId && img.asId.trim().length > 0 && img.asId.trim() !== cleanAsId) continue;
+        const activeId = isShutterstock ? img.ssId : img.asId;
+        if (activeId && activeId.trim().length > 0 && activeId.trim() !== cleanId) continue;
         if (claimedExactImageIds.has(img.id)) continue;
 
         const score = computeSimilarity(cleanTitle, img.title);
@@ -380,37 +436,27 @@ export async function POST(request: NextRequest) {
       }
 
       if (bestScore >= 0.60 && bestImage) {
-        const isAlreadySynced = Boolean(bestImage.asId && bestImage.asId === item.asId);
-        const isOverwrite = Boolean(bestImage.asId && bestImage.asId !== item.asId);
+        const existingId = isShutterstock ? bestImage.ssId : bestImage.asId;
+        const isAlreadySynced = Boolean(existingId && existingId === cleanId);
+        const isOverwrite = Boolean(existingId && existingId !== cleanId);
         return {
-          asId: item.asId,
+          platform,
+          asId: cleanId,
+          ssId: isShutterstock ? cleanId : undefined,
           adobeTitle: cleanTitle,
+          displayTitle: cleanTitle,
           downloads: Number(item.downloads || 0),
+          statusLabel: item.status || 'Approved',
+          mediaType: item.mediaType || 'Illustration',
           thumbnailUrl: item.thumbnailUrl || '',
           status: 'fuzzy' as const,
           confidence: Math.round(bestScore * 100) / 100,
           isAlreadySynced,
           isOverwrite,
-          existingAsId: bestImage.asId || null,
-          matchedImage: {
-            id: bestImage.id,
-            code: bestImage.code || 'NO-CODE',
-            title: bestImage.title,
-            filePath: bestImage.filePath,
-            asId: bestImage.asId,
-            asDownloads: bestImage.asDownloads,
-          },
-          candidates: [
-            {
-              id: bestImage.id,
-              code: bestImage.code || 'NO-CODE',
-              title: bestImage.title,
-              filePath: bestImage.filePath,
-              asId: bestImage.asId,
-              asDownloads: bestImage.asDownloads,
-              similarity: bestScore,
-            },
-          ],
+          existingId: existingId || null,
+          existingAsId: existingId || null,
+          matchedImage: formatCandidate(bestImage, bestScore),
+          candidates: [formatCandidate(bestImage, bestScore)],
         };
       }
 
@@ -418,14 +464,20 @@ export async function POST(request: NextRequest) {
       // PRIORITY 4: Unmatched Fallback
       // ───────────────────────────────────────────────────────────────────────
       return {
-        asId: item.asId,
+        platform,
+        asId: cleanId,
+        ssId: isShutterstock ? cleanId : undefined,
         adobeTitle: cleanTitle,
+        displayTitle: cleanTitle,
         downloads: Number(item.downloads || 0),
+        statusLabel: item.status || 'Approved',
+        mediaType: item.mediaType || 'Illustration',
         thumbnailUrl: item.thumbnailUrl || '',
         status: 'unmatched' as const,
         confidence: 0,
         isAlreadySynced: false,
         isOverwrite: false,
+        existingId: null,
         existingAsId: null,
         matchedImage: null,
         candidates: [],
@@ -438,6 +490,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      platform,
       preview: true,
       totalParsed: candidateItems.length,
       exactCount,
