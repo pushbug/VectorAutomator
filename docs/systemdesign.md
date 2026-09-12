@@ -93,3 +93,8 @@ Always write modern canonical Tailwind v4 utilities. Never use legacy/deprecated
 - **Server Watchdog:** `src/lib/serverWatchdog.ts` maintains a 60-second boot grace period and a 25-second inactivity threshold.
 - **Auto-Shutdown:** If all browser tabs and desktop windows are closed for >25s, the watchdog executes `checkpointDatabase(undefined, 'TRUNCATE')`, unlinks `.server.pid`, and calls `process.exit(0)` to immediately release port 3000 for other development projects.
 - **Explicit Exit:** Clicking "Quit App" (`sidebar-quit-app-btn`) triggers `POST /api/system/quit` for instant shutdown and port release.
+
+### On-Demand Database Backup & Durability
+- **Manual Trigger:** Clicking "Backup Now" (`sidebar-backup-btn`) triggers `POST /api/system/backup`.
+- **Forced Flush:** The route executes `prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);')` directly on the active Prisma connection to flush in-flight WAL frames into `dev.db`, then generates a compressed `.db.gz` snapshot (`force = true`) bypassing duplicate hash suppression.
+- **UI Feedback:** Displays dynamic loading spinner, 3.5-second success/error indicator, and tooltip with the generated archive filename while disabling the button during execution.

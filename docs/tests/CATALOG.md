@@ -154,6 +154,9 @@
 | `UT-PARSER-SHUTTERSTOCK-CATALOG-01` | Verify contributorParser auto-detects Shutterstock header signature and parses TSV/CSV with columns (Shutterstock ID, Title / Filename, Status, Media Type, Thumbnail URL) | `src/__tests__/lib/contributorParser.test.ts` |
 | `UT-API-PF-PASTE-SYNC-SSID-01` | Verify /api/portfolio/paste-sync previews and matches Shutterstock artworks against Image.filePath / Image.title, commits Image.ssId, and invokes sales reconciler | `src/__tests__/api/portfolio_paste_sync.test.ts` |
 | `UT-UI-SMART-PASTE-PLATFORM-01` | Verify SmartIdPasteModal toggles between Adobe and Shutterstock modes, auto-switches platform on paste, and renders ssId linking | `src/__tests__/components/SmartIdPasteModal.test.tsx` |
+| `UT-API-SYSTEM-BACKUP-01` | Verify /api/system/backup executes PRAGMA wal_checkpoint(TRUNCATE) and returns backup metadata | `src/__tests__/api/system_backup.test.ts` |
+| `UT-UI-SIDEBAR-BACKUP-01` | Verify sidebar-backup-btn triggers /api/system/backup, enters loading state, and shows success indicator | `src/__tests__/components/Sidebar.test.tsx` |
+| `UT-UI-SIDEBAR-BACKUP-02` | Verify sidebar-backup-btn displays error state and tooltip message when backup API fails | `src/__tests__/components/Sidebar.test.tsx` |
 
 ## E2E Tests
 | Test ID | Description | Target |

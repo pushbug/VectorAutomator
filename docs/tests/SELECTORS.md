@@ -356,3 +356,4 @@ Always use `data-testid` for element selection in E2E tests.
 | `smart-id-paste-platform-shutterstock` | Shutterstock toggle button in Smart ID Matcher modal |
 | `smart-id-paste-analyze-btn` | Analyze and preview button inside Smart ID Matcher modal |
 | `smart-id-paste-commit-btn` | Apply and commit checked artworks button inside Smart ID Matcher modal |
+| `sidebar-backup-btn` | Button in sidebar to trigger immediate on-demand database backup |

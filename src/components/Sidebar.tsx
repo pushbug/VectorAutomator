@@ -17,7 +17,10 @@ import {
   Moon,
   Sun,
   ExternalLink,
-  Power
+  Power,
+  Database,
+  Loader2,
+  Check
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -27,6 +30,8 @@ export default function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [isQuitting, setIsQuitting] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [backupMessage, setBackupMessage] = useState<string>('');
 
   // Global shortcut (Cmd+Shift+N) to spawn sibling desktop window on same port
   useEffect(() => {
@@ -44,6 +49,32 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleTriggerBackup = async () => {
+    if (backupStatus === 'loading') return;
+    setBackupStatus('loading');
+    setBackupMessage('');
+    try {
+      const res = await fetch('/api/system/backup', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Backup failed');
+      }
+      setBackupStatus('success');
+      setBackupMessage(data.filename ? `Saved ${data.filename}` : 'Backup completed');
+      setTimeout(() => {
+        setBackupStatus('idle');
+        setBackupMessage('');
+      }, 3500);
+    } catch (err: any) {
+      setBackupStatus('error');
+      setBackupMessage(err.message || 'Backup failed');
+      setTimeout(() => {
+        setBackupStatus('idle');
+        setBackupMessage('');
+      }, 3500);
+    }
+  };
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -128,6 +159,48 @@ export default function Sidebar() {
             {!isCollapsed && <span className="text-sm">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
           </button>
         )}
+
+        <button
+          type="button"
+          data-testid="sidebar-backup-btn"
+          onClick={handleTriggerBackup}
+          disabled={backupStatus === 'loading'}
+          title={
+            backupStatus === 'success'
+              ? backupMessage || 'Backup Completed!'
+              : backupStatus === 'error'
+              ? backupMessage || 'Backup Failed'
+              : 'Backup Now (สำรองข้อมูลทันที)'
+          }
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer ${
+            isCollapsed ? "justify-center" : ""
+          } ${
+            backupStatus === 'success'
+              ? 'text-emerald-500 bg-emerald-500/10'
+              : backupStatus === 'error'
+              ? 'text-destructive bg-destructive/10'
+              : 'text-muted hover:bg-surface-hover hover:text-foreground'
+          }`}
+        >
+          {backupStatus === 'loading' ? (
+            <Loader2 size={20} className="animate-spin text-primary shrink-0" />
+          ) : backupStatus === 'success' ? (
+            <Check size={20} className="text-emerald-500 shrink-0" />
+          ) : (
+            <Database size={20} className="text-primary shrink-0" />
+          )}
+          {!isCollapsed && (
+            <span className="font-medium text-sm truncate">
+              {backupStatus === 'loading'
+                ? 'Backing up...'
+                : backupStatus === 'success'
+                ? 'Backed up!'
+                : backupStatus === 'error'
+                ? 'Backup Failed'
+                : 'Backup Now'}
+            </span>
+          )}
+        </button>
 
         <button
           data-testid="sidebar-quit-app-btn"

@@ -202,7 +202,7 @@ export function cancelScheduledBackup(): void {
  * 6. Strict rolling retention cap (retaining strictly the latest maxRetained = 10 files).
  * 7. Guaranteed temp snapshot cleanup in finally block.
  */
-export async function createDbBackup(maxRetained = 10, targetDbPath?: string): Promise<string | null> {
+export async function createDbBackup(maxRetained = 10, targetDbPath?: string, force = false): Promise<string | null> {
   if (coordinator.isLock) {
     return null;
   }
@@ -243,13 +243,13 @@ export async function createDbBackup(maxRetained = 10, targetDbPath?: string): P
     const tempDbBuffer = fs.readFileSync(tempSnapshotPath);
     const currentHash = crypto.createHash('sha256').update(tempDbBuffer).digest('hex');
 
-    // 2. Smart Change Detection against latest existing backup
+    // 2. Smart Change Detection against latest existing backup (bypassed if force is true)
     const existingBackups = fs
       .readdirSync(backupsDir)
       .filter((f) => f.startsWith('dev_') && (f.endsWith('.db') || f.endsWith('.db.gz')))
       .sort();
 
-    if (existingBackups.length > 0) {
+    if (!force && existingBackups.length > 0) {
       const latestBackupFile = path.join(backupsDir, existingBackups[existingBackups.length - 1]);
       try {
         let latestBuffer: Buffer;
