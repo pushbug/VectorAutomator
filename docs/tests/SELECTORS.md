@@ -270,23 +270,30 @@ Always use `data-testid` for element selection in E2E tests.
 | `contributor-copy-tsv-btn` | Button in Adobe Contributor Extension popup to copy TSV table with nominate status |
 | `contributor-download-csv-btn` | Button in Adobe Contributor Extension popup to download CSV file |
 | `contributor-copy-json-btn` | Button in Adobe Contributor Extension popup to copy JSON payload |
+| `payout-kpi-total-stock-usd` | The KPI card display for total gross stock agency earnings (USD) in Payouts |
 | `payout-kpi-realized-thb` | The KPI card display for total realized net income (THB) in Payouts |
 | `payout-kpi-holding-usd` | The KPI card display for total USD holding in payment platforms in Payouts |
 | `payout-kpi-total-fees` | The KPI card display for total platform fees in Payouts |
 | `payout-kpi-total-transactions` | The KPI card display for total recorded payout withdrawals count in Payouts |
 | `payout-table` | The table container for payout transactions |
+| `payout-table-footer` | The table footer container displaying column aggregate totals in Payouts |
 | `payout-year-filter` | The year segmented pills container for filtering payouts by tax year |
 | `payout-stock-filter` | The stock agency dropdown select in Payouts table |
 | `payout-add-btn` | The button in Payouts header to open Log Payout modal |
 | `payout-paste-btn` | The button in Payouts header to open Smart Paste from Google Sheet modal |
 | `payout-batch-withdraw-btn` | The button in multi-selection action bar to open Bundled Bank Withdrawal modal |
+| `payout-bulk-mark-completed-btn` | The button in multi-selection action bar to bulk mark selected transactions as completed |
+| `payout-menu-mark-completed-btn-{id}` | Button inside 3-dots row menu to quickly mark transaction as completed |
+| `payout-menu-mark-holding-btn-{id}` | Button inside 3-dots row menu to quickly mark transaction as holding |
 | `payout-entry-modal` | The modal dialog for logging or editing a single payout transaction |
 | `payout-paste-modal` | The modal dialog for smart TSV pasting from Google Sheet |
 | `payout-batch-modal` | The modal dialog for bundled bank withdrawal with proportional THB split |
 | `payout-submit-btn` | The primary submit button inside payout modals |
+| `payout-input-status` | Status dropdown select inside PayoutEntryModal |
 | `payout-input-stock-name` | Stock Agency dropdown select inside PayoutEntryModal |
 | `payout-input-withdraw-date` | Withdraw Date input inside PayoutEntryModal |
 | `payout-input-stock-amount` | Stock USD Amount input inside PayoutEntryModal |
+| `payout-input-bank-name` | Thai Bank dropdown select inside PayoutEntryModal |
 | `payout-input-notes` | Notes / Remarks input inside PayoutEntryModal |
 | `extension-copy-tsv-btn` | Button in Stock SERP Copier popup to copy TSV table to clipboard |
 | `extension-download-csv-btn` | Button in Stock SERP Copier popup to download CSV file |

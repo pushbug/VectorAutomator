@@ -275,3 +275,14 @@
   4. **Automated Verification:** Added unit tests `UT-PARSER-SHUTTERSTOCK-CATALOG-01`, `UT-API-PF-PASTE-SYNC-SSID-01`, `UT-UI-SMART-PASTE-PLATFORM-01`, and Playwright E2E test `E2E-PF-04`. All 60 test files (389 tests) and 4 Playwright E2E tests pass with 0 errors.
 - **Impact:** Delivers ban-safe, 1-click clipboard extraction and ingestion for Shutterstock catalog items with zero risk of cross-platform ID contamination and automated sales link reconciliation.
 
+## ADR-032: Microstock Payout Direct & Bulk Status Management, Quick Lifecycle Transitions, and Holding-Clear Operations
+- **Date:** 2026-09-12
+- **Context:** In the Payouts & Withdrawals module, microstock earnings imported from historical sheets or manual logs often had bank transfer details recorded outside of individual records (e.g. combined bank sums or external statements), causing transactions to remain marked as `in_platform` (Holding) or `pending`. Users needed a streamlined, 1-click way to mark individual or multiple transactions as `completed` without being forced to enter dummy bank names or dates, as well as the ability to toggle items back to `in_platform` directly from the UI.
+- **Decision:**
+  1. **Batch Status API (`/api/payouts/batch`):** Added `update_status` action to the batch endpoint supporting `{ action: 'update_status', ids: string[], status: 'completed' | 'in_platform' | 'pending' }` with SQLite transaction safety and automated database backup trigger (`scheduleAutoBackup()`).
+  2. **Direct Row Status Toggles (`PayoutTable.tsx`):** Enhanced 3-dots action menu (`MoreVertical`) with dynamic status toggle buttons (`Mark Completed` for holding items, `Mark Holding` for completed items) that execute instant PATCH updates and refresh aggregate KPI metrics.
+  3. **Bulk Action Toolbar Integration (`PayoutTable.tsx`):** Added a prominent `Mark Completed (${count})` button to the multi-selection floating action bar, allowing 1-click status updates across dozens of selected transactions.
+  4. **Modal Status Override (`PayoutEntryModal.tsx`):** Integrated a `Status Override` select dropdown supporting `Auto (Derived from Bank Fields)`, `Completed`, `Holding`, and `Pending`, preserving explicit user preference during create and edit flows.
+  5. **Automated Verification:** Added unit tests `UT-API-PAYOUT-BATCH-02` in `src/__tests__/api/payouts.test.ts` and extended `UT-UI-PAYOUT-01` in `src/__tests__/components/Payouts.test.tsx`. All 21 payout tests pass and `npx tsc --noEmit` validates with 0 errors.
+- **Impact:** Eliminates friction in clearing historical platform holdings, allows precise lifecycle state management, and updates financial KPIs in real-time.
+

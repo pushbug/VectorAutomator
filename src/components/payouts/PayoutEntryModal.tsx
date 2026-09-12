@@ -23,6 +23,7 @@ export interface PayoutFormData {
   bankName?: string | null;
   exchangeRate?: number | string | null;
   netIncomeThb?: number | string | null;
+  status?: string | null;
   notes?: string | null;
 }
 
@@ -51,6 +52,7 @@ export function PayoutEntryModal({
   const [bankName, setBankName] = useState('Bangkok Bank (BBL)');
   const [exchangeRate, setExchangeRate] = useState<string>('');
   const [netIncomeThb, setNetIncomeThb] = useState<string>('');
+  const [status, setStatus] = useState<string>('auto');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +67,10 @@ export function PayoutEntryModal({
         setPlatformName(initialData.platformName || 'Payoneer');
         setPlatformAmountUsd(initialData.platformAmountUsd !== undefined && initialData.platformAmountUsd !== null ? String(initialData.platformAmountUsd) : '');
         setBankReceivedDate(initialData.bankReceivedDate ? initialData.bankReceivedDate.slice(0, 10) : '');
-        setBankName(initialData.bankName || 'Bangkok Bank (BBL)');
+        setBankName(initialData.bankName || '');
         setExchangeRate(initialData.exchangeRate !== undefined && initialData.exchangeRate !== null ? String(initialData.exchangeRate) : '');
         setNetIncomeThb(initialData.netIncomeThb !== undefined && initialData.netIncomeThb !== null ? String(initialData.netIncomeThb) : '');
+        setStatus(initialData.status || 'auto');
         setNotes(initialData.notes || '');
       } else {
         const today = new Date().toISOString().slice(0, 10);
@@ -81,6 +84,7 @@ export function PayoutEntryModal({
         setBankName('Bangkok Bank (BBL)');
         setExchangeRate('');
         setNetIncomeThb('');
+        setStatus('auto');
         setNotes('');
       }
       setError(null);
@@ -141,6 +145,7 @@ export function PayoutEntryModal({
         bankName: bankName ? bankName.trim() : null,
         exchangeRate: exchangeRate ? parseFloat(exchangeRate) : null,
         netIncomeThb: netIncomeThb ? parseFloat(netIncomeThb) : null,
+        status: status !== 'auto' ? status : undefined,
         notes: notes.trim() ? notes.trim() : null,
       });
       onClose();
@@ -316,10 +321,12 @@ export function PayoutEntryModal({
               <div>
                 <label className="block text-xs font-medium text-muted mb-1">Bank Name</label>
                 <select
+                  data-testid="payout-input-bank-name"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-hidden focus:border-primary"
                 >
+                  <option value="">-- None / Not Deposited --</option>
                   {THAI_BANKS.map((b) => (
                     <option key={b} value={b}>
                       {b}
@@ -366,17 +373,33 @@ export function PayoutEntryModal({
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-xs font-medium text-muted mb-1">Notes / Remarks</label>
-            <input
-              data-testid="payout-input-notes"
-              type="text"
-              placeholder="e.g. Rate 35.45 (116,992.80) 1 วัน"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-hidden focus:border-primary"
-            />
+          {/* Status Override & Notes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1">Status Override</label>
+              <select
+                data-testid="payout-input-status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-hidden focus:border-primary"
+              >
+                <option value="auto">Auto (Derived from Bank Fields)</option>
+                <option value="completed">Completed (Deposited / Cleared)</option>
+                <option value="in_platform">Holding (In Platform Wallet)</option>
+                <option value="pending">Pending (Awaiting Platform)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1">Notes / Remarks</label>
+              <input
+                data-testid="payout-input-notes"
+                type="text"
+                placeholder="e.g. Rate 35.45 (116,992.80) 1 วัน"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-hidden focus:border-primary"
+              />
+            </div>
           </div>
 
           {/* Footer Actions */}

@@ -18,18 +18,21 @@ The Payouts & Withdrawals module manages the full financial lifecycle of microst
 
 ## 3. UI Components (`/payouts`)
 1. **PayoutSummaryCards:**
-   - Realized Net Income (฿ THB) - Green KPI card
-   - Holding in Platform ($ USD) - Amber KPI card
-   - Total Platform Fees ($ USD) - Red KPI card
-   - Total Transactions (Items count) - Blue KPI card
+   - Total Stock Payout ($ USD) - Indigo KPI card (gross agency earnings matching filtered selection)
+   - Holding in Platform ($ USD) - Amber KPI card (available in Payoneer / PayPal awaiting bank transfer)
+   - Total Platform Fees ($ USD) - Red KPI card (transfer & intermediary fees)
+   - Realized Net Income (฿ THB) - Green KPI card (deposited into Thai bank account)
+   - Total Transactions (Items count) - Blue KPI card (recorded payout count)
 2. **PayoutTable:**
    - Year Segmented switcher (`All`, `2026`, `2025`, `2024`, `2023`, etc.)
    - Stock Agency filter (`Adobe Stock`, `Shutterstock`, `Vecteezy`, `123RF`), search bar, and multi-row selection toolbar
    - Unified 2-line table headers (`bg-muted/10`) and text hierarchy (`text-foreground` primary values, `text-muted` secondary sub-dates)
-   - 3-dots dropdown action menu (`MoreVertical`) for editing and deleting records
+   - Interactive table footer summary row (`<tfoot>`) displaying column aggregate totals (Stock USD, Wallet USD, Fee, Net THB)
+   - 3-dots dropdown action menu (`MoreVertical`) for editing, deleting records, and 1-click quick status toggle (`Mark Completed` or `Mark Holding`)
+   - Multi-selection floating action bar with `Mark Completed (${count})` bulk action, bundled bank withdrawal, and bulk deletion
    - Inline `Holding` clock indicator on Thai Bank cell for unallocated pending withdrawals
 3. **PayoutEntryModal:**
-   - Create and edit dialog with step-by-step stage inputs, 2-way currency calculations, and default `Bangkok Bank (BBL)`
+   - Create and edit dialog with step-by-step stage inputs, 2-way currency calculations, Status Override dropdown, and default `Bangkok Bank (BBL)`
 4. **PayoutPasteModal:**
    - Smart TSV paste importer to batch ingest Google Sheet rows in one click with live parsing preview and multi-space delimiter fallback
 5. **PayoutBatchModal:**
@@ -45,3 +48,4 @@ The Payouts & Withdrawals module manages the full financial lifecycle of microst
   - `create_many`: Batch create transactions from Google Sheet TSV.
   - `delete`: Bulk delete selected IDs.
   - `bundle_withdraw`: Apply bank transfer and proportional THB split across multiple records.
+  - `update_status`: Batch update status (`completed`, `in_platform`) across selected IDs with automatic database backup.

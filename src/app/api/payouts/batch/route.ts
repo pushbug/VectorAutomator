@@ -180,6 +180,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Action 4: Batch Update Status (Mark multiple records as completed or in_platform)
+    if (action === 'update_status') {
+      const { ids, status } = body;
+      if (!Array.isArray(ids) || ids.length === 0 || !status) {
+        return NextResponse.json({ error: 'Missing required ids or status' }, { status: 400 });
+      }
+
+      const result = await prisma.payoutTransaction.updateMany({
+        where: { id: { in: ids } },
+        data: { status },
+      });
+
+      // Immediate auto-backup after batch status update
+      try {
+        await createDbBackup();
+      } catch (err) {
+        console.warn('Post-batch status update backup warning:', err);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Updated status to ${status} for ${result.count} transactions`,
+        count: result.count,
+      });
+    }
+
     return NextResponse.json({ error: 'Invalid batch action' }, { status: 400 });
   } catch (error: any) {
     console.error('Error in batch payout operation:', error);

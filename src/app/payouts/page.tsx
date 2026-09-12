@@ -176,9 +176,42 @@ export default function PayoutsPage() {
       bankName: record.bankName || undefined,
       exchangeRate: record.exchangeRate != null ? record.exchangeRate : undefined,
       netIncomeThb: record.netIncomeThb != null ? record.netIncomeThb : undefined,
+      status: record.status || undefined,
       notes: record.notes || undefined,
     });
     setIsEntryModalOpen(true);
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/payouts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      fetchPayouts();
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
+  };
+
+  const handleBulkStatusChange = async (ids: string[], status: string) => {
+    try {
+      const res = await fetch('/api/payouts/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_status',
+          ids,
+          status,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update status for selected transactions');
+      fetchPayouts();
+    } catch (err) {
+      console.error('Error in bulk status update:', err);
+    }
   };
 
   const handleOpenBundleModal = (selected: PayoutRecord[]) => {
@@ -222,6 +255,7 @@ export default function PayoutsPage() {
 
       {/* KPI Cards */}
       <PayoutSummaryCards
+        totalStockUsd={summary.totalStockUsd}
         totalNetThb={summary.totalNetThb}
         holdingUsd={summary.holdingUsd}
         totalFeeUsd={summary.totalFeeUsd}
@@ -232,6 +266,12 @@ export default function PayoutsPage() {
       <PayoutTable
         records={records}
         total={total}
+        summaryTotals={{
+          totalStockUsd: summary.totalStockUsd,
+          totalPlatformUsd: summary.totalPlatformUsd,
+          totalFeeUsd: summary.totalFeeUsd,
+          totalNetThb: summary.totalNetThb,
+        }}
         page={page}
         totalPages={totalPages}
         limit={50}
@@ -259,6 +299,8 @@ export default function PayoutsPage() {
         onDelete={(id) => setDeleteTargetId(id)}
         onBulkDelete={(ids) => setBulkDeleteIds(ids)}
         onOpenBundleModal={handleOpenBundleModal}
+        onStatusChange={handleStatusChange}
+        onBulkStatusChange={handleBulkStatusChange}
       />
 
       {/* Modals */}

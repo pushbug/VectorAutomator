@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Wallet, Coins, ArrowDownToLine, Receipt } from 'lucide-react';
+import { Wallet, Coins, ArrowDownToLine, Receipt, DollarSign } from 'lucide-react';
 import { formatCurrency, formatBaht } from '@/lib/formatters';
 
 interface PayoutSummaryCardsProps {
+  totalStockUsd?: number;
   totalNetThb: number;
   holdingUsd: number;
   totalFeeUsd: number;
@@ -12,6 +13,7 @@ interface PayoutSummaryCardsProps {
 }
 
 export function PayoutSummaryCards({
+  totalStockUsd = 0,
   totalNetThb,
   holdingUsd,
   totalFeeUsd,
@@ -19,12 +21,12 @@ export function PayoutSummaryCards({
 }: PayoutSummaryCardsProps) {
   const cards = [
     {
-      title: 'Realized Net Income (THB)',
-      value: formatBaht(totalNetThb),
-      subtitle: 'Deposited into Thai bank',
-      icon: Wallet,
-      testId: 'payout-kpi-realized-thb',
-      color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+      title: 'Total Stock Payout (USD)',
+      value: formatCurrency(totalStockUsd),
+      subtitle: 'Gross agency earnings',
+      icon: DollarSign,
+      testId: 'payout-kpi-total-stock-usd',
+      color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
     },
     {
       title: 'Holding in Platform (USD)',
@@ -43,6 +45,14 @@ export function PayoutSummaryCards({
       color: 'text-red-500 bg-red-500/10 border-red-500/20',
     },
     {
+      title: 'Realized Net Income (THB)',
+      value: formatBaht(totalNetThb),
+      subtitle: 'Deposited into Thai bank',
+      icon: Wallet,
+      testId: 'payout-kpi-realized-thb',
+      color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+    },
+    {
       title: 'Total Transactions',
       value: `${totalTransactions.toLocaleString()} Items`,
       subtitle: 'Recorded payout withdrawals',
@@ -53,7 +63,7 @@ export function PayoutSummaryCards({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
       {cards.map((card) => {
         const Icon = card.icon;
         return (

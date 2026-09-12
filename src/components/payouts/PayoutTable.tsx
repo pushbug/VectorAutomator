@@ -40,9 +40,17 @@ export interface PayoutRecord {
   notes?: string | null;
 }
 
+export interface PayoutSummaryTotals {
+  totalStockUsd: number;
+  totalPlatformUsd: number;
+  totalFeeUsd: number;
+  totalNetThb: number;
+}
+
 interface PayoutTableProps {
   records: PayoutRecord[];
   total: number;
+  summaryTotals?: PayoutSummaryTotals;
   page: number;
   totalPages: number;
   limit: number;
@@ -61,6 +69,8 @@ interface PayoutTableProps {
   onDelete: (id: string) => void;
   onBulkDelete: (ids: string[]) => void;
   onOpenBundleModal: (selected: PayoutRecord[]) => void;
+  onStatusChange?: (id: string, status: string) => void;
+  onBulkStatusChange?: (ids: string[], status: string) => void;
 }
 
 const STOCK_OPTIONS = ['all', ...STOCK_AGENCIES];
@@ -68,6 +78,7 @@ const STOCK_OPTIONS = ['all', ...STOCK_AGENCIES];
 export function PayoutTable({
   records,
   total,
+  summaryTotals,
   page,
   totalPages,
   onPageChange,
@@ -85,6 +96,8 @@ export function PayoutTable({
   onDelete,
   onBulkDelete,
   onOpenBundleModal,
+  onStatusChange,
+  onBulkStatusChange,
 }: PayoutTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -187,6 +200,20 @@ export function PayoutTable({
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {onBulkStatusChange && (
+              <button
+                type="button"
+                onClick={() => {
+                  onBulkStatusChange(Array.from(selectedIds), 'completed');
+                  setSelectedIds(new Set());
+                }}
+                data-testid="payout-bulk-mark-completed-btn"
+                className="px-3 py-1.5 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <CheckCircle2 size={14} />
+                Mark Completed ({selectedIds.size})
+              </button>
+            )}
             <button
               onClick={() => onOpenBundleModal(selectedRecords)}
               data-testid="payout-batch-withdraw-btn"
@@ -301,10 +328,16 @@ export function PayoutTable({
                     <ArrowUpDown size={12} className="shrink-0 text-muted" />
                   </div>
                 </th>
-                <th className="py-3 px-3 whitespace-nowrap">
-                  <div className="flex flex-col leading-tight">
-                    <span>Thai Bank</span>
-                    <span className="text-[10px] text-muted/70 font-normal normal-case">& Received Date</span>
+                <th
+                  onClick={() => onSortChange('status')}
+                  className="py-3 px-3 cursor-pointer hover:text-foreground whitespace-nowrap"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col leading-tight">
+                      <span>Thai Bank</span>
+                      <span className="text-[10px] text-muted/70 font-normal normal-case">& Status / Date</span>
+                    </div>
+                    <ArrowUpDown size={12} className="shrink-0 text-muted" />
                   </div>
                 </th>
                 <th className="py-3 px-3 whitespace-nowrap">
@@ -400,6 +433,16 @@ export function PayoutTable({
                               {r.leadTimeDays != null && ` (${r.leadTimeDays}d)`}
                             </span>
                           </div>
+                        ) : r.status === 'completed' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
+                            <CheckCircle2 size={11} />
+                            Completed
+                          </span>
+                        ) : r.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-blue-500 font-medium">
+                            <Clock size={11} />
+                            Pending
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] text-amber-500 font-medium">
                             <Clock size={11} />
@@ -431,9 +474,39 @@ export function PayoutTable({
                         {activeMenuId === r.id && (
                           <div
                             data-testid={`payout-action-dropdown-${r.id}`}
-                            className="absolute right-3 top-10 z-30 w-36 bg-surface border border-border rounded-xl shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-150 flex flex-col text-left divide-y divide-border/50"
+                            className="absolute right-3 top-10 z-30 w-44 bg-surface border border-border rounded-xl shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-150 flex flex-col text-left divide-y divide-border/50"
                             onClick={(e) => e.stopPropagation()}
                           >
+                            {onStatusChange && (
+                              r.status === 'completed' ? (
+                                <button
+                                  type="button"
+                                  data-testid={`payout-menu-mark-holding-btn-${r.id}`}
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    onStatusChange(r.id, 'in_platform');
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                >
+                                  <Clock size={14} className="shrink-0" />
+                                  <span>Mark Holding</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  data-testid={`payout-menu-mark-completed-btn-${r.id}`}
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    onStatusChange(r.id, 'completed');
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-emerald-500 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                                >
+                                  <CheckCircle2 size={14} className="shrink-0" />
+                                  <span>Mark Completed</span>
+                                </button>
+                              )
+                            )}
+
                             <button
                               type="button"
                               data-testid={`payout-edit-btn-${r.id}`}
@@ -467,6 +540,39 @@ export function PayoutTable({
                 })
               )}
             </tbody>
+            {records.length > 0 && summaryTotals && (
+              <tfoot
+                data-testid="payout-table-footer"
+                className="border-t-2 border-border bg-muted/20 font-mono text-xs font-semibold select-none"
+              >
+                <tr>
+                  <td colSpan={3} className="py-3 px-3 text-foreground font-sans font-bold">
+                    Total ({total} {total === 1 ? 'transaction' : 'transactions'})
+                  </td>
+                  <td className="py-3 px-3 text-right text-foreground font-bold whitespace-nowrap">
+                    {formatCurrency(summaryTotals.totalStockUsd)}
+                  </td>
+                  <td></td>
+                  <td className="py-3 px-3 text-right text-foreground font-bold whitespace-nowrap">
+                    {formatCurrency(summaryTotals.totalPlatformUsd)}
+                  </td>
+                  <td className="py-3 px-3 text-right whitespace-nowrap">
+                    {summaryTotals.totalFeeUsd > 0 ? (
+                      <span className="text-destructive font-bold">
+                        -{formatCurrency(summaryTotals.totalFeeUsd)}
+                      </span>
+                    ) : (
+                      <span className="text-muted font-normal">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-3 text-right text-muted font-normal">-</td>
+                  <td className="py-3 px-3 text-right text-emerald-500 font-bold whitespace-nowrap">
+                    {formatBaht(summaryTotals.totalNetThb)}
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
 

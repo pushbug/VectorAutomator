@@ -18,6 +18,7 @@ test.describe('Payouts & Withdrawals Management (E2E-PAYOUT-01)', () => {
 
     // Verify header and KPI summary cards
     await expect(page.getByRole('heading', { name: /^Payouts & Withdrawals$/i })).toBeVisible();
+    await expect(page.getByTestId('payout-kpi-total-stock-usd')).toBeVisible();
     await expect(page.getByTestId('payout-kpi-realized-thb')).toBeVisible();
     await expect(page.getByTestId('payout-kpi-holding-usd')).toBeVisible();
     await expect(page.getByTestId('payout-kpi-total-fees')).toBeVisible();
@@ -25,6 +26,7 @@ test.describe('Payouts & Withdrawals Management (E2E-PAYOUT-01)', () => {
 
     // Verify table and filters exist
     await expect(page.getByTestId('payout-table')).toBeVisible();
+    await expect(page.getByTestId('payout-table-footer')).toBeVisible();
     await expect(page.getByTestId('payout-year-filter')).toBeVisible();
     await expect(page.getByTestId('payout-stock-filter')).toBeVisible();
 
@@ -76,5 +78,43 @@ test.describe('Payouts & Withdrawals Management (E2E-PAYOUT-01)', () => {
     // Verify row appears in table
     await expect(page.getByText(uniqueNote)).toBeVisible();
     await expect(page.getByText('$150.00').first()).toBeVisible();
+  });
+
+  test('E2E-PAYOUT-03: Payout Status Lifecycle: Contextual 3-dots menu quick toggle and multi-selection floating action bar bulk status update', async ({ page }) => {
+    await page.goto('/payouts');
+
+    // Verify table is loaded
+    await expect(page.getByTestId('payout-table')).toBeVisible();
+
+    // 1. Test 3-dots row menu quick status toggle
+    const firstMenuBtn = page.locator('[data-testid^="payout-action-menu-btn-"]').first();
+    if (await firstMenuBtn.isVisible()) {
+      await firstMenuBtn.click();
+
+      // Check dropdown has either Mark Completed or Mark Holding button
+      const markCompletedBtn = page.locator('[data-testid^="payout-menu-mark-completed-btn-"]').first();
+      const markHoldingBtn = page.locator('[data-testid^="payout-menu-mark-holding-btn-"]').first();
+
+      const hasAction = (await markCompletedBtn.isVisible()) || (await markHoldingBtn.isVisible());
+      expect(hasAction).toBe(true);
+
+      // Dismiss menu
+      await page.keyboard.press('Escape');
+    }
+
+    // 2. Test multi-row selection and floating action bar bulk status button
+    const firstRowCheckbox = page.locator('tbody input[type="checkbox"]').first();
+    if (await firstRowCheckbox.isVisible()) {
+      await firstRowCheckbox.check();
+
+      // Floating action bar appears with bulk mark completed button
+      const bulkCompletedBtn = page.getByTestId('payout-bulk-mark-completed-btn');
+      await expect(bulkCompletedBtn).toBeVisible();
+      await expect(bulkCompletedBtn).toContainText('Mark Completed');
+
+      // Uncheck to clear selection
+      await firstRowCheckbox.uncheck();
+      await expect(bulkCompletedBtn).not.toBeVisible();
+    }
   });
 });

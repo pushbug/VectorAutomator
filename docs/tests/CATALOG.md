@@ -174,6 +174,7 @@
 | `E2E-COL-02` | Collections Advanced Flow: Table/Grid view toggle, sort headers, detail view modes, search query filter & clear, tag drill-down filter, and in-place pencil edit modal | `e2e/collections.spec.ts` |
 | `E2E-PAYOUT-01` | Payouts & Withdrawals: Page navigation, summary KPI cards, table filters, open log payout modal, and Smart Paste importer | `e2e/payouts.spec.ts` |
 | `E2E-PAYOUT-02` | Payout Creation & Table Reflection: Form input validation, create transaction, DB commit, and table row render | `e2e/payouts.spec.ts` |
+| `E2E-PAYOUT-03` | Payout Status Lifecycle: Contextual 3-dots menu quick toggle and multi-selection floating action bar bulk status update | `e2e/payouts.spec.ts` |
 | `E2E-SERP-01` | Asset Rankings & SERP Telemetry: Page navigation, summary KPI cards, searchable keyword combobox, FullSerpModal with My Artwork filter, and ArtworkSerpDrawer backdrop dismissal | `e2e/serp.spec.ts` |
 
 

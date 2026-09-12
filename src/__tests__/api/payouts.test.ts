@@ -12,6 +12,7 @@ const {
   mockPayoutUpdate,
   mockPayoutDelete,
   mockPayoutDeleteMany,
+  mockPayoutUpdateMany,
   mockTransaction,
 } = vi.hoisted(() => ({
   mockPayoutFindMany: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockPayoutUpdate: vi.fn(),
   mockPayoutDelete: vi.fn(),
   mockPayoutDeleteMany: vi.fn(),
+  mockPayoutUpdateMany: vi.fn(),
   mockTransaction: vi.fn(),
 }));
 
@@ -34,9 +36,15 @@ vi.mock('@/lib/prisma', () => ({
       update: mockPayoutUpdate,
       delete: mockPayoutDelete,
       deleteMany: mockPayoutDeleteMany,
+      updateMany: mockPayoutUpdateMany,
     },
     $transaction: mockTransaction,
   },
+}));
+
+vi.mock('@/lib/backupService', () => ({
+  createDbBackup: vi.fn().mockResolvedValue({ success: true, backupPath: 'mock-backup.db' }),
+  scheduleAutoBackup: vi.fn(),
 }));
 
 describe('Payouts API (UT-API-PAYOUT-01 & UT-API-PAYOUT-BATCH-02)', () => {
@@ -252,5 +260,88 @@ describe('Payouts API (UT-API-PAYOUT-01 & UT-API-PAYOUT-BATCH-02)', () => {
 
     expect(res.status).toBe(200);
     expect(json.count).toBe(2);
+  });
+
+  it('POST /api/payouts/batch supports update_status to mark transactions completed or holding', async () => {
+    mockPayoutUpdateMany.mockResolvedValue({ count: 3 });
+
+    const req = new NextRequest('http://localhost:3000/api/payouts/batch', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'update_status',
+        ids: ['p-1', 'p-2', 'p-3'],
+        status: 'completed',
+      }),
+    });
+
+    const res = await batchPayouts(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.count).toBe(3);
+    expect(mockPayoutUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['p-1', 'p-2', 'p-3'] } },
+      data: { status: 'completed' },
+    });
+  });
+
+  it('POST /api/payouts/batch returns 400 when update_status has missing ids or status', async () => {
+    // Missing ids
+    const req1 = new NextRequest('http://localhost:3000/api/payouts/batch', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'update_status', status: 'completed' }),
+    });
+    const res1 = await batchPayouts(req1);
+    expect(res1.status).toBe(400);
+
+    // Empty ids array
+    const req2 = new NextRequest('http://localhost:3000/api/payouts/batch', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'update_status', ids: [], status: 'completed' }),
+    });
+    const res2 = await batchPayouts(req2);
+    expect(res2.status).toBe(400);
+
+    // Missing status
+    const req3 = new NextRequest('http://localhost:3000/api/payouts/batch', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'update_status', ids: ['p-1'] }),
+    });
+    const res3 = await batchPayouts(req3);
+    expect(res3.status).toBe(400);
+  });
+
+  it('PATCH /api/payouts/[id] respects explicit status override', async () => {
+    mockPayoutFindUnique.mockResolvedValue({
+      id: 'p-1',
+      stockName: 'Adobe Stock',
+      stockWithdrawDate: new Date('2023-09-03T00:00:00.000Z'),
+      stockAmountUsd: 2667.41,
+      platformAmountUsd: 2664.41,
+      status: 'in_platform',
+    });
+
+    mockPayoutUpdate.mockResolvedValue({
+      id: 'p-1',
+      status: 'completed',
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/payouts/p-1', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'completed',
+      }),
+    });
+
+    const res = await updatePayout(req, { params: Promise.resolve({ id: 'p-1' }) });
+    expect(res.status).toBe(200);
+    expect(mockPayoutUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'completed',
+        }),
+      })
+    );
   });
 });
