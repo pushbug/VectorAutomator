@@ -33,6 +33,7 @@ yarn-error.log*
 .pnpm-debug.log*
 *.log
 .server.log
+.server.pid
 
 # desktop app bundle
 VectorAutomator.app/

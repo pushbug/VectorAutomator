@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { scheduleAutoBackup } from '@/lib/dbBackup';
 import { autoReconcileSerpItems } from '@/lib/serpReconciler';
+import { calculateSerpItemStats, synthesizeAdjacentDropouts } from '@/lib/serp/serpEnrichment';
 
 export function OPTIONS() {
   return new NextResponse(null, {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get('keyword') || undefined;
     const platform = searchParams.get('platform') || undefined;
     const search = searchParams.get('search') || undefined;
+    const quickFilter = searchParams.get('quickFilter') || 'all'; // 'all' | 'top10' | 'rising' | 'dropping' | 'dropped'
     const sortBy = searchParams.get('sortBy') || 'date';
     const sortOrder = (searchParams.get('sortOrder') || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -78,7 +80,7 @@ export async function GET(request: NextRequest) {
 
       const queryWhere: Record<string, unknown> = {};
       if (keyword) {
-        queryWhere.keyword = { contains: keyword };
+        queryWhere.keyword = keyword;
       }
       if (startDate || endDate) {
         queryWhere.searchedAt = {
@@ -97,16 +99,15 @@ export async function GET(request: NextRequest) {
           { assetId: { contains: search } },
           { matchedImage: { code: { contains: search } } },
           { matchedImage: { title: { contains: search } } },
+          { serpQuery: { keyword: { contains: search } } },
         ];
       }
 
-      const [totalCount, serpItems, allQueries] = await Promise.all([
+      const [totalRawCount, serpItems, allQueries] = await Promise.all([
         prisma.serpItem.count({ where: itemWhere }),
         prisma.serpItem.findMany({
           where: itemWhere,
           orderBy: { serpQuery: { searchedAt: 'desc' } },
-          skip,
-          take: limit,
           include: {
             serpQuery: true,
             matchedImage: {
@@ -125,15 +126,17 @@ export async function GET(request: NextRequest) {
         }),
       ]);
 
-      // Deduplicate: Keep only the latest snapshot per (assetId, keyword) for the main table view
-      const latestItemsMap = new Map<string, typeof serpItems[0]>();
+      // Deduplicate: Keep only the latest snapshot per (assetId, keyword) for All Keywords view
+      // But retain full chronological timeline across all recorded dates when filtering by keyword or searching
+      const isTimelineMode = Boolean(keyword || search);
+      const latestItemsMap = new Map<string, (typeof serpItems)[0]>();
       for (const item of serpItems) {
         const key = `${item.assetId}_${item.serpQuery.keyword}`;
         if (!latestItemsMap.has(key)) {
           latestItemsMap.set(key, item);
         }
       }
-      const uniqueSerpItems = Array.from(latestItemsMap.values());
+      const uniqueSerpItems = isTimelineMode ? serpItems : Array.from(latestItemsMap.values());
       const assetIds = Array.from(new Set(uniqueSerpItems.map((i) => i.assetId).filter(Boolean)));
 
       // Batch query previous rankings and direct platform stats in parallel (eliminating N+1 loop)
@@ -193,33 +196,16 @@ export async function GET(request: NextRequest) {
         const rankDelta = previousRank !== null ? previousRank - item.rank : null;
         const isNew = previousRank === null;
 
-        // Earnings and downloads rollup
-        const statsEarnings = (item.matchedImage?.stats || []).reduce(
-          (sum: number, s: any) => sum + s.earnings,
-          0
+        // Earnings and downloads rollup via DRY helper
+        const { asDownloads, totalDownloads, totalEarnings } = calculateSerpItemStats(
+          item.matchedImage,
+          directStatsMap,
+          item.assetId
         );
-        const statsDownloads = (item.matchedImage?.stats || []).reduce(
-          (sum: number, s: any) => sum + s.downloads,
-          0
-        );
-        let totalEarnings = statsEarnings;
-        const asDownloads = item.matchedImage?.asDownloads ?? 0;
-        let totalDownloads = Math.max(
-          statsDownloads,
-          item.matchedImage?.totalDownloads ?? 0,
-          asDownloads
-        );
-
-        // Check if unlinked PlatformStats exist directly in lookup map
-        if (item.assetId && directStatsMap.has(item.assetId)) {
-          const direct = directStatsMap.get(item.assetId)!;
-          totalDownloads = Math.max(totalDownloads, direct.downloads);
-          totalEarnings = Math.max(totalEarnings, direct.earnings);
-        }
 
         return {
           id: item.id,
-          rank: item.rank,
+          rank: item.rank as number | null,
           assetId: item.assetId,
           title: item.title,
           author: item.author,
@@ -237,47 +223,92 @@ export async function GET(request: NextRequest) {
           previousRank,
           rankDelta,
           isNew,
+          isDropped: false,
           asDownloads,
           totalDownloads,
           totalEarnings,
         };
       });
 
+      // Synthesize dropped out artworks between adjacent snapshots (T-1 -> T) concurrently
+      const targetKeywords = keyword
+        ? [keyword]
+        : quickFilter === 'dropped'
+        ? Array.from(new Set(uniqueSerpItems.map((i) => i.serpQuery.keyword)))
+        : [];
+
+      const droppedItems = await synthesizeAdjacentDropouts(prisma, targetKeywords, directStatsMap);
+
+      const allEnrichedItems = [...enrichedItems, ...droppedItems];
+
+      // Quick filter tabs evaluation
+      let filteredItems = allEnrichedItems;
+      if (quickFilter === 'top10') {
+        filteredItems = allEnrichedItems.filter((i) => typeof i.rank === 'number' && i.rank <= 10);
+      } else if (quickFilter === 'rising') {
+        filteredItems = allEnrichedItems.filter((i) => typeof i.rankDelta === 'number' && i.rankDelta > 0);
+      } else if (quickFilter === 'dropping') {
+        filteredItems = allEnrichedItems.filter((i) => typeof i.rankDelta === 'number' && i.rankDelta < 0);
+      } else if (quickFilter === 'dropped') {
+        filteredItems = allEnrichedItems.filter((i) => Boolean(i.isDropped));
+      }
+
       // Apply requested sort order on enriched items
-      enrichedItems.sort((a, b) => {
-        let comparison = 0;
+      filteredItems.sort((a, b) => {
         switch (sortBy) {
           case 'date':
-          case 'searchedAt':
-            comparison = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
-            break;
-          case 'keyword':
-            comparison = (a.keyword || '').localeCompare(b.keyword || '');
-            break;
-          case 'rank':
-            comparison = a.rank - b.rank;
-            break;
+          case 'searchedAt': {
+            const dateDiff = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
+            if (dateDiff !== 0) {
+              return sortOrder === 'asc' ? dateDiff : -dateDiff;
+            }
+            // Tie-breaker on identical date: always rank ascending (#1 -> #100 -> dropped)
+            const rankA = a.rank ?? 999999;
+            const rankB = b.rank ?? 999999;
+            return rankA - rankB;
+          }
+          case 'keyword': {
+            const comp = (a.keyword || '').localeCompare(b.keyword || '');
+            return sortOrder === 'asc' ? comp : -comp;
+          }
+          case 'rank': {
+            const rankA = a.rank ?? 999999;
+            const rankB = b.rank ?? 999999;
+            if (rankA === 999999 && rankB !== 999999) return 1;
+            if (rankB === 999999 && rankA !== 999999) return -1;
+            return sortOrder === 'asc' ? rankA - rankB : rankB - rankA;
+          }
           case 'delta':
           case 'rankDelta': {
             const valA = a.rankDelta ?? (sortOrder === 'asc' ? 999999 : -999999);
             const valB = b.rankDelta ?? (sortOrder === 'asc' ? 999999 : -999999);
-            comparison = valA - valB;
-            break;
+            const comp = valA - valB;
+            return sortOrder === 'asc' ? comp : -comp;
           }
           case 'downloads':
-          case 'totalDownloads':
-            comparison = (a.totalDownloads ?? 0) - (b.totalDownloads ?? 0);
-            break;
+          case 'totalDownloads': {
+            const comp = (a.totalDownloads ?? 0) - (b.totalDownloads ?? 0);
+            return sortOrder === 'asc' ? comp : -comp;
+          }
           case 'revenue':
-          case 'totalEarnings':
-            comparison = (a.totalEarnings ?? 0) - (b.totalEarnings ?? 0);
-            break;
-          default:
-            comparison = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
-            break;
+          case 'totalEarnings': {
+            const comp = (a.totalEarnings ?? 0) - (b.totalEarnings ?? 0);
+            return sortOrder === 'asc' ? comp : -comp;
+          }
+          default: {
+            const dateDiff = new Date(a.searchedAt).getTime() - new Date(b.searchedAt).getTime();
+            if (dateDiff !== 0) {
+              return sortOrder === 'asc' ? dateDiff : -dateDiff;
+            }
+            const rankA = a.rank ?? 999999;
+            const rankB = b.rank ?? 999999;
+            return rankA - rankB;
+          }
         }
-        return sortOrder === 'asc' ? comparison : -comparison;
       });
+
+      const totalFilteredCount = filteredItems.length;
+      const paginatedItems = filteredItems.slice(skip, skip + limit);
 
       // KPI Summary calculations (Unique assets currently ranking)
       const [uniqueKeywordsCount, page1Count, top10Count, bestRankItem] = await Promise.all([
@@ -310,14 +341,14 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(
         {
-          items: enrichedItems,
+          items: paginatedItems,
           summary,
           trackedKeywords: trackedKeywordsList,
           pagination: {
             page,
             limit,
-            total: totalCount,
-            totalPages: Math.ceil(totalCount / limit) || 1,
+            total: totalFilteredCount,
+            totalPages: Math.ceil(totalFilteredCount / limit) || 1,
           },
         },
         { headers: { 'Access-Control-Allow-Origin': '*' } }

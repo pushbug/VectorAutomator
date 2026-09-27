@@ -94,8 +94,13 @@
 | `UT-EXT-STEALTH-NAV-01` | Verify stealth timing engine: watchdog constant, entry delay bounds, base jitter range, and smart linger detection | `src/__tests__/extension/stealthNavigator.test.ts` |
 | `UT-SERP-DELTA-01` | Verify rank delta calculation against previous SerpQuery snapshots for same keyword & artwork | `src/__tests__/api/serp.test.ts` |
 | `UT-API-SERP-SORT-01` | Verify /api/serp sorts enriched items by downloads, revenue, and keyword | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-KEYWORD-SEARCH-01` | Verify /api/serp universal keyword search and exact keyword timeline retention across dates | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-DROPPED-01` | Verify adjacent snapshot dropout synthesis and quickFilter evaluation | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-PASTE-PAGES-01` | Verify same-day query replacement scopes by pageNumber, preserving other pages | `src/__tests__/api/serp.test.ts` |
+| `UT-API-SERP-ENRICH-01` | Verify parallelized adjacent dropout synthesis and DRY stats calculation across multiple keywords | `src/__tests__/api/serp.test.ts` |
 | `UT-API-SERP-ARTWORK-01` | Verify /api/serp/artwork/[id] returns chronological keyword ranks and correlated platform stats | `src/__tests__/api/serp.test.ts` |
 | `UT-UI-SERP-TABLE-01` | Verify SerpTable rendering, keyword filter, delta badge colors, and drawer trigger | `src/__tests__/components/SerpComponents.test.tsx` |
+| `UT-UI-SERP-QUICK-TABS-01` | Verify SerpTable quick filter tabs switching and DROPPED badge rendering | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-UI-SERP-TABLE-SORT-01` | Verify SerpTable sortable header clicks, sort order toggling, and PaginationCapsule integration | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-UI-SERP-PASTE-MODAL-01` | Verify SmartSerpPasteModal date selection, keyword auto-detect, live matched preview, and Paste Another reset | `src/__tests__/components/SerpComponents.test.tsx` |
 | `UT-UI-SERP-ARTWORK-DRAWER-01` | Verify ArtworkSerpDrawer keyword pills, timeline points, backdrop dismissal, and snapshot delta table | `src/__tests__/components/SerpComponents.test.tsx` |

@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
         where: {
           keyword,
           platform,
+          pageNumber,
           searchedAt: {
             gte: startOfDay,
             lte: endOfDay,

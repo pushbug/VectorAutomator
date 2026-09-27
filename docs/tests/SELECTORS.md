@@ -319,6 +319,11 @@ Always use `data-testid` for element selection in E2E tests.
 | `serp-kpi-best-rank` | KPI card display for highest ranking position |
 | `artwork-serp-drawer` | Slide-over inspector drawer for artwork keyword & sales correlation |
 | `full-serp-modal` | Modal dialog displaying full 100-item SERP search results & competitor author leaderboard |
+| `serp-filter-tab-all` | Quick filter tab button to show all artworks |
+| `serp-filter-tab-top10` | Quick filter tab button to filter Top 10 artworks |
+| `serp-filter-tab-rising` | Quick filter tab button to filter rising artworks |
+| `serp-filter-tab-dropping` | Quick filter tab button to filter dropping artworks |
+| `serp-filter-tab-dropped` | Quick filter tab button to filter dropped-out artworks |
 | `quick-import-dialog` | Modal dialog for creating placeholder artwork during Adobe ID paste sync |
 | `quick-import-date-picker-trigger` | Date picker input trigger inside Quick Import dialog |
 | `quick-import-date-picker-popover` | Date picker popover calendar inside Quick Import dialog |

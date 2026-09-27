@@ -1,26 +1,27 @@
-### Goal: Implement 1-click on-demand manual database backup button in the sidebar with real-time feedback and upgrade backup engine to force synchronous Prisma WAL consolidation.
+### Goal: Implement SERP universal keyword search, exact keyword filtering, multi-date historical timeline retention, adjacent dropout synthesis, server-backed quick filter tabs, and concurrent enrichment engine.
 
 ### Status: COMPLETE
 
 ### Done:
-- Added `force?: boolean` option to `createDbBackup()` in `src/lib/dbBackup.ts` to bypass SHA-256 duplicate suppression on manual request.
-- Implemented `POST /api/system/backup` in `src/app/api/system/backup/route.ts` with synchronous Prisma TRUNCATE checkpoint and formatted JSON response.
-- Integrated `sidebar-backup-btn` in `src/components/Sidebar.tsx` with loading spinner and 3.5-second transient checkmark/error tooltips.
-- Added unit tests for `UT-API-SYSTEM-BACKUP-01` in `src/__tests__/api/system_backup.test.ts`.
-- Added unit tests for `UT-UI-SIDEBAR-BACKUP-01` and `UT-UI-SIDEBAR-BACKUP-02` in `src/__tests__/components/Sidebar.test.tsx`.
-- Registered selector in `docs/tests/SELECTORS.md` and test IDs in `docs/tests/CATALOG.md`.
-- Documented ADR-033 in `docs/decisions.md` and updated `docs/systemdesign.md`.
+- Added keyword field to universal search OR conditions and enforced exact keyword matching in filter dropdown in `src/app/api/serp/route.ts`.
+- Retained full multi-month chronological timeline when filtering by keyword or searching by bypassing single-snapshot deduplication in `src/app/api/serp/route.ts`.
+- Scoped same-day paste-sync replacement by `pageNumber` to preserve earlier pages in `src/app/api/serp/paste-sync/route.ts`.
+- Added Quick Filter Tabs sub-toolbar (`All`, `Top 10`, `Rising`, `Dropping`, `Dropped`) and DROPPED badge rendering in `src/components/serp/SerpTable.tsx` and `src/app/serp/page.tsx`.
+- Created `src/lib/serp/serpEnrichment.ts` with `calculateSerpItemStats` and `synthesizeAdjacentDropouts` using `Promise.all` to eliminate N+1 sequential database queries.
+- Added 5 unit tests across `src/__tests__/api/serp.test.ts` and `src/__tests__/components/SerpComponents.test.tsx` (23 total tests pass).
+- Documented ADR-034 in `docs/decisions.md` and updated `docs/features/serp_tracking.md`, `docs/tests/CATALOG.md`, and `docs/tests/SELECTORS.md`.
 
 ### Next:
-- 1. Launch desktop app or open browser to test clicking "Backup Now" in the Sidebar.
-- 2. Inspect `backups/` directory to verify new timestamped `.db.gz` file generation.
+- 1. Open desktop app or browser to `/serp` and test clicking through Quick Filter Tabs with live data.
+- 2. Perform Chrome Extension SERP copy on multiple pages and verify multi-page sync preserves all results.
 
 ### Decisions:
-- Synchronous Prisma WAL Flush: Executing `PRAGMA wal_checkpoint(TRUNCATE)` directly through the shared Prisma client guarantees active WAL frames are committed to `dev.db` before snapshotting.
-- Forced Snapshot Creation: Explicit user clicks bypass SHA-256 deduplication to guarantee an archived snapshot is always produced.
+- Scoped Dropout Synthesis: Comparing strictly adjacent snapshots (T-1 -> T) avoids resurrecting ghost items dropped months ago.
+- Server-Side Quick Filter: Filtering on calculated rank deltas and dropout status occurs before pagination slicing to keep page counts and navigation accurate.
+- Concurrent Batch Enrichment: Parallelizing keyword queries via Promise.all in `src/lib/serp/serpEnrichment.ts` removes N+1 latency while keeping `route.ts` lean.
 
 ### Skills:
-- [`plan`](.agents/skills/plan/SKILL.md) — Formulated TDD-Lite specification and registered selectors for on-demand backup.
-- [`coding`](.agents/skills/coding/SKILL.md) — Implemented Prisma checkpoint route, forced backup logic, sidebar button, and unit tests.
-- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Audited diff classifications, verified database safety isolation rules, and validated 100% test pass.
-- [`handoff`](.agents/skills/handoff/SKILL.md) — Documented ADR-033, updated session.md, evicted plan cache, and performed git push.
+- [`plan`](.agents/skills/plan/SKILL.md) — Specified TDD-Lite contracts, test mappings, and file impact scope for SERP enhancements.
+- [`coding`](.agents/skills/coding/SKILL.md) — Implemented exact search, timeline retention, quick tabs UI, modular enrichment engine, and unit tests.
+- [`scrutinize`](.agents/skills/scrutinize/SKILL.md) — Audited diffs, verified 100% test pass (23/23), and confirmed zero regression risks.
+- [`handoff`](.agents/skills/handoff/SKILL.md) — Documented ADR-034, updated session.md, evicted current_plan.md, and synchronized git repository.

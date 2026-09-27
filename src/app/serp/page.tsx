@@ -22,6 +22,7 @@ export default function SerpPage() {
 
   // Filters & State
   const [keywordFilter, setKeywordFilter] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'top10' | 'rising' | 'dropping' | 'dropped'>('all');
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -50,6 +51,7 @@ export default function SerpPage() {
       });
 
       if (keywordFilter) params.append('keyword', keywordFilter);
+      if (quickFilter && quickFilter !== 'all') params.append('quickFilter', quickFilter);
       if (search) params.append('search', search);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
@@ -74,7 +76,7 @@ export default function SerpPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, keywordFilter, search, startDate, endDate, sortBy, sortOrder]);
+  }, [page, keywordFilter, quickFilter, search, startDate, endDate, sortBy, sortOrder]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget && (!bulkDeleteIds || bulkDeleteIds.length === 0)) return;
@@ -152,6 +154,11 @@ export default function SerpPage() {
         keywordFilter={keywordFilter}
         onKeywordFilterChange={(kw) => {
           setKeywordFilter(kw);
+          setPage(1);
+        }}
+        quickFilter={quickFilter}
+        onQuickFilterChange={(qf) => {
+          setQuickFilter(qf);
           setPage(1);
         }}
         trackedKeywords={trackedKeywords}

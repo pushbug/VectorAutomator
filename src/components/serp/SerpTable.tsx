@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   TrendingUp,
+  TrendingDown,
   Search,
   Image as ImageIcon,
   ExternalLink,
@@ -20,6 +21,9 @@ import {
   ChevronDown,
   Check,
   Download,
+  Flame,
+  AlertTriangle,
+  Layers,
 } from 'lucide-react';
 import { formatCurrency, formatNumber, getImageUrl } from '@/lib/formatters';
 import { DateRangePicker } from '@/components/portfolio/DateRangePicker';
@@ -27,7 +31,7 @@ import { PaginationCapsule } from '@/components/common/PaginationCapsule';
 
 export interface SerpRankedItem {
   id: string;
-  rank: number;
+  rank: number | null;
   assetId: string;
   title: string;
   author?: string | null;
@@ -45,6 +49,7 @@ export interface SerpRankedItem {
   previousRank?: number | null;
   rankDelta?: number | null;
   isNew: boolean;
+  isDropped?: boolean;
   asDownloads: number;
   totalDownloads: number;
   totalEarnings: number;
@@ -65,6 +70,8 @@ interface SerpTableProps {
   onDateRangeChange?: (start: string, end: string) => void;
   keywordFilter?: string;
   onKeywordFilterChange?: (kw: string) => void;
+  quickFilter?: 'all' | 'top10' | 'rising' | 'dropping' | 'dropped';
+  onQuickFilterChange?: (qf: 'all' | 'top10' | 'rising' | 'dropping' | 'dropped') => void;
   trackedKeywords?: string[];
   // Sorting & Pagination
   sortBy?: string;
@@ -90,6 +97,8 @@ export function SerpTable({
   onDateRangeChange,
   keywordFilter = '',
   onKeywordFilterChange,
+  quickFilter = 'all',
+  onQuickFilterChange,
   trackedKeywords = [],
   sortBy = 'date',
   sortOrder = 'desc',
@@ -163,7 +172,7 @@ export function SerpTable({
   // Reset selection on filter, search, page, or sort change
   useEffect(() => {
     setSelectedIds([]);
-  }, [page, keywordFilter, search, startDate, endDate, sortBy, sortOrder]);
+  }, [page, keywordFilter, quickFilter, search, startDate, endDate, sortBy, sortOrder]);
 
   const handleHeaderClick = (column: string) => {
     if (!onSortChange && !onSort) return;
@@ -219,7 +228,7 @@ export function SerpTable({
             <input
               type="text"
               data-testid="serp-search-input"
-              placeholder="Search by code, title, or asset ID..."
+              placeholder="Search by keyword, code, title, or asset ID..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-3 pr-8 py-1.5 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-hidden focus:border-primary h-10"
@@ -350,6 +359,38 @@ export function SerpTable({
             )}
           </div>
         )}
+      </div>
+
+      {/* Sub-toolbar: Quick Filter Tabs */}
+      <div className="px-4 py-2.5 bg-muted/5 border-b border-border/60 flex items-center justify-between gap-2 overflow-x-auto">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {[
+            { id: 'all', label: 'All', icon: Layers },
+            { id: 'top10', label: 'Top 10', icon: Flame },
+            { id: 'rising', label: 'Rising', icon: TrendingUp },
+            { id: 'dropping', label: 'Dropping', icon: TrendingDown },
+            { id: 'dropped', label: 'Dropped', icon: AlertTriangle },
+          ].map((tab) => {
+            const isActive = (quickFilter || 'all') === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                data-testid={`serp-filter-tab-${tab.id}`}
+                onClick={() => onQuickFilterChange && onQuickFilterChange(tab.id as any)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer select-none ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'bg-surface hover:bg-surface-hover text-muted hover:text-foreground border border-border/70'
+                }`}
+              >
+                <Icon size={13} className={isActive ? 'text-primary-foreground' : 'text-muted'} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table Content */}
@@ -531,24 +572,34 @@ export function SerpTable({
 
                     {/* 4. Current Rank */}
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg shadow-sm ${
-                          item.rank <= 3
-                            ? 'bg-emerald-500 text-black'
-                            : item.rank <= 10
-                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                            : item.rank <= 30
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-surface-hover text-muted border border-border'
-                        }`}
-                      >
-                        #{item.rank}
-                      </span>
+                      {item.isDropped || item.rank === null ? (
+                        <span className="inline-flex items-center font-mono font-bold text-xs px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          &gt;100
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg shadow-sm ${
+                            item.rank <= 3
+                              ? 'bg-emerald-500 text-black'
+                              : item.rank <= 10
+                              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                              : item.rank <= 30
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-surface-hover text-muted border border-border'
+                          }`}
+                        >
+                          #{item.rank}
+                        </span>
+                      )}
                     </td>
 
                     {/* 5. Rank Delta */}
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      {item.isNew ? (
+                      {item.isDropped ? (
+                        <span className="text-[11px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                          ⚠️ DROPPED {item.previousRank ? `(was #${item.previousRank})` : ''}
+                        </span>
+                      ) : item.isNew ? (
                         <span className="text-[11px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">
                           ★ NEW
                         </span>
@@ -561,7 +612,7 @@ export function SerpTable({
                           ▼ {item.rankDelta}
                         </span>
                       ) : (
-                        <span className="text-muted font-mono text-xs">=</span >
+                        <span className="text-muted font-mono text-xs">-</span>
                       )}
                     </td>
 

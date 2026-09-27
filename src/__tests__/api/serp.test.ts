@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getSerp, DELETE as deleteSerp, OPTIONS as optionsSerp } from '@/app/api/serp/route';
 import { POST as postSerpSync } from '@/app/api/serp/paste-sync/route';
 import { GET as getArtworkSerp } from '@/app/api/serp/artwork/[id]/route';
+import { calculateSerpItemStats, synthesizeAdjacentDropouts } from '@/lib/serp/serpEnrichment';
 import { NextRequest } from 'next/server';
 
 const {
@@ -389,4 +390,339 @@ describe('SERP API Routes', () => {
     await getSerp(getReq);
     expect(mockExecuteRawUnsafe).toHaveBeenCalled();
   });
+
+  it('UT-API-SERP-KEYWORD-SEARCH-01: supports universal search across keywords and exact keyword filter', async () => {
+    mockSerpItemCount.mockResolvedValue(2);
+    mockSerpItemFindMany
+      .mockResolvedValueOnce([
+        {
+          id: 'item-kw1',
+          rank: 5,
+          assetId: 'asset-kw1',
+          title: 'Clean Minimalist Slide',
+          author: 'Me',
+          thumbnailUrl: null,
+          detailUrl: null,
+          serpQueryId: 'q-kw1',
+          matchedImageId: 'img-kw1',
+          serpQuery: { keyword: 'infographics', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-08-20') },
+          matchedImage: { code: 'A-10', title: 'Clean Minimalist Slide', filePath: '/a.jpg', asDownloads: 20, totalDownloads: 20, stats: [] },
+        },
+        {
+          id: 'item-kw2',
+          rank: 12,
+          assetId: 'asset-kw1', // same asset on earlier date
+          title: 'Clean Minimalist Slide',
+          author: 'Me',
+          thumbnailUrl: null,
+          detailUrl: null,
+          serpQueryId: 'q-kw2',
+          matchedImageId: 'img-kw1',
+          serpQuery: { keyword: 'infographics', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-07-20') },
+          matchedImage: { code: 'A-10', title: 'Clean Minimalist Slide', filePath: '/a.jpg', asDownloads: 20, totalDownloads: 20, stats: [] },
+        },
+      ])
+      .mockResolvedValueOnce([]); // allPrevItems
+
+    mockSerpQueryFindMany.mockResolvedValue([{ keyword: 'infographics' }]);
+
+    // 1. Exact keyword filter test: retains both snapshots across dates (timeline retention)
+    const req = new NextRequest('http://localhost:3000/api/serp?view=artworks&keyword=infographics');
+    const res = await getSerp(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.items).toHaveLength(2); // Timeline mode preserves both dates!
+    expect(data.items[0].searchedAt).toBe(new Date('2026-08-20').toISOString());
+    expect(data.items[1].searchedAt).toBe(new Date('2026-07-20').toISOString());
+
+    // Verify itemWhere clause used exact match
+    expect(mockSerpItemFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          serpQuery: expect.objectContaining({
+            keyword: 'infographics',
+          }),
+        }),
+      })
+    );
+  });
+
+  it('UT-API-SERP-DROPPED-01: synthesizes dropped out artworks between adjacent snapshots and evaluates quickFilter', async () => {
+    // Mock current query items (Page 1 in August: asset-1 present, asset-2 missing)
+    mockSerpItemFindMany
+      .mockResolvedValueOnce([
+        {
+          id: 'aug-1',
+          rank: 2,
+          assetId: 'asset-1',
+          title: 'Top 10 Vector Graphic',
+          author: 'Me',
+          thumbnailUrl: null,
+          detailUrl: null,
+          serpQueryId: 'q-aug',
+          matchedImageId: 'img-1',
+          serpQuery: { keyword: 'dashboard', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-08-28') },
+          matchedImage: { code: 'D-01', title: 'Top 10 Vector Graphic', filePath: '/d1.jpg', asDownloads: 100, totalDownloads: 100, stats: [] },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          assetId: 'asset-1',
+          rank: 8,
+          serpQuery: { keyword: 'dashboard', searchedAt: new Date('2026-07-28') },
+        },
+      ]); // allPrevItems for asset-1
+
+    // Mock kwQueries for adjacent snapshot comparison:
+    // Latest (August): asset-1
+    // Previous (July): asset-1 and asset-2 (asset-2 was rank 45 in July, dropped in August)
+    mockSerpQueryFindMany
+      .mockResolvedValueOnce([{ keyword: 'dashboard' }]) // allQueries
+      .mockResolvedValueOnce([
+        {
+          id: 'q-aug',
+          keyword: 'dashboard',
+          platform: 'Adobe Stock',
+          searchedAt: new Date('2026-08-28'),
+          items: [{ assetId: 'asset-1', rank: 2, isMine: true }],
+        },
+        {
+          id: 'q-jul',
+          keyword: 'dashboard',
+          platform: 'Adobe Stock',
+          searchedAt: new Date('2026-07-28'),
+          items: [
+            { assetId: 'asset-1', rank: 8, isMine: true },
+            {
+              assetId: 'asset-2',
+              rank: 45,
+              isMine: true,
+              title: 'Dropped Vector Element',
+              author: 'Me',
+              thumbnailUrl: '/thumb.jpg',
+              matchedImageId: 'img-2',
+              matchedImage: { code: 'D-02', title: 'Dropped Vector Element', filePath: '/d2.jpg', asDownloads: 30, totalDownloads: 30, stats: [] },
+            },
+          ],
+        },
+      ]);
+
+    const req = new NextRequest('http://localhost:3000/api/serp?view=artworks&keyword=dashboard');
+    const res = await getSerp(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+
+    expect(data.items).toHaveLength(2);
+    // First item is active rank #2 (improved by +6)
+    expect(data.items[0].rank).toBe(2);
+    expect(data.items[0].rankDelta).toBe(6);
+    expect(data.items[0].isDropped).toBe(false);
+
+    // Second item is synthesized dropped out artwork
+    const droppedItem = data.items[1];
+    expect(droppedItem.assetId).toBe('asset-2');
+    expect(droppedItem.rank).toBeNull();
+    expect(droppedItem.previousRank).toBe(45);
+    expect(droppedItem.isDropped).toBe(true);
+
+    // Quick filter test for quickFilter=dropped
+    mockSerpItemFindMany
+      .mockResolvedValueOnce([
+        {
+          id: 'aug-1',
+          rank: 2,
+          assetId: 'asset-1',
+          title: 'Top 10 Vector Graphic',
+          author: 'Me',
+          thumbnailUrl: null,
+          detailUrl: null,
+          serpQueryId: 'q-aug',
+          matchedImageId: 'img-1',
+          serpQuery: { keyword: 'dashboard', platform: 'Adobe Stock', pageNumber: 1, searchedAt: new Date('2026-08-28') },
+          matchedImage: { code: 'D-01', title: 'Top 10 Vector Graphic', filePath: '/d1.jpg', asDownloads: 100, totalDownloads: 100, stats: [] },
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    mockSerpQueryFindMany
+      .mockResolvedValueOnce([{ keyword: 'dashboard' }])
+      .mockResolvedValueOnce([
+        {
+          id: 'q-aug',
+          keyword: 'dashboard',
+          platform: 'Adobe Stock',
+          searchedAt: new Date('2026-08-28'),
+          items: [{ assetId: 'asset-1', rank: 2, isMine: true }],
+        },
+        {
+          id: 'q-jul',
+          keyword: 'dashboard',
+          platform: 'Adobe Stock',
+          searchedAt: new Date('2026-07-28'),
+          items: [
+            {
+              assetId: 'asset-2',
+              rank: 45,
+              isMine: true,
+              title: 'Dropped Vector Element',
+              author: 'Me',
+              thumbnailUrl: '/thumb.jpg',
+              matchedImageId: 'img-2',
+              matchedImage: { code: 'D-02', title: 'Dropped Vector Element', filePath: '/d2.jpg', asDownloads: 30, totalDownloads: 30, stats: [] },
+            },
+          ],
+        },
+      ]);
+
+    const droppedReq = new NextRequest('http://localhost:3000/api/serp?view=artworks&keyword=dashboard&quickFilter=dropped');
+    const droppedRes = await getSerp(droppedReq);
+    expect(droppedRes.status).toBe(200);
+    const droppedData = await droppedRes.json();
+    expect(droppedData.items).toHaveLength(1);
+    expect(droppedData.items[0].isDropped).toBe(true);
+    expect(droppedData.items[0].previousRank).toBe(45);
+  });
+
+  it('UT-API-SERP-PASTE-PAGES-01: scopes same-day query replacement by pageNumber, preserving other pages', async () => {
+    mockImageFindMany.mockResolvedValue([
+      { id: 'img-1', asId: '1001', title: 'Vector 1' },
+    ]);
+
+    let capturedDeleteScope: any = null;
+    mockTransaction.mockImplementation(async (callback) => {
+      if (typeof callback === 'function') {
+        return callback({
+          serpQuery: {
+            findMany: vi.fn().mockImplementation(({ where }) => {
+              capturedDeleteScope = where;
+              if (where.pageNumber === 2) {
+                return Promise.resolve([{ id: 'existing-q-page-2' }]);
+              }
+              return Promise.resolve([]);
+            }),
+            create: vi.fn().mockResolvedValue({
+              id: 'new-q-page-2',
+              keyword: 'infographic',
+              platform: 'Adobe Stock',
+              pageNumber: 2,
+              searchedAt: new Date('2026-08-20'),
+              totalItems: 1,
+              myItemsCount: 1,
+              items: [],
+            }),
+            deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          serpItem: {
+            deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          image: {
+            findMany: mockImageFindMany,
+            findUnique: mockImageFindUnique,
+            findFirst: mockImageFindFirst,
+          },
+        });
+      }
+      return callback;
+    });
+
+    const payload = {
+      keyword: 'infographic',
+      platform: 'Adobe Stock',
+      pageNumber: 2,
+      searchedAt: '2026-08-20T10:00:00.000Z',
+      items: [
+        { rank: 101, assetId: '1001', title: 'Vector 1', author: 'Me' },
+      ],
+    };
+
+    const req = new NextRequest('http://localhost:3000/api/serp/paste-sync', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    const res = await postSerpSync(req);
+    expect(res.status).toBe(201);
+    expect(capturedDeleteScope).toBeDefined();
+    expect(capturedDeleteScope.keyword).toBe('infographic');
+    expect(capturedDeleteScope.platform).toBe('Adobe Stock');
+    expect(capturedDeleteScope.pageNumber).toBe(2);
+  });
+
+  it('UT-API-SERP-ENRICH-01: calculates stats correctly and synthesizes dropouts across multiple keywords concurrently', async () => {
+    // 1. Test calculateSerpItemStats helper directly
+    const directStatsMap = new Map([
+      ['asset-999', { downloads: 50, earnings: 75.0 }],
+    ]);
+    const statsResult = calculateSerpItemStats(
+      {
+        asDownloads: 10,
+        totalDownloads: 15,
+        stats: [{ downloads: 10, earnings: 25.0, platform: 'Adobe Stock' }],
+      },
+      directStatsMap,
+      'asset-999'
+    );
+    expect(statsResult.asDownloads).toBe(10);
+    expect(statsResult.totalDownloads).toBe(50);
+    expect(statsResult.totalEarnings).toBe(75.0);
+
+    // 2. Test synthesizeAdjacentDropouts with multiple keywords in parallel
+    const fakePrisma = {
+      serpQuery: {
+        findMany: vi.fn().mockImplementation(({ where }) => {
+          if (where.keyword === 'kw-1') {
+            return Promise.resolve([
+              {
+                id: 'q-kw1-latest',
+                keyword: 'kw-1',
+                platform: 'Adobe Stock',
+                searchedAt: new Date('2026-08-20'),
+                items: [{ assetId: 'a1', rank: 1, isMine: true }],
+              },
+              {
+                id: 'q-kw1-prev',
+                keyword: 'kw-1',
+                platform: 'Adobe Stock',
+                searchedAt: new Date('2026-08-10'),
+                items: [
+                  { assetId: 'a1', rank: 2, isMine: true },
+                  { assetId: 'a2', rank: 15, isMine: true, title: 'Dropped in KW1', author: 'Me', matchedImage: null },
+                ],
+              },
+            ]);
+          }
+          if (where.keyword === 'kw-2') {
+            return Promise.resolve([
+              {
+                id: 'q-kw2-latest',
+                keyword: 'kw-2',
+                platform: 'Adobe Stock',
+                searchedAt: new Date('2026-08-20'),
+                items: [{ assetId: 'b1', rank: 5, isMine: true }],
+              },
+              {
+                id: 'q-kw2-prev',
+                keyword: 'kw-2',
+                platform: 'Adobe Stock',
+                searchedAt: new Date('2026-08-10'),
+                items: [
+                  { assetId: 'b1', rank: 5, isMine: true },
+                  { assetId: 'b2', rank: 30, isMine: true, title: 'Dropped in KW2', author: 'Me', matchedImage: null },
+                ],
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      },
+    };
+
+    const droppedItems = await synthesizeAdjacentDropouts(fakePrisma, ['kw-1', 'kw-2']);
+    expect(droppedItems).toHaveLength(2);
+    expect(droppedItems.find((d) => d.assetId === 'a2')?.keyword).toBe('kw-1');
+    expect(droppedItems.find((d) => d.assetId === 'a2')?.previousRank).toBe(15);
+    expect(droppedItems.find((d) => d.assetId === 'b2')?.keyword).toBe('kw-2');
+    expect(droppedItems.find((d) => d.assetId === 'b2')?.previousRank).toBe(30);
+  });
 });
+

@@ -240,6 +240,66 @@ describe('SERP UI Components Test Suite', () => {
 
       expect(handleKeywordChange).toHaveBeenCalledWith('diagram');
     });
+
+    it('UT-UI-SERP-QUICK-TABS-01: renders quick filter tabs, triggers tab switch callback, and renders DROPPED badge', () => {
+      const handleQuickFilterChange = vi.fn();
+      const droppedItems: SerpRankedItem[] = [
+        ...mockItems,
+        {
+          id: 'dropped-1',
+          rank: null,
+          assetId: '999888777',
+          title: 'Lost Infographic Template',
+          keyword: 'infographic',
+          platform: 'Adobe Stock',
+          pageNumber: 1,
+          searchedAt: '2026-08-24T00:00:00.000Z',
+          serpQueryId: 'query-dropped',
+          matchedImageId: 'img-dropped',
+          imageCode: '2410-99',
+          imageTitle: 'Lost Infographic Template',
+          imageFilePath: null,
+          previousRank: 25,
+          rankDelta: null,
+          isNew: false,
+          isDropped: true,
+          asDownloads: 50,
+          totalDownloads: 50,
+          totalEarnings: 60.0,
+        },
+      ];
+
+      render(
+        <SerpTable
+          items={droppedItems}
+          isLoading={false}
+          search=""
+          onSearchChange={vi.fn()}
+          onSelectArtwork={vi.fn()}
+          onViewFullSerp={vi.fn()}
+          quickFilter="all"
+          onQuickFilterChange={handleQuickFilterChange}
+        />
+      );
+
+      // Verify all 5 quick tabs exist
+      expect(screen.getByTestId('serp-filter-tab-all')).toBeInTheDocument();
+      expect(screen.getByTestId('serp-filter-tab-top10')).toBeInTheDocument();
+      expect(screen.getByTestId('serp-filter-tab-rising')).toBeInTheDocument();
+      expect(screen.getByTestId('serp-filter-tab-dropping')).toBeInTheDocument();
+      expect(screen.getByTestId('serp-filter-tab-dropped')).toBeInTheDocument();
+
+      // Click on Dropped tab
+      fireEvent.click(screen.getByTestId('serp-filter-tab-dropped'));
+      expect(handleQuickFilterChange).toHaveBeenCalledWith('dropped');
+
+      // Verify DROPPED badges rendered
+      expect(screen.getByText('>100')).toBeInTheDocument();
+      expect(screen.getByText('⚠️ DROPPED (was #25)')).toBeInTheDocument();
+
+      // Verify search input placeholder includes keyword
+      expect(screen.getByPlaceholderText('Search by keyword, code, title, or asset ID...')).toBeInTheDocument();
+    });
   });
 
   describe('SmartSerpPasteModal (UT-UI-SERP-PASTE-MODAL-01)', () => {
