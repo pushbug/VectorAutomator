@@ -205,7 +205,7 @@ export default function Sidebar() {
         <button
           data-testid="sidebar-quit-app-btn"
           onClick={() => setShowQuitConfirm(true)}
-          title="Quit App & Free Port 3000 (ปิดระบบและคืนพอร์ต)"
+          title="Quit App & Free Port (ปิดระบบและคืนพอร์ต)"
           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer ${
             isCollapsed ? "justify-center" : ""
           }`}
@@ -239,12 +239,12 @@ export default function Sidebar() {
                   Quit VectorAutomator?
                 </h3>
                 <p className="text-xs text-muted">
-                  Stop server and release port 3000
+                  Stop server and release port 3333
                 </p>
               </div>
             </div>
             <p className="text-sm text-foreground/80">
-              This will checkpoint the database, shut down the background server, and free port 3000 for your other projects.
+              This will checkpoint the database, shut down the background server, and free port 3333 for your other projects.
             </p>
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button

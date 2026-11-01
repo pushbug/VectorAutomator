@@ -2,14 +2,21 @@
 
 # ==============================================================================
 # VectorAutomator Graceful Server Stopper
-# Stops background Next.js server, checkpoints SQLite WAL, and frees port 3000.
+# Stops background Next.js server, checkpoints SQLite WAL, and frees port.
 # ==============================================================================
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_FILE="${PROJECT_DIR}/.server.pid"
-PORT=3000
 
-echo "Stopping VectorAutomator server..."
+if [ -f "${PROJECT_DIR}/.env" ]; then
+  ENV_PORT=$(grep -E '^PORT=' "${PROJECT_DIR}/.env" | cut -d '=' -f2 | tr -d '"'\'' ')
+  if [ -n "$ENV_PORT" ]; then
+    PORT="$ENV_PORT"
+  fi
+fi
+PORT="${PORT:-3333}"
+
+echo "Stopping VectorAutomator server on port $PORT..."
 
 # 1. Terminate recorded daemon PID gracefully
 if [ -f "$PID_FILE" ]; then

@@ -2,17 +2,24 @@
 
 # ==============================================================================
 # VectorAutomator Safe Terminal Dev Launcher
-# Checks port 3000 status first to prevent raw EADDRINUSE crashes and guide users.
+# Checks port 3333 status first to prevent raw EADDRINUSE crashes and guide users.
 # ==============================================================================
 
-PORT=3000
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -f "${PROJECT_DIR}/.env" ]; then
+  ENV_PORT=$(grep -E '^PORT=' "${PROJECT_DIR}/.env" | cut -d '=' -f2 | tr -d '"'\'' ')
+  if [ -n "$ENV_PORT" ]; then
+    PORT="$ENV_PORT"
+  fi
+fi
+PORT="${PORT:-3333}"
 APP_URL="http://localhost:${PORT}"
 
 is_ready() {
   curl -s -f -o /dev/null -m 2 "$APP_URL"
 }
 
-# Check if port 3000 is already active
+# Check if port 3333 is already active
 if is_ready; then
   ACTIVE_PID=$(lsof -t -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -n 1)
   echo ""
@@ -36,5 +43,5 @@ if [ -n "$OCCUPIED_PID" ]; then
   sleep 1
 fi
 
-# Launch Next.js dev server on port 3000
+# Launch Next.js dev server on port 3333
 exec next dev -p "$PORT"

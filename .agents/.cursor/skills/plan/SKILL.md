@@ -6,7 +6,7 @@ description: Trigger when the user runs the .plan command. Enforces project plan
 # SKILL: Project Planning & TDD-Lite (v4.0)
 
 > Invoke via .plan [task]. Required if task > 1 file or > 15 mins.
-> Target Contract: Checked by dev, audited by scrutinize, closed by handoff.
+> Target Contract: Checked by dev, audited by audit, closed by handoff.
 
 ## HARD RULES (OVERRIDE ALL)
 

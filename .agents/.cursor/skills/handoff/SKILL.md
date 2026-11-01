@@ -15,8 +15,8 @@ description: Trigger when the user runs the .done command. Enforces session wrap
 
 ## Guard
 
-- BLOCKED if: the last `.scrutinize` verdict was not `Ship`, the test suite is currently failing, or any task in `docs/current_plan.md` is incomplete.
-- **VERIFICATION GATE:** Confirm `.scrutinize` actually ran against the current changes. If the flow skipped it (e.g. `.dev` → `.done` directly), WARN the user and recommend running `.scrutinize` first. Never close silently claiming a pass that was never verified.
+- BLOCKED if: the last `.audit` verdict was not `Ship`, the test suite is currently failing, or any task in `docs/current_plan.md` is incomplete.
+- **VERIFICATION GATE:** Confirm `.audit` actually ran against the current changes. If the flow skipped it (e.g. `.dev` → `.done` directly), WARN the user and recommend running `.audit` first. Never close silently claiming a pass that was never verified.
 - **DOC UPDATE CHECKLIST:** Evaluate which scoped docs changed during work. Update ONLY affected files:
   - Feature behavior/exports → matching `docs/features/*.md`
   - State/formulas/lifecycle → matching `docs/core/*.md`

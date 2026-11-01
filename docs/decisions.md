@@ -309,4 +309,15 @@
   7. **Automated Verification:** Added unit tests `UT-API-SERP-KEYWORD-SEARCH-01`, `UT-API-SERP-DROPPED-01`, `UT-API-SERP-PASTE-PAGES-01`, and `UT-API-SERP-ENRICH-01` in `src/__tests__/api/serp.test.ts`, and `UT-UI-SERP-QUICK-TABS-01` in `src/__tests__/components/SerpComponents.test.tsx`. Registered test IDs in `docs/tests/CATALOG.md` and selectors in `docs/tests/SELECTORS.md`. All 23 SERP tests pass with 0 errors.
 - **Impact:** Eliminates ranking history loss, provides instant visibility into ranking changes and dropouts, guarantees multi-page sync persistence, and eliminates N+1 query latency.
 
+## ADR-035: Configurable Non-Colliding Port 3333 Architecture, Native macOS Applet Path Rebinding, and Co-Pilot Audit Command Standardization
+- **Date:** 2026-11-01
+- **Context:** (1) Moving the workspace directory from Desktop to Documents invalidated the compiled AppleScript launcher path inside `VectorAutomator.app`, causing launcher startup failures. (2) Standard port 3000 conflicted with concurrent Next.js / React projects. (3) The legacy `.scrutinize` co-pilot command was verbose and prone to typos compared to the industry standard `.audit`.
+- **Decision:**
+  1. **Configurable Port 3333 Architecture (`scripts/dev.sh`, `scripts/launch.sh`, `scripts/stop.sh`):** Reconfigured the default listening and watchdog shutdown port from 3000 to 3333, while dynamically sourcing `.env` (`PORT=3333`) with environment variable fallback (`${PORT:-3333}`).
+  2. **UI & Documentation Sync:** Updated `src/components/Sidebar.tsx` quit confirmation modal and tooltip to reflect port 3333. Converted obsolete absolute Desktop URLs in `docs/INDEX.md` into workspace-relative markdown paths.
+  3. **Applet Recompilation:** Rebuilt `VectorAutomator.app` via `scripts/create-mac-app.sh`, binding the launcher script to the current `/Users/baemon/Documents/VectorAutomator` path.
+  4. **Co-Pilot `.audit` Command Standardization:** Renamed `.scrutinize` to `.audit` across `.agents/AGENTS.md`, `.agents/.cursor/rules/copilot-core.mdc`, and all skills in both `.agents/skills/` and `.agents/.cursor/skills/` to ensure 100% configuration parity.
+  5. **Automated Verification:** Verified all 61 test files (406 unit and integration tests) pass with zero TypeScript errors.
+- **Impact:** Eliminates port collisions with other development projects, restores native macOS desktop applet functionality in the Documents directory, and streamlines co-pilot phase invocation.
+
 

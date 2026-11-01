@@ -1,13 +1,13 @@
 ---
 name: testing
-description: Reference for test specification and E2E verification. Use during .plan and .scrutinize phases alongside the plan or scrutinize skill.
+description: Reference for test specification and E2E verification. Use during .plan and .audit phases alongside the plan or audit skill.
 ---
 
 # SKILL: Test Execution Thought Process (v2.0)
 
 ## CONTEXT & ANCHORS
 
-- **Trigger:** Loaded during `.plan` (spec generation) and `.scrutinize` (execution & verification).
+- **Trigger:** Loaded during `.plan` (spec generation) and `.audit` (execution & verification).
 - **Reference:** `docs/tests/SELECTORS.md`, `docs/tests/CATALOG.md`, `docs/tests/OVERVIEW.md`
 
 ## 1. TEST SPECIFICATION (.plan Phase)
@@ -20,7 +20,7 @@ description: Reference for test specification and E2E verification. Use during .
 - **Rule:** Test behaviors, not implementation details. Retain validity after internal refactors.
 - **Naming & Location:** `tests/[feature].spec.ts` -> `should [expect] when [condition]`.
 
-## 2. VERIFICATION & REPORTING (.scrutinize Phase)
+## 2. VERIFICATION & REPORTING (.audit Phase)
 
 - **Execution:** Run automated suite via `npm run test:e2e` or `npx playwright test`.
 - **Report Format (Thai):**

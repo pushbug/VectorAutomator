@@ -28,7 +28,7 @@ The Dashboard (`/`) serves as the central operational Cockpit for VectorAutomato
 - `ActivitySplitGrid.tsx`: Split widget for Recent Ingestion and Top Performers with 1-click clipboard keyword copy.
 
 ### 2.3 Standalone macOS Desktop Launcher
-- `scripts/launch.sh`: Dynamically resolves Homebrew/NVM Node environment, starts Next.js background daemon with output piped to `.server.log`, polls port readiness, and launches Chrome/Edge in standalone app window mode (`--app=http://localhost:3000`).
+- `scripts/launch.sh`: Dynamically resolves Homebrew/NVM Node environment, starts Next.js background daemon with output piped to `.server.log`, polls port readiness, and launches Chrome/Edge in standalone app window mode (`--app=http://localhost:${PORT:-3333}`).
 - `scripts/generate-icon.sh`: Uses Swift AppKit to render a 1024x1024 Blue Squircle with white "V" glyph, generates a multi-resolution `.iconset` with `sips`, and compiles `applet.icns` via `iconutil`.
 - `scripts/create-mac-app.sh`: Compiles `VectorAutomator.app` via `osacompile`, copies the standalone bundle to `~/Desktop/VectorAutomator.app`, applies the custom icon attribute via Cocoa `NSWorkspace.shared.setIcon`, and refreshes Finder/LaunchServices.
 

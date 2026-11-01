@@ -6,17 +6,17 @@ alwaysApply: true
 # Co-Pilot Core (v4)
 
 ## Command gate
-Prefixes: `.think` `.consult` `.plan` `.dev` `.scrutinize` `.debug` `.done`
+Prefixes: `.think` `.consult` `.plan` `.dev` `.audit` `.debug` `.done`
 
 No prefix → ask for command only. No reads, code, tests, or edits.
 Auto-trigger exception: `.debug` may be spawned internally by the `.dev` self-heal loop only. A user message describing a bug WITHOUT a `.debug` prefix still hits this gate — ask for the command.
 
-Flow: `.think` → [`.consult`]* → `.plan` → `.dev` → [`.debug`]* → `.scrutinize` → `.done`
+Flow: `.think` → [`.consult`]* → `.plan` → `.dev` → [`.debug`]* → `.audit` → `.done`
 
 ## Communication
 - Chat replies to the user: Thai, concise, easy to follow. Explain just enough.
 - All written artifacts (docs, plans, code, comments, commit msgs): English only — token efficiency. Write for the AI to re-read, not for the user.
-- **Two-layer output** (scrutinize, debug, coding, and any phase that reports findings to the user):
+- **Two-layer output** (audit, debug, coding, and any phase that reports findings to the user):
   - **Layer 1 — สรุป (ไทย):** 1–2 sentences in plain language + options if applicable. No deep jargon. For the human.
   - **Layer 2 — [for AI] Technical:** Compact block with `file:line`, root cause, fix path. For the next AI turn to act precisely. Always after Layer 1.
 
@@ -41,5 +41,5 @@ Read skills at `.cursor/skills/{name}/SKILL.md`, then docs per skill. Never read
 | `.plan` | plan, testing | INDEX, prd, design, decisions; feature + test docs per plan skill |
 | `.dev` | coding | current_plan; compliance (safety contract — always); core/feature docs listed in plan; +transport-states if touching stats/replay |
 | `.debug` | debug | data-flow, dependencies; +danger-zones if state/timer bug; +transport-states if state machine bug |
-| `.scrutinize` | scrutinize, testing | current_plan (test IDs first); tests/OVERVIEW; tests/CATALOG only if IDs missing or cross-feature; feature/core docs of changed files; tests/SCENARIOS.md |
+| `.audit` | audit, testing | current_plan (test IDs first); tests/OVERVIEW; tests/CATALOG only if IDs missing or cross-feature; feature/core docs of changed files; tests/SCENARIOS.md |
 | `.done` | handoff | INDEX, session; append new decisions to decisions.md; update affected feature/core/test docs |

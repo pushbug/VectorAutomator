@@ -38,8 +38,8 @@ Entry → State → Branches → Output. Check: Props, API shape, async timing, 
 Vague ("something in state") → Step 3. Hypothesis only → `[เดา]`, Layer 1 only, **STOP. NO CODE.**
 
 ### 5. Fix & Verify
-Minimal change. `npx tsc --noEmit` + affected tests only. **No full E2E** (reserved for `.scrutinize`).
-User-invoked → recommend `.scrutinize` before `.done`. Self-heal → stay in `.dev` scope.
+Minimal change. `npx tsc --noEmit` + affected tests only. **No full E2E** (reserved for `.audit`).
+User-invoked → recommend `.audit` before `.done`. Self-heal → stay in `.dev` scope.
 
 ### 6. Test Recommendation
 After fix passes:

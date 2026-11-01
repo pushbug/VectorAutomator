@@ -21,7 +21,7 @@ description: Trigger when the user runs the .dev command. Enforces minimal, surg
 ## PLAN ANCHORING & STALENESS CHECK
 
 - Read `docs/current_plan.md` + listed docs before coding.
-- **Before each step:** verify target file/change doesn't already exist (`ls`/`grep`). Already done → mark `[x]`, skip. All `[x]` → set `Status: COMPLETE`, announce: "ทำเสร็จครบแล้วครับ แนะนำ .scrutinize ก่อน .done"
+- **Before each step:** verify target file/change doesn't already exist (`ls`/`grep`). Already done → mark `[x]`, skip. All `[x]` → set `Status: COMPLETE`, announce: "ทำเสร็จครบแล้วครับ แนะนำ .audit ก่อน .done"
 - With plan: align strictly. Without plan: max 1 file, confirm scope first.
 
 ## MINIMALISM
@@ -41,7 +41,7 @@ description: Trigger when the user runs the .dev command. Enforces minimal, surg
 
 - Read target file before writing. 300-line threshold = ask before split.
 - Multi-step: one step → verify → proceed.
-- **Testing:** `npx tsc --noEmit` + existing Vitest specs for touched feature. **No Playwright here** (reserved for `.scrutinize`).
+- **Testing:** `npx tsc --noEmit` + existing Vitest specs for touched feature. **No Playwright here** (reserved for `.audit`).
 - **Visual changes:** state explicitly what to eye-check. Never claim visual fix works from type-check alone.
 - **Self-heal:** 1 auto `.debug` loop. Failure persists → STOP & ASK.
 - **No session wrap-up.** No git push/PR/summary during `.dev`.
@@ -50,7 +50,7 @@ description: Trigger when the user runs the .dev command. Enforces minimal, surg
 
 - After each step: mark `[x]` in `docs/current_plan.md`.
 - After ALL steps: `Status: ACTIVE` → `Status: COMPLETE`.
-- **Never end silently.** Report: "ทำเสร็จ step X/Y" or "ครบทุก step แนะนำ .scrutinize"
+- **Never end silently.** Report: "ทำเสร็จ step X/Y" or "ครบทุก step แนะนำ .audit"
 
 ## OUTPUT
 

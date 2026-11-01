@@ -1,11 +1,11 @@
 ---
-name: scrutinize
-description: Trigger when the user runs the .scrutinize command. Acts as an E2E gatekeeper to review code or plans without writing code.
+name: audit
+description: Trigger when the user runs the .audit command. Acts as an E2E gatekeeper to review code or plans without writing code.
 ---
 
-# SKILL: Scrutinize & E2E Gatekeeper (v3.0)
+# SKILL: Audit & E2E Gatekeeper (v3.0)
 
-> Trigger: .scrutinize | review/audit/sanity-check requests.
+> Trigger: .audit | review/audit/sanity-check requests.
 
 ## STANCE
 

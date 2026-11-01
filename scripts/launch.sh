@@ -34,7 +34,13 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-PORT=3000
+if [ -f "${PROJECT_DIR}/.env" ]; then
+  ENV_PORT=$(grep -E '^PORT=' "${PROJECT_DIR}/.env" | cut -d '=' -f2 | tr -d '"'\'' ')
+  if [ -n "$ENV_PORT" ]; then
+    PORT="$ENV_PORT"
+  fi
+fi
+PORT="${PORT:-3333}"
 APP_URL="http://localhost:${PORT}"
 LOG_FILE="${PROJECT_DIR}/.server.log"
 PID_FILE="${PROJECT_DIR}/.server.pid"
@@ -47,7 +53,7 @@ is_ready() {
 if is_ready; then
   echo "VectorAutomator server is already running on port $PORT. Spawning additional window..."
 else
-  # Check if port 3000 is occupied by a non-responsive process
+  # Check if target port is occupied by a non-responsive process
   OCCUPIED_PID="$(lsof -i :"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -n 1)"
   if [ -n "$OCCUPIED_PID" ]; then
     echo "Port $PORT occupied by PID $OCCUPIED_PID. Verifying readiness..."
